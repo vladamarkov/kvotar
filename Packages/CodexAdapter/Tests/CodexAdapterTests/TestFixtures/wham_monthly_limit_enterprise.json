@@ -1,0 +1,27 @@
+{
+  "user_id": "user-fixture",
+  "account_id": "acct-fixture",
+  "email": "user@domain.com",
+  "plan_type": "business",
+  "rate_limit": null,
+  "code_review_rate_limit": null,
+  "additional_rate_limits": null,
+  "credits": null,
+  "spend_control": {
+    "reached": false,
+    "individual_limit": {
+      "limit": "5000",
+      "used": "2376.905242651701",
+      "remaining": "2623.094757348299",
+      "used_percent": 46,
+      "remaining_percent": 52,
+      "reset_after_seconds": 1468800,
+      "reset_at": 1785542401,
+      "source": "group_based_spend_controls"
+    }
+  },
+  "rate_limit_reached_type": null,
+  "promo": null,
+  "referral_beacon": null,
+  "rate_limit_reset_credits": { "available_count": 0 }
+}

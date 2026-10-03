@@ -1,0 +1,94 @@
+name: Kvotar
+options:
+  bundleIdPrefix: com.vladimirmarkovic
+  deploymentTarget:
+    macOS: "14.0"
+packages:
+  KvotarCore:
+    path: Packages/KvotarCore
+  ClaudeAdapter:
+    path: Packages/ClaudeAdapter
+  CodexAdapter:
+    path: Packages/CodexAdapter
+  KvotarUI:
+    path: Packages/KvotarUI
+  # STEP_152 (REV-83): the only remote package. `exactVersion` because the app-level
+  # Package.resolved is untracked (*.xcodeproj/ is gitignored), so nothing else pins it.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: "2.9.6"
+targets:
+  Kvotar:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: App
+      - path: Resources/pricing.json
+      # D-105f: third-party licence notices ship inside the bundle (Contents/Resources).
+      - path: Resources/THIRD_PARTY_NOTICES
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vladimirmarkovic.kvotar
+        PRODUCT_NAME: Kvotar
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_ENTITLEMENTS: App/Kvotar.entitlements
+        CODE_SIGN_STYLE: Automatic
+        INFOPLIST_FILE: App/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "0.3.0"
+        CURRENT_PROJECT_VERSION: "18"
+        # STEP_153: the prerelease label belongs to artifact names only (never Info.plist). The
+        # release scripts read version, build and label from here — one place to bump.
+        KVOTAR_PRERELEASE_LABEL: "beta.9"
+        ARCHS: "arm64 x86_64"
+        # Extended diagnostics are always off without explicit, expiring consent. The friend
+        # candidate is a release-channel build; prerelease labels belong to artifact names only.
+        KVOTAR_CHANNEL: release
+    dependencies:
+      - package: KvotarCore
+      - package: ClaudeAdapter
+      - package: CodexAdapter
+      - package: KvotarUI
+      # Kvotar target only — KvotarTests compiles App sources directly and stays Sparkle-free.
+      - package: Sparkle
+  # STEP_140: the App layer's first test target — closes the coverage gap STEP_99 recorded
+  # ("There is no App-level test target"). Not app-hosted: it compiles the presenter source
+  # directly, so the copy statics are same-module accessible and no app launch is needed.
+  KvotarTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    sources:
+      - path: App/UserNotificationPresenter.swift
+      - path: App/OnboardingGate.swift
+      - path: App/NotificationPermissionHint.swift
+      # STEP_204: the three AppKit-free halves of the quota-surface work — the launch-source rule,
+      # the shared open/close lifecycle, and the presenter's routing and close→open ordering. The
+      # two window controllers stay out: they are AppKit, and the presenter talks to them through
+      # `QuotaSurface`, which tests satisfy with fakes.
+      - path: App/LaunchSource.swift
+      - path: App/QuotaSurfaceLifecycle.swift
+      - path: App/QuotaSurfacePresenter.swift
+      # STEP_205: the AppKit-free halves of the hand-off — what a copy that lost the §9.2 lock
+      # does, and the box that holds a request arriving before there is a presenter to answer it.
+      - path: App/SecondInstanceAction.swift
+      - path: App/HandoffInbox.swift
+      # STEP_206: the pure half of detection — three gates over the occlusion signal.
+      # `HiddenItemMonitor` stays out: it is AppKit, and the rule it feeds is the half worth
+      # pinning.
+      - path: App/HiddenItemDetection.swift
+      # STEP_233: the debug notification fixture's scripts — pinned so each one sends what its
+      # name says through the real engine.
+      - path: App/NotificationFixture.swift
+      - path: AppTests
+    dependencies:
+      - package: KvotarCore
+      - package: KvotarUI
+    scheme:
+      testTargets:
+        - KvotarTests

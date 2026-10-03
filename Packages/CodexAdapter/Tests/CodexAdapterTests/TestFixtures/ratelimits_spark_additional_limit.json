@@ -1,0 +1,35 @@
+{
+  "rateLimits": {
+    "limitId": "codex",
+    "limitName": null,
+    "primary": {
+      "usedPercent": 42,
+      "windowSeconds": 18000,
+      "resetsInSeconds": 7440,
+      "resetsAt": 1781391701
+    },
+    "secondary": null,
+    "credits": { "balance": 142.3 },
+    "planType": "enterprise",
+    "rateLimitReachedType": null
+  },
+  "rateLimitsByLimitId": {
+    "codex": {
+      "limitId": "codex",
+      "primary": null,
+      "secondary": null,
+      "credits": null,
+      "planType": "enterprise",
+      "rateLimitReachedType": null
+    },
+    "codex_spark": {
+      "limitId": "codex_spark",
+      "limitName": "GPT-5.3-Codex-Spark",
+      "primary": { "usedPercent": 12, "resetsAt": 1781391701 },
+      "secondary": null,
+      "credits": null,
+      "planType": "enterprise",
+      "rateLimitReachedType": null
+    }
+  }
+}

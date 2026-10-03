@@ -1,0 +1,2 @@
+{"type":"session_meta","payload":{"id":"01900000-0000-7000-8000-000000000008","originator":"codex_work_desktop","source":"vscode","thread_source":"user","cli_version":"0.147.0-alpha.6.5"}}
+{"type":"event_msg","timestamp":"2026-08-13T18:13:30Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":19974,"output_tokens":765,"cached_input_tokens":10624,"cache_write_input_tokens":0,"reasoning_output_tokens":385,"total_tokens":20739}}}}

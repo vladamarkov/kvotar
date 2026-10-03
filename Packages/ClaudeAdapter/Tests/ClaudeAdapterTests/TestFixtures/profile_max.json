@@ -1,0 +1,13 @@
+{
+  "account": {
+    "uuid": "00000000-0000-0000-0000-000000000000",
+    "email": "max@example.com",
+    "has_claude_pro": false,
+    "has_claude_max": true
+  },
+  "organization": {
+    "uuid": "00000000-0000-0000-0000-000000000001",
+    "name": "Example",
+    "rate_limit_tier": "default_claude_max"
+  }
+}

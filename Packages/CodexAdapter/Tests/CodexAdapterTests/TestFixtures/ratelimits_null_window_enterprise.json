@@ -1,0 +1,21 @@
+{
+  "rateLimits": {
+    "limitId": "codex",
+    "limitName": null,
+    "primary": null,
+    "secondary": null,
+    "credits": null,
+    "planType": "enterprise",
+    "rateLimitReachedType": null
+  },
+  "rateLimitsByLimitId": {
+    "codex": {
+      "limitId": "codex",
+      "primary": null,
+      "secondary": null,
+      "credits": null,
+      "planType": "enterprise",
+      "rateLimitReachedType": null
+    }
+  }
+}

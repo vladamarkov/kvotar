@@ -1,0 +1,30 @@
+{
+  "user_id": "user-fixture",
+  "account_id": "acct-fixture",
+  "email": "user@domain.com",
+  "plan_type": "enterprise",
+  "rate_limit": {
+    "allowed": false,
+    "limit_reached": true,
+    "primary_window": {
+      "used_percent": 100,
+      "limit_window_seconds": 18000,
+      "reset_after_seconds": 5355,
+      "reset_at": 1781391701
+    },
+    "secondary_window": {
+      "used_percent": 21,
+      "limit_window_seconds": 604800,
+      "reset_after_seconds": 592155,
+      "reset_at": 1781978501
+    }
+  },
+  "code_review_rate_limit": null,
+  "additional_rate_limits": null,
+  "credits": null,
+  "spend_control": { "reached": false, "individual_limit": null },
+  "rate_limit_reached_type": null,
+  "promo": null,
+  "referral_beacon": null,
+  "rate_limit_reset_credits": { "available_count": 0 }
+}

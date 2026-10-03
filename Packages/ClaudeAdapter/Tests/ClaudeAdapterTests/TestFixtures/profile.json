@@ -1,0 +1,26 @@
+{
+  "account": {
+    "uuid": "00000000-0000-0000-0000-000000000000",
+    "email": "dev@example.com",
+    "display_name": "Dev",
+    "full_name": "Dev Example",
+    "created_at": "2025-01-01T00:00:00Z",
+    "has_claude_pro": true,
+    "has_claude_max": false
+  },
+  "organization": {
+    "uuid": "00000000-0000-0000-0000-000000000001",
+    "name": "Example",
+    "billing_type": "individual",
+    "organization_type": "personal",
+    "rate_limit_tier": "default",
+    "has_extra_usage_enabled": false,
+    "subscription_status": "active"
+  },
+  "application": {
+    "uuid": "00000000-0000-0000-0000-000000000002",
+    "name": "Claude Code",
+    "slug": "claude-code"
+  },
+  "enabled_plugins": []
+}

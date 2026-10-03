@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "tools": {
+    "claude": {
+      "max": { "five_hour": 100, "weekly": 100 },
+      "pro":  { "five_hour": 100, "weekly": 100 }
+    },
+    "codex": {
+      "pro":  { "five_hour": 100, "weekly": 100 },
+      "plus": { "five_hour": 100, "weekly": 100 }
+    }
+  }
+}

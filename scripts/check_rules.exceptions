@@ -1,0 +1,4 @@
+# Exceptions to scripts/check_rules.sh (STEP_239). One per line: file<TAB>pattern<TAB>reason.
+# The pattern must still occur in the file, or the run fails — this list cannot rot.
+Packages/KvotarCore/Sources/KvotarCore/Diagnostics/DiagnosticsPayloadSanitizer.swift	"refresh_token", "refreshtoken"	R3: the redaction key list — names the token so it is removed, never sent
+Packages/CodexAdapter/Sources/CodexAdapter/CodexTokenProvider.swift	`tokens.refresh_token` is	R3: the doc comment saying the field is never read

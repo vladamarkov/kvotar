@@ -1,0 +1,17 @@
+{
+  "rateLimits": {
+    "limitId": "codex",
+    "limitName": null,
+    "primary": null,
+    "secondary": null,
+    "credits": null,
+    "planType": "business",
+    "rateLimitReachedType": null,
+    "individualLimit": {
+      "limit": "5000",
+      "used": "2376.905242651701",
+      "remainingPercent": 52,
+      "resetsAt": 1785542400
+    }
+  }
+}

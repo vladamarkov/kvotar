@@ -1,0 +1,42 @@
+ macOS
+.DS_Store
+**/.DS_Store
+
+# Claude local settings (ignore all of .claude/ EXCEPT the shared, version-controlled skills)
+.claude/*
+!.claude/skills/
+.claude/settings.local.json
+
+# Microsoft Word temporary files
+~$*
+docs/~$*
+
+# Xcode / SPM — project.yml is the source of truth, project regenerated via xcodegen
+*.xcodeproj/
+.build/
+DerivedData/
+xcuserdata/
+.swiftpm/
+
+# Local build & distribution artifacts
+build/
+dist/
+
+# Local-only spike/exploration docs (not for the repo)
+docs/Spike_Codex_Enterprise_Monthly_2026-07-15.md
+
+# Sparkle EdDSA key material never lives under the repo (STEP_153 / D-105i)
+*.private
+*-private-key*
+
+# wrangler local state (publish_update.sh)
+.wrangler/
+
+# Tester-material exports (PDF/PNG/HTML renders) live in the iCloud Release Archive, not in git
+planning/tester-materials/*.pdf
+planning/tester-materials/*.png
+planning/tester-materials/*.html
+
+# Local scratch: Claude session renders and temporary PDF page dumps
+Claude outputs/
+tmp/

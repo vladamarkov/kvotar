@@ -1,0 +1,51 @@
+{
+  "_fixture_note": "RECONSTRUCTED, not captured — the tester's Claude Team shape on Sun 2026-09-20, rebuilt from his log and explanation snapshot (bundle Kvotar-diagnostics-20260921-1052); Extended Diagnostics was off, so no payload exists. Replace with a real capture when one arrives (STEP_218, REV-102 §6 item 1).",
+  "five_hour": {
+    "utilization": 0.0,
+    "resets_at": null
+  },
+  "seven_day": {
+    "utilization": 100.0,
+    "resets_at": "2026-09-22T02:59:00Z"
+  },
+  "extra_usage": {
+    "is_enabled": true,
+    "monthly_limit": 7000,
+    "used_credits": 1680.0,
+    "utilization": null,
+    "currency": "EUR",
+    "disabled_reason": null,
+    "decimal_places": 2,
+    "daily": null,
+    "weekly": null
+  },
+  "spend": {
+    "used": {
+      "amount_minor": 1680,
+      "currency": "EUR",
+      "exponent": 2
+    },
+    "limit": {
+      "amount_minor": 7000,
+      "currency": "EUR",
+      "exponent": 2
+    },
+    "percent": 24,
+    "severity": "normal",
+    "enabled": true,
+    "disabled_reason": null,
+    "cap": {
+      "money": null,
+      "credits": {
+        "amount_minor": 7000,
+        "exponent": 2
+      }
+    },
+    "balance": null,
+    "auto_reload": null,
+    "disclaimer": "Usage credits cover you when you hit your plan limits. [Learn more](https://example.invalid)",
+    "can_purchase_credits": false,
+    "can_toggle": false
+  },
+  "member_dashboard_available": false
+}

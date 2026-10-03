@@ -1,0 +1,27 @@
+{
+  "account": {
+    "uuid": "00000000-0000-0000-0000-000000000010",
+    "email": "seat@enterprise.example.com",
+    "display_name": "Seat",
+    "full_name": "Enterprise Seat",
+    "created_at": "2025-01-01T00:00:00Z",
+    "has_claude_pro": false,
+    "has_claude_max": false
+  },
+  "organization": {
+    "uuid": "00000000-0000-0000-0000-000000000011",
+    "name": "Enterprise Org",
+    "billing_type": "stripe_subscription_contracted",
+    "organization_type": "claude_enterprise",
+    "seat_tier": "enterprise_usage_based",
+    "rate_limit_tier": "default_claude_zero",
+    "has_extra_usage_enabled": true,
+    "subscription_status": "active"
+  },
+  "application": {
+    "uuid": "00000000-0000-0000-0000-000000000012",
+    "name": "Claude Code",
+    "slug": "claude-code"
+  },
+  "enabled_plugins": []
+}

@@ -1,0 +1,2 @@
+{"type":"assistant","sessionId":"s5","requestId":"req-5a","message":{"id":"m5a","model":"claude-sonnet-4-6","usage":{"input_tokens":0,"output_tokens":0,"cache_creation":{"ephemeral_1h_input_tokens":3,"ephemeral_5m_input_tokens":4},"cache_read_input_tokens":2}}}
+{"type":"assistant","sessionId":"s5","requestId":"req-5b","message":{"id":"m5b","model":"claude-sonnet-4-6","usage":{"input_tokens":0,"output_tokens":0}}}

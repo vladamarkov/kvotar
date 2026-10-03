@@ -1,0 +1,392 @@
+{
+  "version": "1.4.0",
+  "updated": "2026-09-30",
+  "models": {
+    "claude-fable-5-1": {
+      "provider": "claude",
+      "input_per_mtok": 10.00,
+      "output_per_mtok": 50.00,
+      "cache_write_5m_per_mtok": 12.50,
+      "cache_write_1h_per_mtok": 20.00,
+      "cache_read_per_mtok": 0.25,
+      "currency": "USD"
+    },
+    "claude-mythos-5-1": {
+      "provider": "claude",
+      "input_per_mtok": 10.00,
+      "output_per_mtok": 50.00,
+      "cache_write_5m_per_mtok": 12.50,
+      "cache_write_1h_per_mtok": 20.00,
+      "cache_read_per_mtok": 0.25,
+      "currency": "USD"
+    },
+    "claude-fable-5": {
+      "provider": "claude",
+      "input_per_mtok": 10.00,
+      "output_per_mtok": 50.00,
+      "cache_write_5m_per_mtok": 12.50,
+      "cache_write_1h_per_mtok": 20.00,
+      "cache_read_per_mtok": 1.00,
+      "currency": "USD"
+    },
+    "claude-mythos-5": {
+      "provider": "claude",
+      "input_per_mtok": 10.00,
+      "output_per_mtok": 50.00,
+      "cache_write_5m_per_mtok": 12.50,
+      "cache_write_1h_per_mtok": 20.00,
+      "cache_read_per_mtok": 1.00,
+      "currency": "USD"
+    },
+    "claude-opus-5-5": {
+      "provider": "claude",
+      "input_per_mtok": 4.00,
+      "output_per_mtok": 20.00,
+      "cache_write_5m_per_mtok": 5.00,
+      "cache_write_1h_per_mtok": 8.00,
+      "cache_read_per_mtok": 0.20,
+      "currency": "USD"
+    },
+    "claude-opus-5": {
+      "provider": "claude",
+      "input_per_mtok": 5.00,
+      "output_per_mtok": 25.00,
+      "cache_write_5m_per_mtok": 6.25,
+      "cache_write_1h_per_mtok": 10.00,
+      "cache_read_per_mtok": 0.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-8": {
+      "provider": "claude",
+      "input_per_mtok": 5.00,
+      "output_per_mtok": 25.00,
+      "cache_write_5m_per_mtok": 6.25,
+      "cache_write_1h_per_mtok": 10.00,
+      "cache_read_per_mtok": 0.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-7": {
+      "provider": "claude",
+      "input_per_mtok": 5.00,
+      "output_per_mtok": 25.00,
+      "cache_write_5m_per_mtok": 6.25,
+      "cache_write_1h_per_mtok": 10.00,
+      "cache_read_per_mtok": 0.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-6": {
+      "provider": "claude",
+      "input_per_mtok": 5.00,
+      "output_per_mtok": 25.00,
+      "cache_write_5m_per_mtok": 6.25,
+      "cache_write_1h_per_mtok": 10.00,
+      "cache_read_per_mtok": 0.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-5": {
+      "provider": "claude",
+      "input_per_mtok": 5.00,
+      "output_per_mtok": 25.00,
+      "cache_write_5m_per_mtok": 6.25,
+      "cache_write_1h_per_mtok": 10.00,
+      "cache_read_per_mtok": 0.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-5-20251101": {
+      "provider": "claude",
+      "input_per_mtok": 5.00,
+      "output_per_mtok": 25.00,
+      "cache_write_5m_per_mtok": 6.25,
+      "cache_write_1h_per_mtok": 10.00,
+      "cache_read_per_mtok": 0.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-1": {
+      "provider": "claude",
+      "input_per_mtok": 15.00,
+      "output_per_mtok": 75.00,
+      "cache_write_5m_per_mtok": 18.75,
+      "cache_write_1h_per_mtok": 30.00,
+      "cache_read_per_mtok": 1.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-1-20250805": {
+      "provider": "claude",
+      "input_per_mtok": 15.00,
+      "output_per_mtok": 75.00,
+      "cache_write_5m_per_mtok": 18.75,
+      "cache_write_1h_per_mtok": 30.00,
+      "cache_read_per_mtok": 1.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-0": {
+      "provider": "claude",
+      "input_per_mtok": 15.00,
+      "output_per_mtok": 75.00,
+      "cache_write_5m_per_mtok": 18.75,
+      "cache_write_1h_per_mtok": 30.00,
+      "cache_read_per_mtok": 1.50,
+      "currency": "USD"
+    },
+    "claude-opus-4-20250514": {
+      "provider": "claude",
+      "input_per_mtok": 15.00,
+      "output_per_mtok": 75.00,
+      "cache_write_5m_per_mtok": 18.75,
+      "cache_write_1h_per_mtok": 30.00,
+      "cache_read_per_mtok": 1.50,
+      "currency": "USD"
+    },
+    "claude-sonnet-5-5": {
+      "provider": "claude",
+      "input_per_mtok": 2.00,
+      "output_per_mtok": 10.00,
+      "cache_write_5m_per_mtok": 2.50,
+      "cache_write_1h_per_mtok": 4.00,
+      "cache_read_per_mtok": 0.20,
+      "currency": "USD"
+    },
+    "claude-sonnet-5": {
+      "provider": "claude",
+      "input_per_mtok": 2.00,
+      "output_per_mtok": 10.00,
+      "cache_write_5m_per_mtok": 2.50,
+      "cache_write_1h_per_mtok": 4.00,
+      "cache_read_per_mtok": 0.20,
+      "currency": "USD"
+    },
+    "claude-sonnet-4-6": {
+      "provider": "claude",
+      "input_per_mtok": 3.00,
+      "output_per_mtok": 15.00,
+      "cache_write_5m_per_mtok": 3.75,
+      "cache_write_1h_per_mtok": 6.00,
+      "cache_read_per_mtok": 0.30,
+      "currency": "USD"
+    },
+    "claude-sonnet-4-5": {
+      "provider": "claude",
+      "input_per_mtok": 3.00,
+      "output_per_mtok": 15.00,
+      "cache_write_5m_per_mtok": 3.75,
+      "cache_write_1h_per_mtok": 6.00,
+      "cache_read_per_mtok": 0.30,
+      "currency": "USD"
+    },
+    "claude-sonnet-4-5-20250929": {
+      "provider": "claude",
+      "input_per_mtok": 3.00,
+      "output_per_mtok": 15.00,
+      "cache_write_5m_per_mtok": 3.75,
+      "cache_write_1h_per_mtok": 6.00,
+      "cache_read_per_mtok": 0.30,
+      "currency": "USD"
+    },
+    "claude-sonnet-4-0": {
+      "provider": "claude",
+      "input_per_mtok": 3.00,
+      "output_per_mtok": 15.00,
+      "cache_write_5m_per_mtok": 3.75,
+      "cache_write_1h_per_mtok": 6.00,
+      "cache_read_per_mtok": 0.30,
+      "currency": "USD"
+    },
+    "claude-sonnet-4-20250514": {
+      "provider": "claude",
+      "input_per_mtok": 3.00,
+      "output_per_mtok": 15.00,
+      "cache_write_5m_per_mtok": 3.75,
+      "cache_write_1h_per_mtok": 6.00,
+      "cache_read_per_mtok": 0.30,
+      "currency": "USD"
+    },
+    "claude-haiku-4-5": {
+      "provider": "claude",
+      "input_per_mtok": 1.00,
+      "output_per_mtok": 5.00,
+      "cache_write_5m_per_mtok": 1.25,
+      "cache_write_1h_per_mtok": 2.00,
+      "cache_read_per_mtok": 0.10,
+      "currency": "USD"
+    },
+    "claude-haiku-4-5-20251001": {
+      "provider": "claude",
+      "input_per_mtok": 1.00,
+      "output_per_mtok": 5.00,
+      "cache_write_5m_per_mtok": 1.25,
+      "cache_write_1h_per_mtok": 2.00,
+      "cache_read_per_mtok": 0.10,
+      "currency": "USD"
+    },
+    "claude-3-5-haiku-20241022": {
+      "provider": "claude",
+      "input_per_mtok": 0.80,
+      "output_per_mtok": 4.00,
+      "cache_write_5m_per_mtok": 1.00,
+      "cache_write_1h_per_mtok": 1.60,
+      "cache_read_per_mtok": 0.08,
+      "currency": "USD"
+    },
+    "gpt-6-astra": {
+      "provider": "codex",
+      "input_per_mtok": 10.00,
+      "output_per_mtok": 50.00,
+      "cache_creation_per_mtok": 1.00,
+      "cache_read_per_mtok": 1.00,
+      "currency": "USD"
+    },
+    "gpt-6.1-sol": {
+      "provider": "codex",
+      "input_per_mtok": 2.00,
+      "output_per_mtok": 10.00,
+      "cache_creation_per_mtok": 0.10,
+      "cache_read_per_mtok": 0.10,
+      "currency": "USD"
+    },
+    "gpt-6-sol": {
+      "provider": "codex",
+      "input_per_mtok": 2.00,
+      "output_per_mtok": 10.00,
+      "cache_creation_per_mtok": 0.20,
+      "cache_read_per_mtok": 0.20,
+      "currency": "USD"
+    },
+    "gpt-6-luna": {
+      "provider": "codex",
+      "input_per_mtok": 0.10,
+      "output_per_mtok": 0.50,
+      "cache_creation_per_mtok": 0.01,
+      "cache_read_per_mtok": 0.01,
+      "currency": "USD"
+    },
+    "gpt-5.6-sol": {
+      "provider": "codex",
+      "input_per_mtok": 4.00,
+      "output_per_mtok": 20.00,
+      "cache_creation_per_mtok": 0.40,
+      "cache_read_per_mtok": 0.40,
+      "currency": "USD"
+    },
+    "gpt-5.6": {
+      "provider": "codex",
+      "input_per_mtok": 4.00,
+      "output_per_mtok": 20.00,
+      "cache_creation_per_mtok": 0.40,
+      "cache_read_per_mtok": 0.40,
+      "currency": "USD"
+    },
+    "gpt-5.6-terra": {
+      "provider": "codex",
+      "input_per_mtok": 2.00,
+      "output_per_mtok": 12.00,
+      "cache_creation_per_mtok": 0.20,
+      "cache_read_per_mtok": 0.20,
+      "currency": "USD"
+    },
+    "gpt-5.6-luna": {
+      "provider": "codex",
+      "input_per_mtok": 0.20,
+      "output_per_mtok": 1.20,
+      "cache_creation_per_mtok": 0.02,
+      "cache_read_per_mtok": 0.02,
+      "currency": "USD"
+    },
+    "gpt-5.5": {
+      "provider": "codex",
+      "input_per_mtok": 5.00,
+      "output_per_mtok": 30.00,
+      "cache_creation_per_mtok": 0.50,
+      "cache_read_per_mtok": 0.50,
+      "currency": "USD"
+    },
+    "gpt-5.4": {
+      "provider": "codex",
+      "input_per_mtok": 2.50,
+      "output_per_mtok": 15.00,
+      "cache_creation_per_mtok": 0.25,
+      "cache_read_per_mtok": 0.25,
+      "currency": "USD"
+    },
+    "gpt-5.4-mini": {
+      "provider": "codex",
+      "input_per_mtok": 0.75,
+      "output_per_mtok": 4.50,
+      "cache_creation_per_mtok": 0.075,
+      "cache_read_per_mtok": 0.075,
+      "currency": "USD"
+    },
+    "gpt-5.4-nano": {
+      "provider": "codex",
+      "input_per_mtok": 0.20,
+      "output_per_mtok": 1.25,
+      "cache_creation_per_mtok": 0.02,
+      "cache_read_per_mtok": 0.02,
+      "currency": "USD"
+    },
+    "gpt-5.3-codex": {
+      "provider": "codex",
+      "input_per_mtok": 1.75,
+      "output_per_mtok": 14.00,
+      "cache_creation_per_mtok": 0.175,
+      "cache_read_per_mtok": 0.175,
+      "currency": "USD"
+    },
+    "gpt-5.2": {
+      "provider": "codex",
+      "input_per_mtok": 1.75,
+      "output_per_mtok": 14.00,
+      "cache_creation_per_mtok": 0.175,
+      "cache_read_per_mtok": 0.175,
+      "currency": "USD"
+    },
+    "gpt-5.1": {
+      "provider": "codex",
+      "input_per_mtok": 1.25,
+      "output_per_mtok": 10.00,
+      "cache_creation_per_mtok": 0.125,
+      "cache_read_per_mtok": 0.125,
+      "currency": "USD"
+    },
+    "gpt-5": {
+      "provider": "codex",
+      "input_per_mtok": 1.25,
+      "output_per_mtok": 10.00,
+      "cache_creation_per_mtok": 0.125,
+      "cache_read_per_mtok": 0.125,
+      "currency": "USD"
+    },
+    "gpt-5-mini": {
+      "provider": "codex",
+      "input_per_mtok": 0.25,
+      "output_per_mtok": 2.00,
+      "cache_creation_per_mtok": 0.025,
+      "cache_read_per_mtok": 0.025,
+      "currency": "USD"
+    },
+    "gpt-5-nano": {
+      "provider": "codex",
+      "input_per_mtok": 0.05,
+      "output_per_mtok": 0.40,
+      "cache_creation_per_mtok": 0.005,
+      "cache_read_per_mtok": 0.005,
+      "currency": "USD"
+    }
+  },
+  "fallback": {
+    "claude": {
+      "input_per_mtok": 3.00,
+      "output_per_mtok": 15.00,
+      "cache_write_5m_per_mtok": 3.75,
+      "cache_write_1h_per_mtok": 6.00,
+      "cache_read_per_mtok": 0.30,
+      "currency": "USD"
+    },
+    "codex": {
+      "input_per_mtok": 2.50,
+      "output_per_mtok": 15.00,
+      "cache_creation_per_mtok": 0.25,
+      "cache_read_per_mtok": 0.25,
+      "currency": "USD"
+    }
+  }
+}

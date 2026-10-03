@@ -1,0 +1,30 @@
+{
+  "five_hour": { "utilization": 13.0, "resets_at": "2026-07-16T23:00:00Z" },
+  "seven_day": { "utilization": 17.0, "resets_at": "2026-07-20T00:00:00Z" },
+  "extra_usage": {
+    "is_enabled": true,
+    "monthly_limit": 2000,
+    "used_credits": 3.25,
+    "utilization": null,
+    "currency": "USD",
+    "decimal_places": null,
+    "disabled_reason": null,
+    "daily": null,
+    "weekly": null
+  },
+  "spend": {
+    "used": { "amount_minor": 0, "currency": "USD", "exponent": 2 },
+    "limit": null,
+    "percent": 0,
+    "severity": "normal",
+    "enabled": false,
+    "disabled_reason": null,
+    "cap": null,
+    "balance": null,
+    "auto_reload": null,
+    "disclaimer": "Usage credits cover you when you hit your plan limits. [Learn more](https://example.invalid)",
+    "can_purchase_credits": false,
+    "can_toggle": false
+  },
+  "member_dashboard_available": false
+}

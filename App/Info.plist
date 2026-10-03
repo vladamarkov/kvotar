@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Kvotar</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>KvotarChannel</key>
+	<string>$(KVOTAR_CHANNEL)</string>
+	<!-- Sparkle (REV-83 / D-105a-b, STEP_152). The feed URL is baked into every shipped
+	     binary and never changes. Checks daily, prompts to install, never installs by itself.
+	     SUPublicEDKey is the public half of the EdDSA key generated in STEP_153 (Keychain account
+	     `kvotar`, backup + rotation rule in planning/KVOTAR_RELEASE_SETUP.md §7); sign_and_notarize.sh
+	     refuses a bundle whose key differs from the Keychain's. SUEnableSystemProfiling is deliberately absent. -->
+	<key>SUFeedURL</key>
+	<string>https://updates.kvotar.com/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>urqTnYAev4n5H9Upw76QivSGECl9d+moOIcTEmbOjaE=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+</dict>
+</plist>

@@ -1,0 +1,17 @@
+{
+  "account": {
+    "uuid": "00000000-0000-0000-0000-000000000020",
+    "email": "team@example.com",
+    "display_name": "Team Tester",
+    "full_name": "Team Tester",
+    "has_claude_pro": false,
+    "has_claude_max": false
+  },
+  "organization": {
+    "uuid": "00000000-0000-0000-0000-000000000021",
+    "name": "Example Team",
+    "organization_type": "claude_team",
+    "billing_type": "stripe_subscription",
+    "rate_limit_tier": "default_raven"
+  }
+}

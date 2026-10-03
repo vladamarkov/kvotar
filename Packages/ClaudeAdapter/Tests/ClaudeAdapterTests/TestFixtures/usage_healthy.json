@@ -1,0 +1,27 @@
+{
+  "five_hour": {
+    "resets_at": "2026-06-15T21:00:00Z",
+    "utilization": 12.0
+  },
+  "seven_day": {
+    "resets_at": "2026-06-20T00:00:00Z",
+    "utilization": 8.0
+  },
+  "seven_day_oauth_apps": null,
+  "seven_day_opus": null,
+  "seven_day_sonnet": null,
+  "seven_day_cowork": null,
+  "seven_day_omelette": null,
+  "extra_usage": {
+    "is_enabled": false,
+    "monthly_limit": null,
+    "used_credits": null,
+    "utilization": null,
+    "currency": null,
+    "disabled_reason": null
+  },
+  "cinder_cove": null,
+  "iguana_necktie": null,
+  "omelette_promotional": null,
+  "tangelo": null
+}

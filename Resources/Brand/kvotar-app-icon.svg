@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Kvotar app icon">
+  <rect x="48" y="48" width="928" height="928" rx="208" fill="#F5F2EA"/>
+  <g transform="translate(132 132) scale(7.6)">
+    <path d="M31.19 80.11A35.5 35.5 0 1 1 85.5 50" fill="none" stroke="#25282D" stroke-width="6" stroke-linecap="round"/>
+    <path d="M84.59 57.99A35.5 35.5 0 0 1 69.85 79.43" fill="none" stroke="#789681" stroke-width="6" stroke-linecap="round"/>
+    <path d="M40 32V68" fill="none" stroke="#25282D" stroke-width="6" stroke-linecap="round"/>
+    <path d="M44 50L63 33M44 50L63 67" fill="none" stroke="#25282D" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
