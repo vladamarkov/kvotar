@@ -38,8 +38,8 @@ What this page does **not** own:
 
 | Topic | Page |
 |---|---|
-| How Claude's usage endpoint fields become a reading, including model-scoped weekly limits | `claude-account.md` (pending) |
-| How Codex app-server and `wham/usage` fields become a reading, including the placeholder-reset rule | `codex-account.md` (pending) |
+| How Claude's usage endpoint fields become a reading, including model-scoped weekly limits | [Claude account](claude-account.md) |
+| How Codex app-server and `wham/usage` fields become a reading, including the placeholder-reset rule | [Codex account](codex-account.md) |
 | States, priority, severity, hard blocks, long-limit tiers, hysteresis, triggers | [state.md](state.md) |
 | Percent left as shown, colours, placeholders, the amber age stamp, all wording except window names (owned here) | [display-semantics.md](display-semantics.md) |
 | Poll cadence, floors, refusals, holds, extra polls near a reset | [polling.md](polling.md) |
@@ -128,7 +128,7 @@ Four shapes, each with a different meaning. Keep them apart.
 | Null window | used `nil` | The provider sent no window. Normal for an idle Codex account and for a Claude seat whose only limit is monthly. Not an error. | `QuotaSnapshot.isNullWindow` (both slots), `primaryUsedPct == nil` |
 | Not started | used `0`, reset `nil`, width known | The window exists but has not begun. Utilization is real (0 %); the deadline does not exist yet. | `QuotaSnapshot.primaryWindowIsUnanchored` |
 | Expired | reset more than 60 s in the past | The window is over; its spend is forgiven. | `QuotaSnapshot.degradingExpiredWindows` |
-| Reset unreadable | used known, reset `nil`, not 0 % | A real window that cannot be dated. Keeps its utilization. Not "not started". | `claude-account.md` (pending) |
+| Reset unreadable | used known, reset `nil`, not 0 % | A real window that cannot be dated. Keeps its utilization. Not "not started". | [Claude account](claude-account.md#the-five-hour-window-four-shapes) |
 
 `nullWindowSource` records, for diagnostics only, whether a null primary came from the provider or
 from Kvotar's own normalization. Nothing branches on it. (`AccountAdapter.swift`: `NullWindowSource`)
@@ -136,8 +136,9 @@ from Kvotar's own normalization. Nothing branches on it. (`AccountAdapter.swift`
 ### Not started
 
 Both adapters produce the same shape; how is provider-specific. Claude sends it almost directly
-(`claude-account.md`, pending). Codex never says "not started" and answers with a sliding
-placeholder reset, which its adapter recognises and drops (`codex-account.md`, pending;
+([Claude account](claude-account.md#the-five-hour-window-four-shapes)). Codex never says "not
+started" and answers with a sliding placeholder reset, which its adapter recognises and drops
+([Codex account](codex-account.md#the-placeholder-reset);
 `Packages/CodexAdapter/Sources/CodexAdapter/CodexAccountAdapter.swift`: `isUnanchoredWindow`).
 A model-allowance window uses the same shape test. (`DisplayFormatter+LimitSelection.swift`: the
 `unanchored` test in `selectLimit`)
@@ -199,7 +200,7 @@ expired only once `now` is more than 60 s past its reset. The episode and long-l
 (`BlockEpisode`, `LongLimitAssessment`, the weekly ladder, the menu-bar reminder) compare resets
 through `QuotaSnapshot.isSameResetInstant`, never by string. (`QuotaSnapshot.resetJitterTolerance`,
 aliased by `StateEngine.resetJitterTolerance`; other copies are listed under Known gaps. The Claude
-adapter also holds a wobbling reset steady: `claude-account.md`, pending.)
+adapter also holds a wobbling reset steady: [Claude account](claude-account.md#reset-de-jitter).)
 
 **The state engine tracks one anchor per tool: the primary window's.** It remembers the last live
 reset and reports exactly one of three outcomes:
@@ -308,6 +309,6 @@ Claude prepaid wallet from its own fetch time. Neither changes the quota reading
 | Five-hour fallbacks outside `primaryWindowLength` | Separate fallbacks for a missing width: `NotificationEngine.fallbackWindowLength`, `OffMachineEstimator.fallbackWindowSeconds`, `ForecastEngine` (`item.windowSeconds ?? 18_000`), `ShadowTablesReader`, `DeltaLine`, `DisplayFormatter+Anatomy`, `SQLiteStore.lastActiveWindow` (a fixed `-18_000`, read today only for the Claude idle recap). Each would also apply to a Codex reading with no width. (`AttributionEngine.fallbackWindowSeconds` is a span floor, not a width, and is not in this list) | Read `primaryWindowLength` (or the stored width) everywhere; give Codex no window start when its width is missing. Low risk: no Codex payload without a width has been seen |
 | Copies of the 60 s tolerance | `QuotaSnapshot.resetJitterTolerance` is the rule, aliased only by `StateEngine`. Own `60` constants: `ClaudeAccountAdapter.resetJitterTolerance`, `ForecastEngine.resetJitterTolerance`, `MonthlySpendRate.resetJitterTolerance`, `OffMachineEstimator.resetJitterToleranceUnix`, `MonthlyAttributionEstimator.resetJitterToleranceUnix`, `DeltaLine.resetJitterTolerance`, `QuotaWindowOutcomes.anchorJitterTolerance`, `NotificationEngine.minResetAdvanceForRollover` | Alias each to `QuotaSnapshot.resetJitterTolerance` |
 | Stale "2 minutes" amber comments | Private Baseline §9.3 says the stamp turns amber after 2 minutes; the code uses 240 s. Comments in `DisplayFormatter.sourceTag` and `PopoverDisplay.swift` still say 2 minutes | This page and display-semantics.md win; fix the comments with the next change to those files |
-| Stale code comments about windows | `QuotaSnapshot` doc says Claude always fills both windows (it can send no `five_hour`, or a not-started one). `AdditionalRateLimit` and a `selectLimit` comment say Claude's scoped limits carry no width; the Claude adapter sets seven days, so a 0 %, reset-less scoped limit would read not started. A `StateEngine.classify` comment says the null-window rank catches a not-started window; it classifies Healthy (used 0) | Fix the comments with the next change to each file; settle on `claude-account.md` whether a scoped limit can be not started |
+| Stale code comments about windows | `QuotaSnapshot` doc says Claude always fills both windows (it can send no `five_hour`, or a not-started one). `AdditionalRateLimit` and a `selectLimit` comment say Claude's scoped limits carry no width; the Claude adapter sets seven days, so a 0 %, reset-less scoped limit would read not started. A `StateEngine.classify` comment says the null-window rank catches a not-started window; it classifies Healthy (used 0) | Fix the comments with the next change to each file; settle on [Claude account](claude-account.md#questions-for-owner) whether a scoped limit can be not started |
 
-Checked against the code at 14dd256 + STEP_247.
+Checked against the code at 890e5f2 + STEP_255.

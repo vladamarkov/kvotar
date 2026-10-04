@@ -34,9 +34,9 @@ rules for which table a 429 goes to. Change this page in the same commit as the 
 
 Why the cadence and the 429 rules are what they are is recorded in
 [decision 0003](../decisions/0003-polling-and-rate-limits.md). Why Kvotar never refreshes a token
-is [decision 0001](../decisions/0001-never-refresh-a-token.md). How the credential is read will be
-the pending `credentials.md` page; the provider endpoints, response shapes and request timeouts
-will be the pending `claude-account.md` and `codex-account.md` pages. What a reading means and when
+is [decision 0001](../decisions/0001-never-refresh-a-token.md). How the credential is read is in
+[credentials](credentials.md); the provider endpoints, response shapes and request timeouts are in
+[Claude account](claude-account.md) and [Codex account](codex-account.md). What a reading means and when
 it is stale is [quota readings](quota-readings.md); which state a tool is in is
 [state](state.md); what the user sees is [display semantics](display-semantics.md).
 
@@ -234,7 +234,8 @@ A prepaid failure never fails the quota poll. (`testPrepaidFailureDoesNotBlockQu
 ## When the Claude credential has lapsed
 
 Kvotar **never refreshes** a token and never triggers anything that would (decision 0001). It only
-waits for Claude Code to refresh its own credential.
+waits for Claude Code to refresh its own credential. The check before a request is specified in
+[credentials — The Claude expiry gate](credentials.md#the-claude-expiry-gate).
 
 - **Before each poll** the credential is read fresh. If it is past its expiry, **no request is
   sent**; the poll ends as "credential expired". (`ClaudeAccountAdapter.fetchQuotaSnapshot`, the
@@ -254,7 +255,9 @@ waits for Claude Code to refresh its own credential.
   the call is retried once with it. Otherwise the poll fails as "re-auth required" and waits the
   base cadence. (`test401RotationSelfHeals`)
 
-Codex has no expiry gate; its credential handling is for the pending `codex-account.md` page.
+Codex has no expiry gate; its credential reading is in
+[credentials](credentials.md#where-each-credential-lives), and its poll failure handling is in
+[Codex account](codex-account.md#two-transports-one-reading).
 
 ## Recovery
 
@@ -341,4 +344,4 @@ Rejected after measurement or incidents; don't re-propose without new evidence.
 | `PATTERNS.md` says the poll role includes "proactive slowdown" | That rule was deleted; nothing slows down ahead of a refusal | Remove the words with the next PATTERNS.md edit |
 | Polling word in the "already running" copy | `AlreadyRunningView.Conflict.message` says "Only one app polls at a time" (AgentPilot lock) and "Only one instance polls at a time" (unreachable: a second Kvotar hands off and quits, `SecondInstanceAction.decide`). "polls" breaks the copy rule, and no copy test sweeps this view. The rule has no exceptions | A separate code step: reword the AgentPilot sentence (for example "Only one app can run at a time."), update `AlreadyRunningViewTests` and the private old-name audit pattern, delete the unreachable string, and add the view to a copy sweep |
 
-Checked against the code at 14dd256 + STEP_247.
+Checked against the code at 890e5f2 + STEP_255.
