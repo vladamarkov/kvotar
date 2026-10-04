@@ -53,6 +53,7 @@ topic page also applies.
 | [Storage](storage.md) | The local database, its tables by purpose, retention, migrations and the version pin, the settings table, the legacy AgentPilot import, the single-instance lock | `Packages/KvotarCore/Sources/KvotarCore/Storage`, `Packages/KvotarCore/Sources/KvotarCore/Lifecycle/RetentionScheduler.swift`, `Packages/KvotarCore/Sources/KvotarCore/Lifecycle/PIDLock.swift` |
 | [Claude account](claude-account.md) | What is sent with the Claude token, the endpoints and fields that become a reading, plans and account kinds, model-scoped weekly limits, prepaid and extra-usage decoding, the prepaid 401/403 latch | `Packages/ClaudeAdapter` (`ClaudeAccountAdapter`, `ClaudeResponses`) |
 | [Codex account](codex-account.md) | The app-server RPC and the `wham/usage` web fallback that become a reading, what is sent with the Codex token, the placeholder-reset rule, plan_type strings, binary discovery and the app-server launch flags | `Packages/CodexAdapter` (`CodexAccountAdapter`, `CodexRPCClient`, `CodexWhamHTTPClient`, responses), `Packages/KvotarCore/Sources/KvotarCore/Adapters/CodexBinaryCandidates.swift` |
+| [Menu actions](menu-actions.md) | The right-click menu and its `⋯` twin: items in order, their copy, when each shows or is greyed, the settings available today, the About panel, Quit | `App/MenuBarController.swift` (`contextMenu()`), `App/NotificationPermissionHint.swift` |
 
 ## Topics without a page yet
 
@@ -72,7 +73,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 | popover | Popover layout, rows and recommendations | Display semantics, State |
 | explanations | Hover cards and the verdict's anatomy | Display semantics |
 | history | The History window and weekly recap | Display semantics |
-| menu-actions | Right-click menu actions and settings | — |
 | app-lifecycle | Launch, second opening, hidden menu-bar item recovery | — |
 | cli | The `kvotar` command-line tool | Diagnostics |
 | updates-and-releases | Updates, packaging, source-to-release mapping | — |
