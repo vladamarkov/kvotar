@@ -116,9 +116,9 @@ commands belong to `cli.md` (pending) and [diagnostics](diagnostics.md#cli-comma
 |---|---|---|---|---|
 | Account quota | `poll_snapshots` | One account-quota poll, as normalized | 2 hours; the newest row per tool always stays; rolled up before deletion | [Quota readings](quota-readings.md) |
 | | `quota_series` | A slim copy of a poll whose [primary](quota-readings.md#the-vocabulary) window had a used percent and a reset, whatever its width (used %, reset, width, the secondary beside it, the last local activity) | Permanent | Quota readings; `local-usage.md` (pending) |
-| | `model_limit_series` | One window of one model allowance, from one poll | Permanent | `claude-account.md`, `codex-account.md` (pending) |
+| | `model_limit_series` | One window of one model allowance, from one poll | Permanent | [Claude account](claude-account.md), [Codex account](codex-account.md) |
 | | `history_rollups` | One tool-hour of `poll_snapshots`: min, max and last values | Permanent | `history.md` (pending) |
-| | `accounts` | One tool's account email (plain text) and plan | Permanent, overwritten in place | `claude-account.md`, `codex-account.md` (pending) |
+| | `accounts` | One tool's account email (plain text) and plan | Permanent, overwritten in place | [Claude account](claude-account.md), [Codex account](codex-account.md) |
 | | `discontinuity_events` | An instant something changed, for example a limit, the plan, credits, a window reset, early reset, withdrawal or width change, a monthly rollover | Permanent | [Quota readings](quota-readings.md#resets) |
 | Local usage | `local_sessions` | One Claude Code or Codex session: project folder, model, surface | Permanent | `local-usage.md` (pending) |
 | | `local_usage_events` | One request's token counts | Permanent | `local-usage.md` (pending) |
@@ -414,4 +414,4 @@ version), `SQLiteStoreTokenEventsTests` (`v19`), `SQLiteStoreQuotaLimitEventsTes
 `v13`), `LegacyDataMigratorTests`, `PIDLockTests`, `CredentialTreesUntouchedTests`; and
 `Packages/KvotarCLI/Tests/KvotarCLITests/CredentialTreesUntouchedTests.swift`.
 
-Checked against the code at 615292c + STEP_253
+Checked against the code at 04468d8 + STEP_256

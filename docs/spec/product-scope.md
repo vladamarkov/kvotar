@@ -40,7 +40,7 @@ What it does and what "local" means: [README.md](../../README.md). Scope going f
 
 It ships the menu bar and popover, notifications, the History window, the
 [first-run window](first-run-window.md), the right-click menu (which holds the settings available today; a separate Settings window is planned future work, Decided 1), the
-`kvotar` command-line tool and one local database (`storage.md`, pending).
+`kvotar` command-line tool and one local database ([storage](storage.md)).
 
 ## What Kvotar is not
 
@@ -64,8 +64,8 @@ database's `tool` columns. (`Packages/KvotarCore/Sources/KvotarCore/Tool.swift`)
 
 | Tool | Menu-bar prefix | Popover tab | Quota and its reading | Credential |
 |---|---|---|---|---|
-| Claude | `CL` | Claude | `claude-account.md` (pending) | `credentials.md` (pending) |
-| Codex | `CX` | Codex | `codex-account.md` (pending) | `credentials.md` (pending) |
+| Claude | `CL` | Claude | [Claude account](claude-account.md) | [credentials](credentials.md) |
+| Codex | `CX` | Codex | [Codex account](codex-account.md) | [credentials](credentials.md) |
 
 Each tool has its own [polls](polling.md) and [state](state.md). A tool that is
 [not detected](state.md#what-is-not-inferred-from-incomplete-evidence) shows a setup prompt
@@ -83,7 +83,7 @@ Accounts differ in shape: windows, monthly limits, credits. No window rule branc
 and Go ([state](state.md)).
 
 How each kind is recognized and labelled is on the account pages; a Claude Team seat's label is a
-Known gap on `claude-account.md` (pending). Monthly limits and credits: the
+Known gap on [Claude account](claude-account.md#known-gaps). Monthly limits and credits: the
 credits-and-monthly-limits page (pending).
 
 ## Terms a newcomer needs
@@ -126,10 +126,10 @@ intervention or blocking.
 - `Packages/KvotarCore/Sources/KvotarCore/Tool.swift`: `Tool`, `menuBarPrefix`, `tabLabel`. Test:
   `AppViewModelTests` (rendered `CL` / `CX` lines).
 - `Packages/KvotarCore/Sources/KvotarCore/ProductIdentity.swift`: `productName`, `tagline`,
-  `descriptionSentence` (file locations and the former name: `storage.md`, pending). Test:
+  `descriptionSentence` (file locations and the former name: [storage](storage.md)). Test:
   `ProductIdentityTests`.
 - `Packages/KvotarCore/Sources/KvotarCore/Adapters/AccountAdapter.swift`: `DetectionStatus.classify`.
   Test: `DetectionStatusTests`.
 - `Packages/KvotarCore/Sources/KvotarCore/Attribution/CodexSurface.swift`: the Codex surfaces.
 
-Checked against the code at 144a85c + STEP_254
+Checked against the code at 04468d8 + STEP_256

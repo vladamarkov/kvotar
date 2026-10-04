@@ -40,8 +40,8 @@ This page is the specification for reading credentials. It replaces the private 
 Baseline §8.0.1 (Credential source), the credential rows of §5.1 and §5.2 (credential posture,
 fallback auth, expired-token behaviour) and the Keychain-sharing row of §5.3, plus the private
 revision records on token rotation, the expiry gate and the "could not look" outcome. Baseline §7
-has no credential rule; its topics belong to the claude-account page (`claude-account.md`,
-pending) and the local-usage page (pending). Change this page in the same commit as the code.
+has no credential rule; its topics belong to the [Claude account](claude-account.md) page and the
+local-usage page (pending). Change this page in the same commit as the code.
 
 The safety rules are in [AGENTS.md](../../AGENTS.md#the-four-safety-rules), word for word; this
 page changes none of them. Their reasons are
@@ -51,7 +51,7 @@ page changes none of them. Their reasons are
 The user-facing explanation is [credentials and privacy](../credentials-and-privacy.md).
 
 Neighbours: cadence, holds and the new-token probe are [polling](polling.md); what is sent with
-each token is the claude-account page and the codex-account page (`codex-account.md`, pending);
+each token is the [Claude account](claude-account.md) and [Codex account](codex-account.md) pages;
 what the user sees is [display semantics](display-semantics.md).
 
 ## Terms used here
@@ -249,4 +249,4 @@ The rules are in [AGENTS.md](../../AGENTS.md#the-four-safety-rules). In this cod
   and `CredentialTreesUntouchedTests` (KvotarCore); `CredentialTreesUntouchedTests` (KvotarCLI).
 - Static checks: `scripts/check_rules.sh`, described in [safety checks](../safety-checks.md).
 
-Checked against the code at 02e8449 + STEP_249
+Checked against the code at 04468d8 + STEP_256
