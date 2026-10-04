@@ -51,6 +51,7 @@ topic page also applies.
 | [Product scope](product-scope.md) | What Kvotar is and is not, the two tools and the account kinds it covers, the terms every page assumes, and where to read next | `Packages/KvotarCore/Sources/KvotarCore/Tool.swift`, `Packages/KvotarCore/Sources/KvotarCore/ProductIdentity.swift`; README, VISION, ARCHITECTURE |
 | [Credentials](credentials.md) | Finding and reading the Claude and Codex credentials, the read-only posture, an expired, missing or unreadable credential, and what is never done | `KeychainTokenProvider`, `ClaudeTokenProvider` and `ClaudeCredential` in `Packages/ClaudeAdapter`; `CodexTokenProvider` and `CodexAuthFileReader` in `Packages/CodexAdapter`; the expiry gate in `ClaudeAccountAdapter`; `CredentialTreesUntouchedTests` |
 | [Storage](storage.md) | The local database, its tables by purpose, retention, migrations and the version pin, the settings table, the legacy AgentPilot import, the single-instance lock | `Packages/KvotarCore/Sources/KvotarCore/Storage`, `Packages/KvotarCore/Sources/KvotarCore/Lifecycle/RetentionScheduler.swift`, `Packages/KvotarCore/Sources/KvotarCore/Lifecycle/PIDLock.swift` |
+| [Claude account](claude-account.md) | What is sent with the Claude token, the endpoints and fields that become a reading, plans and account kinds, model-scoped weekly limits, prepaid and extra-usage decoding, the prepaid 401/403 latch | `Packages/ClaudeAdapter` (`ClaudeAccountAdapter`, `ClaudeResponses`) |
 
 ## Topics without a page yet
 
@@ -60,7 +61,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 
 | Planned page | Topic | Shared pages it builds on |
 |---|---|---|
-| claude-account | Claude quota and prepaid data, model-scoped weekly limits | Quota readings, Polling |
 | codex-account | Codex quota, the web fallback, Enterprise | Quota readings, Polling |
 | local-usage | Local session discovery, token use, attribution | Quota readings |
 | capacity-learning | Community limits and the personal observed ceiling | Quota readings |
