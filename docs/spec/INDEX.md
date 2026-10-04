@@ -62,6 +62,7 @@ topic page also applies.
 | [Credits and monthly limits](credits-and-monthly-limits.md) | Credits and monthly spend as a product: money states, the credits card, the Codex credits and spend section, the monthly layout, the monthly spend rate and forecast, the monthly attribution split, spend control, `runway_days` | `Packages/KvotarCore/Sources/KvotarCore/State/MoneyState.swift`, `Packages/KvotarCore/Sources/KvotarCore/Forecast/MonthlySpendRate.swift`, `MonthlyAttributionEstimator.swift`; the monthly and credits parts of `DisplayFormatter`; `CreditsCardSectionView`, `CreditsSpendSectionView` |
 | [Estimated value](estimated-value.md) | The bundled price list, model matching and the fallback, unpriced models, the estimated token value and its spans, why it is never called a cost | `Packages/KvotarCore/Sources/KvotarCore/Pricing`, `Resources/pricing.json`, `Packages/KvotarCore/Sources/KvotarCore/Storage/SQLiteStore+EstimatedValue.swift`, `SQLiteStore+UnpricedModels.swift` |
 | [Forecast](forecast.md) | Burn, runway and pace for five-hour and weekly windows: forecast tiers, the burn buffer, the blended rate, the pace clock and its grace, shadow outputs, `forecast_log`, cold start | `Packages/KvotarCore/Sources/KvotarCore/Forecast` (`ForecastEngine`, `Forecast`, `ShadowForecast`, `ShadowPolicy`, `ShadowTables`, `ForecastLogRecorder`), `QuotaSnapshot.paceExceeded`, `Packages/KvotarCore/Sources/KvotarCore/Storage/SQLiteStore+ForecastLog.swift` |
+| [Notifications](notifications.md) | Which notifications Kvotar sends and when each fires or is held back: both firing paths, arbitration, caps, block episodes, the weekly ladder, the low-allowance gate, launch behaviour, the groups inside the engine, permission requests and reads, delivery and Focus, withdrawal at reset, every title and body | `Packages/KvotarCore/Sources/KvotarCore/Notifications` (`NotificationEngine`, `NotificationTypes`, `WeeklyLadder`, `WindowFact`), `Packages/KvotarCore/Sources/KvotarCore/Storage/SQLiteStore+Notifications.swift`, `App/UserNotificationPresenter.swift`, `App/NotificationFixture.swift` |
 
 ## Topics without a page yet
 
@@ -71,7 +72,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 
 | Planned page | Topic | Shared pages it builds on |
 |---|---|---|
-| notifications | When notifications fire, the weekly ladder, delivery | State, Display semantics |
 | menu-bar | The menu-bar item and its modes | Display semantics, State |
 | popover | Popover layout, rows and recommendations | Display semantics, State |
 | explanations | Hover cards and the verdict's anatomy | Display semantics |
