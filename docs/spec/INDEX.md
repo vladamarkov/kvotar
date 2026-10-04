@@ -55,6 +55,7 @@ topic page also applies.
 | [Codex account](codex-account.md) | The app-server RPC and the `wham/usage` web fallback that become a reading, what is sent with the Codex token, the placeholder-reset rule, plan_type strings, binary discovery and the app-server launch flags | `Packages/CodexAdapter` (`CodexAccountAdapter`, `CodexRPCClient`, `CodexWhamHTTPClient`, responses), `Packages/KvotarCore/Sources/KvotarCore/Adapters/CodexBinaryCandidates.swift` |
 | [Menu actions](menu-actions.md) | The right-click menu and its `⋯` twin: items in order, their copy, when each shows or is greyed, the settings available today, the About panel, Quit | `App/MenuBarController.swift` (`contextMenu()`), `App/NotificationPermissionHint.swift` |
 | [App lifecycle](app-lifecycle.md) | Launch order, opened by the user or at login, opening Kvotar again while it runs, a second copy's hand-off, the AgentPilot conflict window, when the app window opens and closes, hidden menu-bar item detection and its notice, quit | `App/AppDelegate.swift`, `App/LaunchSource.swift`, `App/SecondInstanceAction.swift`, `App/HandoffInbox.swift`, `App/HiddenItemMonitor.swift`, `App/HiddenItemDetection.swift`, `App/QuotaSurfaceLifecycle.swift`, `App/QuotaSurfacePresenter.swift`, `App/QuotaWindowController.swift`, `AlreadyRunningView` |
+| [CLI](cli.md) | The `kvotar` command-line tool: commands and shared options, `status` text and JSON output, `doctor`, version, exit codes, building and installing, what it never does | `Packages/KvotarCLI`, `scripts/cli.sh` |
 
 ## Topics without a page yet
 
@@ -74,7 +75,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 | popover | Popover layout, rows and recommendations | Display semantics, State |
 | explanations | Hover cards and the verdict's anatomy | Display semantics |
 | history | The History window and weekly recap | Display semantics |
-| cli | The `kvotar` command-line tool | Diagnostics |
 | updates-and-releases | Updates, packaging, source-to-release mapping | — |
 
 ## Adding or changing a page
