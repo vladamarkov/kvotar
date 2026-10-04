@@ -116,7 +116,7 @@ off nothing. Reason: a window appearing by itself at every sign-in would interru
 and this silence is what the rest of the recovery design rests on. It does not silence the rest
 of the app: quota notifications still arrive, an already-onboarded install still makes its one
 notification-permission request when a tool is first detected, and the updater starts as on any
-launch (what it shows is `updates-and-releases.md`'s, pending). Among the windows and notices this
+launch (what it shows is [updates and releases](updates-and-releases.md)'s). Among the windows and notices this
 page owns, three can still appear after a login launch, each for its own reason:
 
 - the AgentPilot conflict window (below), because that state is unusable, not merely unread;
@@ -420,4 +420,4 @@ word in the conflict copy, and the unreachable "another Kvotar" string, are a
   `testAllThreeDarwinNamesAreDistinct` in
   `Packages/KvotarCore/Tests/KvotarCoreTests/DiagnosticsCaptureFlagTests.swift`; `PIDLockTests`.
 
-Checked against the code at aa428be + STEP_258
+Checked against the code at 595b1b9 + STEP_266

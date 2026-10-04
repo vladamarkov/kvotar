@@ -89,7 +89,7 @@ one hover away. (D-97)
 | "Since you last looked" line | Movement, named | `13% burned`, `2% returned` | `DeltaLine.deltaToken` |
 | History quota chart and window rows | Used; 100 % at the top | `Ended at 87% used` | `HistoryDisplay+Quota.swift` |
 | History critical observations | Left | `At risk · 3:34 pm` → `8% left` | `HistoryDisplay.observationRow` |
-| CLI `status`, human column | Left, bare number | `CL  Healthy      42%  resets in 1h52m · 12s ago` | `Packages/KvotarCLI/Sources/KvotarCLI/Status.swift` |
+| CLI `status`, human column | Left, bare number | `CL  Healthy       42%  resets in 1h52m · 12s ago` | `Packages/KvotarCLI/Sources/KvotarCLI/Status.swift` |
 | CLI `status --json` | Used, as `utilization_pct` | — | same; a machine contract, unchanged |
 
 The test to apply to a new percentage: **is it a gauge or an event?** A level the user reads as
@@ -338,4 +338,4 @@ window draws its menu-bar sample through the real `DisplayFormatter.menuBarRende
 | Dead builders | `DisplayFormatter.quotaRows`, `quotaRowLabel` and `windowAccountingRows` have no production caller; tests still pin `quotaRows` | Delete them and their tests with the next change to `DisplayFormatter` |
 | Older design records disagree | They describe a percentage on the tab, a menu-bar gauge, an overflow stripe past 100 %, green for idle and loading, and an amber stamp at 2 minutes | Code wins; nothing to change in code |
 
-Checked against the code at 14dd256 + STEP_247.
+Checked against the code at 595b1b9 + STEP_266.

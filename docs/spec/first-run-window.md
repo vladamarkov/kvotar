@@ -63,7 +63,7 @@ the system permission prompt its context.
 - **Closing the window with its close button** completes nothing: no key is written, so it opens
   again on the next launch that finds a tool.
 - **Open Kvotar** applies the launch-at-login checkbox, completes, then opens the active quota
-  surface: the popover, or the quota window when the menu-bar item is known to be hidden.
+  surface: the popover, or the app window when the menu-bar item is known to be hidden.
   (`openPopover` → `QuotaSurfacePresenter.present`)
 
 ## Chrome
@@ -193,4 +193,4 @@ the product's argument, so every sentence on this screen must be literally true.
 
 None.
 
-Checked against the code at 02b738e + STEP_242.
+Checked against the code at 595b1b9 + STEP_266.

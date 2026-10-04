@@ -25,7 +25,7 @@ A contributor changing how Kvotar estimates burn, runway or pace finds the forec
    reasons; rejected alternatives where they matter; **Known gaps** with a proposed fix per row;
    code and test pointers; last line `Checked against the code at <parent commit> + STEP_265`.
 2. Link, never restate, a rule another page owns.
-   - Owns window forecasts (five-hour and weekly): burn, runway, the pace clock and its 2 % grace, the blend, shadows, `forecast_log` and its grading inputs, cold start. **The blended rate went live in build 18; a re-grade is not due before 2026-10-15. Describe today's code; do not pre-empt the re-grade** (no claim about whether the blend will stay).
+   - Owns window forecasts (five-hour and weekly): burn, runway, the pace clock and its 2 % grace, the blend, shadows, `forecast_log` and its grading inputs, cold start. **Describe the current blend; leave its future grading and retention open.**
    - The long-limit tiers (`LongLimitAssessment`) stay on state.md; this page owns only the pace inputs they read. The monthly spend rate and the monthly forecast are `credits-and-monthly-limits.md`'s.
    - The verdict's words and layout are `popover.md` / `explanations.md` (pending); this page owns the numbers they are built from.
 3. `docs/spec/INDEX.md` lists the page under *Topic pages* with its code areas, and drops it from

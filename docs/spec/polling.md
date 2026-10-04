@@ -282,7 +282,7 @@ Two different 429s, never mixed:
 | Whose request | Kvotar's own quota request | The user's Claude Code or Codex session |
 | Seen in | The adapter's HTTP response | The tool's local session log |
 | Stored in | `poll_health_events` (90 days) | `quota_limit_events` |
-| Effect | The ladder and hold above; the reading freezes | Feeds the learned ceiling; no cadence change (it can trip the session-start poll) |
+| Effect | The ladder and hold above; the reading freezes | Recorded; nothing reads it today (see [capacity learning](capacity-learning.md#dormant-today)); no cadence change (it can trip the session-start poll) |
 | Says about the quota | Nothing | The user reached a limit |
 
 (`PollCoordinator.writePollHealthEvent`, `writeQuota429Events`; `SQLiteStore+PollHealth.swift`,
@@ -294,7 +294,7 @@ Two different 429s, never mixed:
   provider's "limit reached" fields); see [quota readings](quota-readings.md) and
   [state](state.md).
 - A quota 429 (a 429 or 529 line in the session log) is recorded only after at least one
-  successful poll this launch that carried a five-hour used percent, because the row needs it.
+  successful poll this launch that carried a used percent for the primary window, because the row needs it.
   (`writeQuota429Events`; `LocalDeltaSignal.quota429Observations`)
 - A run of other rejections from one endpoint (standing rejections) is a separate diagnostics
   record; see [diagnostics](diagnostics.md).
@@ -344,4 +344,4 @@ Rejected after measurement or incidents; don't re-propose without new evidence.
 | `PATTERNS.md` says the poll role includes "proactive slowdown" | That rule was deleted; nothing slows down ahead of a refusal | Remove the words with the next PATTERNS.md edit |
 | Polling word in the "already running" copy | `AlreadyRunningView.Conflict.message` says "Only one app polls at a time" (AgentPilot lock) and "Only one instance polls at a time" (unreachable: a second Kvotar hands off and quits, `SecondInstanceAction.decide`). "polls" breaks the copy rule, and no copy test sweeps this view. The rule has no exceptions | A separate code step: reword the AgentPilot sentence (for example "Only one app can run at a time."), update `AlreadyRunningViewTests` and the private old-name audit pattern, delete the unreachable string, and add the view to a copy sweep |
 
-Checked against the code at 890e5f2 + STEP_255.
+Checked against the code at 595b1b9 + STEP_266.

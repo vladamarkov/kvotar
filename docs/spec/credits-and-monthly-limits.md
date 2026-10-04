@@ -47,9 +47,9 @@ What this page does **not** own:
 | How the money glyph and the monthly slots are drawn in the menu bar | `menu-bar.md` (pending) |
 | Where the credits card, the Codex section and the monthly rows sit in the popover; verdict copy outside the monthly family | `popover.md` (pending) |
 | The spend-control and over-quota notifications, the long-limit notifications | `notifications.md` (pending) |
-| The five-hour forecast, burn tiers, the `fullRunway` tier | `forecast.md` (pending) |
-| Local activity, the 8-minute liveness gap, the monthly layout's local-day grain | `local-usage.md` (pending) |
-| Est. token value rows | `estimated-value.md` (pending) |
+| The five-hour forecast, burn tiers, the `fullRunway` tier | [Forecast](forecast.md) |
+| Local activity, the 8-minute liveness gap, the monthly layout's local-day grain | [Local usage](local-usage.md) |
+| Est. token value rows | [Estimated value](estimated-value.md) |
 | The CLI as a whole (it links here for `runway_days`) | [CLI](cli.md) |
 
 ## Terms used here
@@ -248,7 +248,7 @@ ruled to change: [Codex account Decided 1](codex-account.md#decided). (`codexCre
 | `Plan` | The plan's display name | Same |
 | `Credit balance` | `$X remaining`, or `unavailable` when missing (see below) | Not shown |
 | `Spend control` | `Reached` (red) / `Active · not reached`; absent when the provider sent no flag | `Limit reached · resets [date]` (red) / `Active · not reached`; absent without a flag |
-| `Est. token value · today`, `· 30-day` | When local value exists (`estimated-value.md`, pending) | Not shown |
+| `Est. token value · today`, `· 30-day` | When local value exists ([estimated value](estimated-value.md)) | Not shown |
 
 **The credits balance's meaning is unknown.** Captured payloads send `credits.balance` as the
 string `"0"`, beside `hasCredits: false` and `unlimited: false`. The decoder reads only a number,
@@ -440,7 +440,7 @@ by design.
   dipping meter from counting twice.
 - If priced local activity over the last 8 minutes is above zero, the rise is **this machine**;
   otherwise it is **elsewhere**. The 8 minutes match the local-liveness gap, so a long turn that
-  writes nothing until it ends is not read as idle (`local-usage.md`, pending).
+  writes nothing until it ends is not read as idle ([local usage](local-usage.md)).
 - **The residual** (`unattributedAmount`) is used minus the two buckets. It holds what was already on the
   meter when Kvotar started watching this cycle (an install mid-month, a long gap). It is never
   guessed into a bucket.
@@ -510,4 +510,4 @@ rows do not return (Decided 1). `offMachine` and `unattributed` are internal nam
 | CLI `runway_days` | `Packages/KvotarCLI/Sources/KvotarCLI/CLIFormat.swift`, `Status.swift` |
 | Tests | `MoneyStateTests`, `MonthlySpendRateTests`, `MonthlyAttributionEstimatorTests`, `MonthlyLimitTests`, `StateEngineTests` (`Packages/KvotarCore/Tests/KvotarCoreTests/`); `DisplayFormatterMonthlyTests`, `DisplayFormatterTests`, `LongLimitSurfaceAgreementTests`, `AccountLimitSelectionTests` (`Packages/KvotarUI/Tests/KvotarUITests/`) |
 
-Checked against the code at e0b0791 + STEP_263
+Checked against the code at 595b1b9 + STEP_266

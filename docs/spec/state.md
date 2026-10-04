@@ -30,9 +30,10 @@ same commit as the code it describes.
 
 What a reading, a window, a reset and staleness *mean* is in [quota readings](quota-readings.md).
 How a state is worded and coloured on screen is in [display semantics](display-semantics.md). When
-polls happen is in [polling](polling.md). Three pages that consume state are not written yet:
-`notifications.md` (what fires on a transition, the weekly ladder), `forecast.md` (burn, runway and
-the pace clock) and `credits-and-monthly-limits.md` (credits and the monthly pool's own layout).
+polls happen is in [polling](polling.md). Three pages consume state:
+`notifications.md` (pending: what fires on a transition, the weekly ladder), [forecast](forecast.md)
+(burn, runway and the pace clock) and [credits and monthly limits](credits-and-monthly-limits.md)
+(credits and the monthly pool's own layout).
 
 ## The states
 
@@ -74,13 +75,13 @@ five-hour red above a long-limit red, and a long-limit red above a five-hour amb
   stop you outranks a fast hour.
 - **Limit ahead of pace needs a populated primary window; Limit nearly spent does not.** With
   no primary window the account is on the monthly layout, which paints its own amber from the
-  monthly forecast (see `credits-and-monthly-limits.md`, pending). Two amber sources on one meter
+  monthly forecast (see [credits and monthly limits](credits-and-monthly-limits.md)). Two amber sources on one meter
   would disagree. That layout has no way to say *nearly spent*, so Limit nearly spent may pre-empt it.
   (`StateEngineTests.testMonthlyLayoutKeepsNullWindowAtAmberAndYieldsAtRed`)
 - **Elevated is pace-gated; At risk and Fast burn are not.** Against a weekly window "runway <
   time to reset" is almost always true, so without the pace clock 5 % used classified Elevated
   for about a fifth of an evening. At risk and Fast burn stay ungated so a late-window burst is still
-  caught. The pace clock and its 2 % grace live in `forecast.md` (pending);
+  caught. The pace clock and its 2 % grace live in [forecast](forecast.md);
   (`Adapters/AccountAdapter.swift`: `QuotaSnapshot.paceExceeded`).
 - **Over quota reads `≥ 100`, not `> 100`.** Claude's usage endpoint caps utilization at exactly
   100, so a strict test never fired. (`StateEngineTests.testOverQuotaAtExactly100`)
@@ -232,7 +233,7 @@ poll-failure evaluations can escalate but never count towards calming. (`StateEn
 
 The menu-bar money glyph uses the same escalate-now, demote-later rule with 2 polls; it is
 display-only and adds no state (`StateEngine.resolveGlyphHysteresis`;
-`credits-and-monthly-limits.md`).
+[credits and monthly limits](credits-and-monthly-limits.md)).
 
 ## When state is evaluated
 
@@ -312,4 +313,4 @@ timing, the long-limit states or Healthy, where the app's own launch restore sho
 | CLI comment claims restore parity | `StatusReader`'s comment says it returns exactly the app's restore state; it judges staleness by row age instead (see above) | Fix the comment; or pass `isStale: true` if the owner wants parity |
 | Limit nearly spent and staleness | A stale Limit nearly spent drops to Idle; no test covers it | Decided 1: keep it in the stale branch while its limit's reset is ahead, as for a block; keep the "as of" time; no second alert on recovery; add tests for both |
 
-Checked against the code at 14dd256 + STEP_247.
+Checked against the code at 595b1b9 + STEP_266.

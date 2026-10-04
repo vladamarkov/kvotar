@@ -35,7 +35,7 @@ What this page does **not** own:
 | Which state a reading puts the account in | [state.md](state.md) |
 | Wording and colour; the plan badge is neutral | [display-semantics.md](display-semantics.md) |
 | Plan display names (`DisplayFormatter.planDisplayName`) | `popover.md` (pending) |
-| Usage credits, monthly spend and spend control as a product | `credits-and-monthly-limits.md` (pending) |
+| Usage credits, monthly spend and spend control as a product | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | What Kvotar is and the account kinds in brief | [product scope](product-scope.md) |
 | Response capture for diagnostics | [diagnostics.md](diagnostics.md) |
 
@@ -231,7 +231,8 @@ then reads the profile again. (`fetchQuotaSnapshot`, the token-transition block;
 
 `ExtraUsage` holds both **self-serve credits** (Pro/Max, from `extra_usage`) and **organization
 credits** (Team, from `spend`, `managedByOrganization` true). `MonthlyLimit` holds an Enterprise
-seat's monthly spend. What the app does with them is the credits page's (pending).
+seat's monthly spend. What the app does with them is on
+[credits and monthly limits](credits-and-monthly-limits.md).
 
 ### Which source wins
 
@@ -379,4 +380,4 @@ Why, how often, and the tests for the gate: [polling.md](polling.md), "Claude's 
 | Tests | `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/ClaudeAccountAdapterTests.swift`, `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/NoRefreshNetworkSeamTests.swift` |
 | Fixtures | `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/TestFixtures/` |
 
-Checked against the code at 94a094f + STEP_251
+Checked against the code at 595b1b9 + STEP_266

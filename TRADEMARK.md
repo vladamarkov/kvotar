@@ -14,6 +14,10 @@ the official releases (Apache-2.0, section 6). The maintainer reserves those.
 - **If you distribute a fork**, use a distinct name, icon, menu-bar mark and bundle identifier, and do
   not imply that your fork is an official Kvotar release or made by the Kvotar maintainer. A distinct
   bundle identifier also keeps your fork from replacing or updating an installed Kvotar.
+- **A distributed fork also changes the update feed (`SUFeedURL`) and the public key that
+  checks its updates (`SUPublicEDKey`),** so its users get the fork's updates rather than
+  Kvotar's, **or removes the updater,** so the fork does not check Kvotar's update feed. See
+  [updates and releases](docs/spec/updates-and-releases.md).
 
 ## Name check
 

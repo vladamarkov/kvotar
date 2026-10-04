@@ -30,9 +30,9 @@ What this page does **not** own:
 | When and where a quota 429 is written, how it differs from Kvotar's own refused poll, and that it can trip the session-start poll | [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota) |
 | The `quota_limit_events` table's retention and the `v11` cleanup as a storage exception | [Storage](storage.md#permanent-means-permanent) |
 | What a window, a reading and used percent mean | [Quota readings](quota-readings.md#limits-and-windows) |
-| Finding and parsing session logs, the backfill, token counting | `local-usage.md` (pending) |
-| Pricing and the [Est. token value](product-scope.md#terms-a-newcomer-needs) the series is built from | `estimated-value.md` (pending) |
-| Burn, runway and pace (no ceiling enters them) | `forecast.md` (pending) |
+| Finding and parsing session logs, the backfill, token counting | [Local usage](local-usage.md) |
+| Pricing and the [Est. token value](product-scope.md#terms-a-newcomer-needs) the series is built from | [Estimated value](estimated-value.md) |
+| Burn, runway and pace (no ceiling enters them) | [Forecast](forecast.md) |
 | How the History window shows the series | `history.md` (pending) |
 | The notification for a window added, removed or resized | `notifications.md` (pending) |
 | The Codex plan string the table is keyed by | [Codex account](codex-account.md#plan-types) |
@@ -117,8 +117,8 @@ both, the raw line mentions a usage or rate limit, "limit reached", 429 or 529. 
 the raw line so the message is never decoded. A server overload or a non-quota limit therefore
 counts too. (`Quota429Observation.lineContainsQuotaLimitMarker`; the parsers' `detectQuota429`;
 tests `BurnTierTrackerTests.testQuotaLimitMarkerMatches`,
-`testQuotaLimitMarkerRejectsOrdinaryErrors`) How the parsers read the logs is `local-usage.md`'s
-(pending).
+`testQuotaLimitMarkerRejectsOrdinaryErrors`) How the parsers read the logs is
+[local usage](local-usage.md)'s.
 
 **The used percent comes from the last successful poll of this launch**, the primary window's.
 Reason: the log line carries no used percent. Without such a poll nothing is recorded, because a
@@ -247,11 +247,10 @@ own notification, which does not use this series (`notifications.md`, pending).
 | Gap | Today | Proposed fix |
 |---|---|---|
 | The ceiling is dormant | Seed, resolver and quota 429 rows are built and tested; nothing in the app reads them, and the rows keep being written | Deferred by the maintainer's ruling (2026-10-04). Later choose: keep as is (no work, rows keep piling up), wire it (only after a real quota 429 capture from each tool), or remove the adapter, seed and write path (table and rows stay) |
-| [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota) misdescribes the quota 429 row twice | The "Effect" row of its "Poll refusal vs Quota 429" table says a quota 429 "feeds the learned ceiling", a consumer that does not exist; the bullet below the table says the row needs a poll "that carried a five-hour used percent", but the code takes the primary window's used percent whatever its width | A follow-up step changes that cell to "Recorded; nothing reads it today (see [capacity learning](capacity-learning.md#dormant-today)); no cadence change (it can trip the session-start poll)", and in the bullet changes "a five-hour used percent" to "a used percent for the primary window" |
 | Every row is labelled five-hour | `writeQuota429Events` writes `five_hour` with the primary window's used percent, whatever that window is. On a Codex account whose primary is seven days or 30 days the label is wrong. The log line has no window | Before any wiring: store the primary's width (or name it by width, as [quota readings](quota-readings.md#limits-and-windows) does), or record nothing when the primary is not five hours |
 | The detector is unverified | Any rate-limit-shaped error line counts; a server overload is recorded as a limit | Capture a real quota 429 line from each tool, then narrow `lineContainsQuotaLimitMarker` with fixtures |
 | The table holds no observed value | Every entry is 100, yet a bundled hit is tagged `community`; the adapter doc calls the seed "community-observed values" | Settle with the deferred keep / wire / remove choice; if kept, fix the doc and tag |
-| Stale code comments | `LimitsDatabaseAdapter` type doc and `SQLiteStore+QuotaLimitEvents.swift` header say `ForecastEngine` feeds or reads the ceiling; `LimitsDatabaseAdapter` and `LimitsSeed` tie the remote stub to a release stage; `PATTERNS.md` says the adapter is "read by `ForecastEngine`"; the `LocalDeltaSignal.quota429Observations` doc says it "feeds" the table as if the table were used; `WorkPerPercentSeries` says "the notice that reads it is a later, gated step"; the `PollCoordinator.writeQuota429Events` doc calls the table "the self-learning ceiling's input"; a `SQLiteStoreQuotaLimitEventsTests` header comment names a reader "that feeds `resolveCeiling`". [Storage](storage.md#permanent-means-permanent)'s `v11` row reads as if the learned ceiling were live | Fix with the next change to each file; `PATTERNS.md` with its next edit; the storage row in the same follow-up as the polling correction |
+| Stale code comments | `LimitsDatabaseAdapter` type doc and `SQLiteStore+QuotaLimitEvents.swift` header say `ForecastEngine` feeds or reads the ceiling; `LimitsDatabaseAdapter` and `LimitsSeed` tie the remote stub to a release stage; `PATTERNS.md` says the adapter is "read by `ForecastEngine`"; the `LocalDeltaSignal.quota429Observations` doc says it "feeds" the table as if the table were used; `WorkPerPercentSeries` says "the notice that reads it is a later, gated step"; the `PollCoordinator.writeQuota429Events` doc calls the table "the self-learning ceiling's input"; a `SQLiteStoreQuotaLimitEventsTests` header comment names a reader "that feeds `resolveCeiling`". | Fix with the next change to each file; `PATTERNS.md` with its next edit |
 
 ## Code and tests
 
@@ -272,4 +271,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `LimitsDatabaseAdapterTes
 `CodexLocalAdapterWatcherTests` (`testQuota429ObservationEmittedFromTokenlessFlush`) and
 `ClaudeLocalAdapterBackfillTests`.
 
-Checked against the code at c824a6e + STEP_262
+Checked against the code at 595b1b9 + STEP_266

@@ -84,7 +84,7 @@ and Go ([state](state.md)).
 
 How each kind is recognized and labelled is on the account pages; a Claude Team seat's label is a
 Known gap on [Claude account](claude-account.md#known-gaps). Monthly limits and credits: the
-credits-and-monthly-limits page (pending).
+[credits and monthly limits](credits-and-monthly-limits.md) page.
 
 ## Terms a newcomer needs
 
@@ -98,9 +98,9 @@ percent left in [display semantics](display-semantics.md); poll, refusal and hol
 | **Tool** | Claude or Codex: one of the two `Tool` cases |
 | **Account** | The one subscription a tool is signed in to now. Kvotar has no account of its own |
 | **Surface** | A local app that spends a tool's quota on this Mac. Claude has one, Claude Code. Codex has `Desktop`, `CLI` and `IDE extension`; an unmapped one is `Unknown`. (`CodexSurface.bucket`; `SurfaceWorkSplit.claudeMainAgent`) |
-| **Local activity** | Token use read from a tool's own session logs on this Mac (with Codex's local metadata), never the text. Owned by `local-usage.md` (pending) |
+| **Local activity** | Token use read from a tool's own session logs on this Mac (with Codex's local metadata). Kvotar does not decode or store message, prompt, or code content; it scans raw error-flagged lines for quota markers. Owned by [local usage](local-usage.md) |
 | **Elsewhere** | Quota use no local activity on this Mac explains: Claude Desktop chat (no session log), the web, a phone, another computer. Estimated, not measured. The popover header says `Not seen locally`; identifiers say `offMachine` |
-| **Est. token value** | What local tokens would cost at published API prices. An estimate, never "cost" (`estimated-value.md`, pending) |
+| **Est. token value** | What local tokens would cost at published API prices. An estimate, never "cost" ([estimated value](estimated-value.md)) |
 
 The naming rules for code and copy are in [PATTERNS.md — Naming
 conventions](../../PATTERNS.md#naming-conventions-baseline-4). Window names belong to
@@ -132,4 +132,4 @@ intervention or blocking.
   Test: `DetectionStatusTests`.
 - `Packages/KvotarCore/Sources/KvotarCore/Attribution/CodexSurface.swift`: the Codex surfaces.
 
-Checked against the code at 04468d8 + STEP_256
+Checked against the code at 595b1b9 + STEP_266

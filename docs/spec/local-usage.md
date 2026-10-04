@@ -32,12 +32,12 @@ What this page does **not** own:
 | The Off-machine burn and Multi-surface states, the idle gap they use, and the `jsonl_delta` trigger | [State](state.md#when-state-is-evaluated) |
 | The session-start and turn-end polls a local change can cause | [Polling](polling.md#extra-polls) |
 | When a quota-limit line becomes a `quota_limit_events` row | [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota) |
-| What a `quota_limit_events` row is for | `capacity-learning.md` (pending) |
+| What a `quota_limit_events` row is for | [Capacity learning](capacity-learning.md) |
 | What the `usage_limited` goal signal does to a Codex reading | [Codex account](codex-account.md#from-payload-to-reading) |
 | The local tables' retention and the `settings` table | [Storage](storage.md#tables-by-purpose) |
 | `parse_anomalies` rows (an undecodable log line) | [Diagnostics](diagnostics.md#where-it-is-stored-and-for-how-long) |
-| Prices and the estimated token value | `estimated-value.md` (pending) |
-| The monthly `This machine` / `Elsewhere` / `Not observed` split of spend | `credits-and-monthly-limits.md` (pending) |
+| Prices and the estimated token value | [Estimated value](estimated-value.md) |
+| The monthly `This machine` / `Elsewhere` / `Not observed` split of spend | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | Where the local figures sit in the popover, and their hover text | `popover.md`, `explanations.md` (pending) |
 | The never-store and never-write rules | [AGENTS.md](../../AGENTS.md#the-four-safety-rules) |
 
@@ -279,7 +279,7 @@ Kvotar's own refused poll ([polling](polling.md#a-refused-poll-is-not-an-exhaust
 - **Live path only**, never the backfill.
 - Observations ride on the meaningful-change signal (a flush with no requests still carries them).
   Whether one becomes a row is [polling](polling.md#a-refused-poll-is-not-an-exhausted-quota)'s
-  rule; what the row is for is `capacity-learning.md` (pending).
+  rule; what the row is for is [capacity learning](capacity-learning.md).
 
 ## Counting tokens
 
@@ -304,7 +304,7 @@ reasoning output is part of its output. Every count follows from that.
   `AttributionEngineTests.testCodexCacheHitIsIdenticalAcrossBothStorageConventions`,
   `testCodexCacheHitNilWhenNoCachedTokens`)
 - **Claude's 1-hour cache-write share** is a part of the cache write, never added to a count. Only
-  the estimated value reads it (`estimated-value.md`, pending). (test
+  the estimated value reads it ([estimated value](estimated-value.md)). (test
   `testTierSplitLeavesTheDisplayedTokenColumnsUntouched`)
 - **The recent rate is per minute over the last 2 minutes**, by each request's own time, so a
   late-read backlog does not look like a burst. (`AttributionEngine.tokensPerMinute`; test
@@ -425,7 +425,7 @@ estimated value in the last 30 days and no surface split.
 | Current session | The session seen most recently since the span start: project, model, bucket |
 | Session count | Sessions last seen since the span start (a session that began earlier counts) |
 | Surface split | Displayed tokens per bucket since the span start, with each bucket's newest request time |
-| Model totals, cache hit, span value | Per-model sums since the span start; the value is `estimated-value.md`'s |
+| Model totals, cache hit, span value | Per-model sums since the span start; the value is [estimated value](estimated-value.md)'s |
 
 **The span start**, in order (`PollCoordinator.pollOnceInner`, `handleLocalDelta`, `localDayGrain`):
 
@@ -504,7 +504,7 @@ Rules with reasons:
 
 The Off-machine burn *state* is [state](state.md#the-states)'s; the turn-end poll that gives the walk
 clean intervals is [polling](polling.md#extra-polls)'s; the monthly split is
-`credits-and-monthly-limits.md`'s (pending).
+[credits and monthly limits](credits-and-monthly-limits.md)'s.
 
 ## Today's local report
 
@@ -553,7 +553,7 @@ What the section's figures mean (`DisplayFormatter.localActivitySection`; tests
 - The recent rate shows only while the figures it came from are under 2 minutes old; otherwise `—`.
 - The source tag dates the newest request today: how fresh the evidence is, not whether the read
   worked.
-- The value rows are `estimated-value.md`'s (pending).
+- The value rows are [estimated value](estimated-value.md)'s.
 
 ## The one-time repairs
 
@@ -623,7 +623,6 @@ From the private records; reopening any needs the maintainer's approval.
 | No app-level test for the watermark and repair order | `runBackfill`, the repair order and their keys in `PollCoordinator` are untested; the parts below them are tested | A test with an injected store and adapters |
 | `session_summaries` has no reader | Written by the retention job, read nowhere in the app | Keep (permanent, small); give it a reader or retire the writer in a storage step |
 | Stale code comments | Both local adapters: "a future consumer persists the stream"; `CodexLocalAdapter`: "Codex has no subagent concept"; `CodexJSONLParser`: refers to a `parseTokenLine` that does not exist | Fix with the next change to each file |
-| Product scope says "never the text" | [Product scope](product-scope.md#terms-a-newcomer-needs) says local activity is read "never the text"; error-flagged lines are scanned as raw text for quota markers | Reword with the next product-scope edit: content is never decoded or stored |
 
 ## Code and tests
 
@@ -658,4 +657,4 @@ Tests:
   `CodexSQLiteMetadataReaderTests`, `NoContentStoredTests`.
 - `Packages/KvotarUI/Tests/KvotarUITests/`: `DisplayFormatterLocalActivityTests`.
 
-Checked against the code at ead54c0 + STEP_261
+Checked against the code at 595b1b9 + STEP_266

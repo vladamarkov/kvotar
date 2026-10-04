@@ -31,10 +31,10 @@ item, the **Open at Login** item, and the copy of the Notify me permission hints
 | The four notification switches: their events, defaults and settings keys | [First-run window, screen 4](first-run-window.md#screen-4--when-should-kvotar-interrupt-you-onboardingnotificationsscreen) |
 | When notifications fire, and the permission request itself | `notifications.md` (pending) |
 | The first-run window that **Welcome to Kvotar…** reopens | [First-run window](first-run-window.md#when-it-opens) |
-| The app window, which surface opens, and what quitting tears down | `app-lifecycle.md` (pending) |
+| The app window, which surface opens, and what quitting tears down | [App lifecycle](app-lifecycle.md) |
 | The History window | `history.md` (pending) |
 | **Save Diagnostics…** and extended diagnostics | [Diagnostics](diagnostics.md) |
-| What an update check does, and the automatic-check schedule | `updates-and-releases.md` (pending) |
+| What an update check does, and the automatic-check schedule | [Updates and releases](updates-and-releases.md) |
 | The per-tool setup card (`FirstRunCardView`) that **Set up …** opens | `popover.md` (pending) |
 
 Every string in the menu follows [the copy rule](display-semantics.md#the-copy-rule-no-polling-words):
@@ -58,7 +58,7 @@ no polling words.
   [Notify me](#notify-me-and-its-permission-hints) for when that read lands.
 - **Why a second door exists:** macOS can hide the status item when the menu bar is full, and this
   menu is the only place to change a setting. When and how the app window
-  opens is `app-lifecycle.md` (pending).
+  opens is [app lifecycle](app-lifecycle.md).
 
 ## The menu, top to bottom
 
@@ -73,19 +73,19 @@ Separators are where the table shows them. "Greyed" means shown but not clickabl
 | 3 | **Open at Login** | Always | Never | `onToggleLaunchAtLogin` | This page |
 | 4 | **Notify me** ▸ (or **Notify me — off in System Settings** ▸) | Always | See [below](#notify-me-and-its-permission-hints) | `onToggleNotificationGroup`, `onOpenNotificationSettings` | [First-run window](first-run-window.md#screen-4--when-should-kvotar-interrupt-you-onboardingnotificationsscreen); `notifications.md` (pending) |
 | | — separator — | | | | |
-| 5 | **Set up Claude Code…** / **Set up Codex…** | Only while that tool is not detected | Never | `onPresent(.setup(tool))` | `popover.md`, `app-lifecycle.md` (pending) |
+| 5 | **Set up Claude Code…** / **Set up Codex…** | Only while that tool is not detected | Never | `onPresent(.setup(tool))` | `popover.md` (pending), [app lifecycle](app-lifecycle.md) |
 | | — separator — (only when item 5 is shown) | | | | |
 | 6 | **Welcome to Kvotar…** | Always | Never | `onOpenWelcome` | [First-run window](first-run-window.md#when-it-opens) |
 | | — separator — | | | | |
-| 7 | **Open in Window** | Always | Never | `onOpenQuotaWindow` | `app-lifecycle.md` (pending) |
+| 7 | **Open in Window** | Always | Never | `onOpenQuotaWindow` | [App lifecycle](app-lifecycle.md) |
 | 8 | **History…** | Always | Never | `onOpenHistory` | `history.md` (pending) |
 | 9 | **Save Diagnostics…** | Always, in every build channel | Never | `onSaveDiagnostics` | [Diagnostics](diagnostics.md#save-diagnostics) |
 | 10 | **Enable Extended Diagnostics for 24 Hours…** / **Turn Off Extended Diagnostics…** | Always | Never | `onConfigureExtendedDiagnostics` | [Diagnostics](diagnostics.md#turning-it-on-and-off) |
 | | — separator — | | | | |
-| 11 | **Check for Updates…** | Always | While a check is already running | `onCheckForUpdates` | `updates-and-releases.md` (pending) |
-| 12 | **Check for updates automatically** | Always | Never | `onToggleAutomaticUpdateChecks` | `updates-and-releases.md` (pending) |
+| 11 | **Check for Updates…** | Always | While a check is already running | `onCheckForUpdates` | [Updates and releases](updates-and-releases.md) |
+| 12 | **Check for updates automatically** | Always | Never | `onToggleAutomaticUpdateChecks` | [Updates and releases](updates-and-releases.md) |
 | 13 | **About Kvotar** | Always | Never | `showAbout` (in the controller) | This page |
-| 14 | **Quit Kvotar** ⌘Q | Always | Never | `NSApp.terminate` | This page; teardown is `app-lifecycle.md` (pending) |
+| 14 | **Quit Kvotar** ⌘Q | Always | Never | `NSApp.terminate` | This page; teardown is [app lifecycle](app-lifecycle.md) |
 
 (`MenuBarController.contextMenu()`; the closures are set in `App/AppDelegate.swift`)
 
@@ -159,7 +159,7 @@ Rules behind the table:
   checkmark is read from the system at the next open, it shows the real state, so a failed click
   looks like a click that did nothing. A build run from outside an installed app bundle is
   expected to fail this way. See *Known gaps*.
-- How an app launched at login behaves (it stays silent) is `app-lifecycle.md` (pending).
+- How an app launched at login behaves (it stays silent) is [app lifecycle](app-lifecycle.md).
 
 ## Notify me and its permission hints
 
@@ -218,11 +218,11 @@ the panel comes to the front. (`MenuBarController.showAbout`)
 
 ## Quit and the key equivalent
 
-- **Quit Kvotar** calls `NSApp.terminate`. What shutting down does is `app-lifecycle.md` (pending).
+- **Quit Kvotar** calls `NSApp.terminate`. What shutting down does is [app lifecycle](app-lifecycle.md).
 - **⌘Q is the menu's only key equivalent,** shown beside **Quit Kvotar**. Kvotar is a menu-bar-only
   app with no app menu, and a menu shown only on click handles no shortcut while it is closed. The
   app window therefore handles ⌘Q and ⌘W itself (`QuotaWindowController.installKeyMonitor`;
-  `app-lifecycle.md`, pending).
+  [app lifecycle](app-lifecycle.md)).
 
 ## Rejected alternatives
 
@@ -238,7 +238,7 @@ the panel comes to the front. (`MenuBarController.showAbout`)
 - **For Open in Window:** greying it in the app window's own `⋯` menu, an ellipsis, and putting it
   first in the menu (the menu's shape is settings first, surfaces later).
 - **An update reminder as a menu row only.** A row that appears only on right-click is easy never to
-  see; an update shows Sparkle's own window instead (`updates-and-releases.md`, pending).
+  see; an update shows Sparkle's own window instead ([updates and releases](updates-and-releases.md)).
 - **A third-party notices link in the About panel.** Shipped once, then removed by the maintainer.
 
 ## Known gaps
@@ -271,4 +271,4 @@ the panel comes to the front. (`MenuBarController.showAbout`)
 - Tests: `AppTests/NotificationPermissionHintTests.swift`; `QuotaSurfacePresenterTests` (the
   presenter the menu calls). Nothing tests `contextMenu()` itself (see *Known gaps*).
 
-Checked against the code at 4c26e10 + STEP_257
+Checked against the code at 595b1b9 + STEP_266

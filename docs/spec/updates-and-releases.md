@@ -15,7 +15,7 @@ This page is the specification for how Kvotar reaches people and stays up to dat
 private Implementation Baseline §5.3 (distribution and entitlements), except its Keychain-sharing
 row, which [credentials](credentials.md) replaced, its path rows, which
 [storage](storage.md#where-the-data-lives) covers, and its JSONL watch-roots row, which belongs to
-`local-usage.md` (pending); the Sparkle part of §17's
+[local usage](local-usage.md); the Sparkle part of §17's
 network-inventory amendment (the request itself is described in
 [credentials and privacy](../credentials-and-privacy.md#the-network)); and the versioning section
 of the private release checklist. Change this page in the same commit as the code it describes.
@@ -279,4 +279,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `DiagnosticsCaptureFlagTe
 `ProductIdentityTests` (the channel key and setting names), `ForecastLogRecorderTests`
 (`testAppVersionFormatting`). Nothing tests `UpdaterService` or the `SU*` keys (Known gaps).
 
-Checked against the code at 77cb052 + STEP_260
+Checked against the code at 595b1b9 + STEP_266

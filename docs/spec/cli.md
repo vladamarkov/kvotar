@@ -52,7 +52,7 @@ What this page does **not** own:
 | How a percent, a placeholder, a countdown or a clock is written, and where `CLIFormat` drifts from the app | [Display semantics](display-semantics.md#known-gaps) |
 | When a reading is stale | [Quota readings](quota-readings.md#fresh-and-stale-readings) |
 | Why the CLI must not poll | [Polling](polling.md) |
-| The monthly runway rule behind `runway_days` | `credits-and-monthly-limits.md` (pending) |
+| The monthly runway rule behind `runway_days` | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | What the log may and may not contain | [Diagnostics — what the log never contains](diagnostics.md#what-the-log-never-contains) |
 
 ## What the CLI is
@@ -215,7 +215,7 @@ Each object in `tools` (`StatusReport.Row`):
 | `window` | `five_hour` (the primary limit, whatever its width) or `monthly`. Absent when the tool has no saved poll, or has neither a primary percent nor a monthly limit. Decided 1 names the primary by its width |
 | `utilization_pct` | Percent **used** (not left) of that limit, a number. Absent when unknown. It kept its name and meaning when the text column switched to percent left ([display semantics — by surface](display-semantics.md#by-surface)) |
 | `resets_at` | That limit's reset, Unix seconds. Absent when unknown |
-| `runway_days` | Monthly limit only: the value of `MonthlyLimit.runwayDays`. The rule, and when it has no value, are on `credits-and-monthly-limits.md` (pending). Absent for the primary limit. When present, the text detail cell reads `runway ~17d` instead of a reset |
+| `runway_days` | Monthly limit only: the value of `MonthlyLimit.runwayDays`. The rule, and when it has no value, are on [credits and monthly limits](credits-and-monthly-limits.md). Absent for the primary limit. When present, the text detail cell reads `runway ~17d` instead of a reset |
 | `polled_at` | When the saved poll was taken, Unix seconds. Absent when the tool was never polled |
 | `stale` | `true` when the saved poll is stale |
 | `as_of` | The saved poll's clock time as text, present only when stale (see *Known gaps*) |
@@ -310,4 +310,4 @@ used in JSON), `CLIFormatTests` (not-started, absent and reset-less limits),
 `CredentialTreesUntouchedTests`, and for the diagnostics commands `CaptureCommandTests`,
 `ImportCommandTests`, `BundleReaderTests`, `AnalysisStoreTests`, `LogLineTests`.
 
-Checked against the code at e6d389c + STEP_259
+Checked against the code at 595b1b9 + STEP_266

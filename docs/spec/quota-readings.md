@@ -268,7 +268,8 @@ is never invalidated this way. (`StateEngine.evaluate`, `resetCrossed`; tests
 `testPollFailureWithFutureResetStaysOnCachedState`)
 
 **Stale data is kept, not wiped.** Past the 10 minutes the last reading stays available with its
-poll time; windows that have expired since are null; no forecast is attached. Which states survive
+poll time; windows that have expired since are null; no forecast is shown. (The state check still
+computes one from the cached reading and writes it to `forecast_log`; see [forecast](forecast.md).) Which states survive
 staleness (only an already-reached block whose reset is still ahead) is [state.md](state.md)'s.
 Reason: wiping blanked the popover for hours overnight and during runs of refused polls.
 (`App/PollCoordinator.swift`: `evaluateStaleness`; `AppViewModel.applyCached`; tests
@@ -311,4 +312,4 @@ Claude prepaid wallet from its own fetch time. Neither changes the quota reading
 | Stale "2 minutes" amber comments | Private Baseline §9.3 says the stamp turns amber after 2 minutes; the code uses 240 s. Comments in `DisplayFormatter.sourceTag` and `PopoverDisplay.swift` still say 2 minutes | This page and display-semantics.md win; fix the comments with the next change to those files |
 | Stale code comments about windows | `QuotaSnapshot` doc says Claude always fills both windows (it can send no `five_hour`, or a not-started one). `AdditionalRateLimit` and a `selectLimit` comment say Claude's scoped limits carry no width; the Claude adapter sets seven days, so a 0 %, reset-less scoped limit would read not started. A `StateEngine.classify` comment says the null-window rank catches a not-started window; it classifies Healthy (used 0) | Fix the comments with the next change to each file; settle on [Claude account](claude-account.md#questions-for-owner) whether a scoped limit can be not started |
 
-Checked against the code at 890e5f2 + STEP_255.
+Checked against the code at 595b1b9 + STEP_266.

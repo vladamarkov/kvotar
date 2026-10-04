@@ -36,9 +36,9 @@ What this page does **not** own:
 
 | Topic | Page |
 |---|---|
-| Which local tokens are counted, from which session logs, and how double counting is removed | `local-usage.md` (pending) |
-| The displayed token count, the cache-hit ratio and the Today population (local midnight to now) | `local-usage.md` (pending) |
-| The monthly split that uses the priced local rate to tell an idle Mac from a busy one | `credits-and-monthly-limits.md` (pending) |
+| Which local tokens are counted, from which session logs, and how double counting is removed | [Local usage](local-usage.md) |
+| The displayed token count, the cache-hit ratio and the Today population (local midnight to now) | [Local usage](local-usage.md) |
+| The monthly split that uses the priced local rate to tell an idle Mac from a busy one | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | The `$12.00` USD form and every other number form | [Display semantics](display-semantics.md#rounding-and-number-forms) |
 | Where user-facing strings are built, and the copy rule | [Display semantics](display-semantics.md#where-strings-are-built) |
 | The `unpriced_models` table's place among the tables, and what "permanent" means | [Storage](storage.md#tables-by-purpose) |
@@ -64,7 +64,7 @@ stated yardstick is read against the monthly plan fee.
   counterfactual, such as the hover card's "would have cost if you paid per token", may stay
   (`ExplanationRegistry`, `.estTokenValue`). The maintainer confirmed this rule on 2026-10-04.
   Real money a provider reports is a different thing with its own form (`Fmt.money`) and its own
-  page (`credits-and-monthly-limits.md`, pending).
+  page ([credits and monthly limits](credits-and-monthly-limits.md)).
 - **Computed locally.** Prices come from the bundled table; no tool such as ccusage runs at
   runtime ([PATTERNS.md](../../PATTERNS.md) Do / don't table).
 
@@ -199,7 +199,7 @@ add. A log line rotates away; the record stays.
 ## The formula
 
 Inputs are per-model token totals from `SQLiteStore.tokenTotalsByModel`. Which events those totals
-contain is `local-usage.md`'s (pending). The query groups by the event's own model and falls back
+contain is [local usage](local-usage.md)'s. The query groups by the event's own model and falls back
 to the session's model for older rows that carry none, so a session that switched models prices
 each slice at its own rate (`SQLiteStoreEstimatedValueTests.testMultiModelSessionPricesEachSliceAtItsOwnModel`,
 `testNullModelRowFallsBackToSessionModel`).
@@ -256,7 +256,7 @@ fast mode is an opt-in premium), long-context surcharges, regional uplifts.
 | Today (engine) | Local midnight (`Calendar.current`) to now | Codex credits section (raw plan `enterprise`, full form), `Est. token value · today` | `.today` |
 | Per day, per model | Each local day of the History period | History window | `HistoryReportReader` |
 | One session | One session's events, per event model | History window | `EstimatedValueEngine.value(for:tool:)` over session totals |
-| Local rate | The trailing 8 minutes, in $/min | Not shown; the monthly split's idle test (`credits-and-monthly-limits.md`, pending) | `AttributionEngine.localValuePerMin` |
+| Local rate | The trailing 8 minutes, in $/min | Not shown; the monthly split's idle test ([credits and monthly limits](credits-and-monthly-limits.md)) | `AttributionEngine.localValuePerMin` |
 | This quota window | Window start (or its fallback: the latest session start, else now − 5 h) to now | Not shown; to be removed (Decided 1) | `LocalAttribution.windowValue` |
 
 - **The 7-day and 30-day figures are rolling, not tied to any quota window.** They cover the last
@@ -352,4 +352,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `EstimatedValueEngineTest
 `DisplayFormatterLocalActivityTests`, `DisplayFormatterTests.testCodexEnterpriseCreditsCard`,
 `HistoryExperienceContractTests.testNoRenderedStringUsesRetiredVocabulary`.
 
-Checked against the code at bb1c574 + STEP_264
+Checked against the code at 595b1b9 + STEP_266

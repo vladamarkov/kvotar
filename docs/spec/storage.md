@@ -46,9 +46,9 @@ What this page does **not** own:
 | The diagnostics tables (`raw_payloads`, `payload_shapes`, `parse_anomalies`, `app_lifecycle_events`) and the debug and capture settings | [Diagnostics](diagnostics.md) |
 | Which poll table a refusal or a quota 429 goes to (`poll_health_events`, `quota_limit_events`), and the stored hold | [Polling](polling.md) |
 | The launch restore of the last reading, and why a restored reading is stale | [Quota readings](quota-readings.md) |
-| What happens when a second copy starts, and the message an AgentPilot conflict shows | `app-lifecycle.md` (pending) |
-| The `kvotar` CLI's commands and its read-only use of the database | `cli.md` (pending) |
-| Finding and parsing session logs, the backfill and its one-time repairs | `local-usage.md` (pending) |
+| What happens when a second copy starts, and the message an AgentPilot conflict shows | [App lifecycle](app-lifecycle.md) |
+| The `kvotar` CLI's commands | [CLI](cli.md) |
+| Finding and parsing session logs, the backfill and its one-time repairs | [Local usage](local-usage.md) |
 
 ## Where the data lives
 
@@ -106,7 +106,7 @@ Who touches `kvotar.db`:
 
 The CLI never migrates, because the running app owns the schema and a CLI migration would race
 it, and never creates the database. (`SQLiteStore.init`, `openReadOnly`, `openReadWrite`) The
-commands belong to `cli.md` (pending) and [diagnostics](diagnostics.md#cli-commands-today).
+commands belong to [CLI](cli.md) and [diagnostics](diagnostics.md#cli-commands-today).
 
 ## Tables by purpose
 
@@ -115,20 +115,20 @@ commands belong to `cli.md` (pending) and [diagnostics](diagnostics.md#cli-comma
 | Purpose | Table | One row is | Kept | Meaning owned by |
 |---|---|---|---|---|
 | Account quota | `poll_snapshots` | One account-quota poll, as normalized | 2 hours; the newest row per tool always stays; rolled up before deletion | [Quota readings](quota-readings.md) |
-| | `quota_series` | A slim copy of a poll whose [primary](quota-readings.md#the-vocabulary) window had a used percent and a reset, whatever its width (used %, reset, width, the secondary beside it, the last local activity) | Permanent | Quota readings; `local-usage.md` (pending) |
+| | `quota_series` | A slim copy of a poll whose [primary](quota-readings.md#the-vocabulary) window had a used percent and a reset, whatever its width (used %, reset, width, the secondary beside it, the last local activity) | Permanent | Quota readings; [local usage](local-usage.md) |
 | | `model_limit_series` | One window of one model allowance, from one poll | Permanent | [Claude account](claude-account.md), [Codex account](codex-account.md) |
 | | `history_rollups` | One tool-hour of `poll_snapshots`: min, max and last values | Permanent | `history.md` (pending) |
 | | `accounts` | One tool's account email (plain text) and plan | Permanent, overwritten in place | [Claude account](claude-account.md), [Codex account](codex-account.md) |
 | | `discontinuity_events` | An instant something changed, for example a limit, the plan, credits, a window reset, early reset, withdrawal or width change, a monthly rollover | Permanent | [Quota readings](quota-readings.md#resets) |
-| Local usage | `local_sessions` | One Claude Code or Codex session: project folder, model, surface | Permanent | `local-usage.md` (pending) |
-| | `local_usage_events` | One request's token counts | Permanent | `local-usage.md` (pending) |
-| | `session_summaries` | One session's totals, written once it has been idle 24 hours | Permanent | `local-usage.md` (pending) |
-| | `unpriced_models` | One model the price table did not know | Permanent | `estimated-value.md` (pending) |
+| Local usage | `local_sessions` | One Claude Code or Codex session: project folder, model, surface | Permanent | [Local usage](local-usage.md) |
+| | `local_usage_events` | One request's token counts | Permanent | [Local usage](local-usage.md) |
+| | `session_summaries` | One session's totals, written once it has been idle 24 hours | Permanent | [Local usage](local-usage.md) |
+| | `unpriced_models` | One model the price table did not know | Permanent | [Estimated value](estimated-value.md) |
 | Polling | `poll_health_events` | One refused or failed poll of Kvotar's own | 90 days | [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota) |
-| | `quota_limit_events` | One quota 429 seen in a session log | Permanent | [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota); `capacity-learning.md` (pending) |
+| | `quota_limit_events` | One quota 429 seen in a session log | Permanent | [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota); [capacity learning](capacity-learning.md) |
 | State and alerts | `state_transitions` | One change of state | 90 days | [State](state.md) |
 | | `notification_events` | One notification sent | 90 days | `notifications.md` (pending) |
-| | `forecast_log` | One forecast, with what was on screen then | Permanent | `forecast.md` (pending) |
+| | `forecast_log` | One forecast, with what was on screen then | Permanent | [Forecast](forecast.md) |
 | | `popover_opens` | One popover opening: tab and the states shown | Permanent | `popover.md` (pending) |
 | Settings | `settings` | One key and its text value | Permanent | [The settings table](#the-settings-table) |
 | | `settings_changes` | One settings write, old value to new | Permanent | The settings table |
@@ -210,7 +210,7 @@ The exceptions, all one-time corrections of rows that recorded nothing real:
 
 | Where | What it deleted | Why it was allowed |
 |---|---|---|
-| Migration `v11_quota_ceiling_floor` | `quota_limit_events` below 50 % used | A "limit reached" at 5 % cannot be a real limit, and the learned ceiling takes the minimum, so one bad row pinned it forever |
+| Migration `v11_quota_ceiling_floor` | `quota_limit_events` below 50 % used | A "limit reached" at 5 % cannot be a real limit, and the ceiling resolver takes the minimum, so one bad row would pin it forever. Nothing reads the table today ([capacity learning](capacity-learning.md#dormant-today)) |
 | Migration `v12_unanchored_window_cleanup` | Every Codex `window_reset` row in `discontinuity_events` and every Codex `window_reset_post` row in `notification_events` stored until then | The reset time moved on every poll while nothing was used, so each poll looked like a rollover and every such row was false |
 | Migration `v16_duplicate_event_cleanup` | `local_usage_events` the app stored twice under two of its own naming schemes, and `local_sessions` left empty | One turn, two rows |
 | Migration `v19_fixture_session_cleanup` | Seven Codex sessions that were Kvotar's own test fixtures, by exact id, from `local_usage_events`, `local_sessions` and `session_summaries` | They were never anyone's work |
@@ -260,8 +260,8 @@ The keys in use, by owner:
 | `block_episode.<tool>`, `nearly_spent.<tool>.<limit>`, `ladder.<tool>.<limit>` | `notifications.md` (pending) |
 | `menu_bar_display_mode`, `reminder_episode.<tool>.<limit>` | `menu-bar.md` (pending) |
 | `last_open_snapshot_<tool>` | `explanations.md` (pending) |
-| `monthly_attrib_accum_<tool>` | `credits-and-monthly-limits.md` (pending) |
-| `jsonl_backfill_watermark_<tool>`, `jsonl_attribution_enrichment_done_<tool>`, `jsonl_reemission_cleanup_done_codex`, `jsonl_forked_history_cleanup_done_codex`, `jsonl_surface_repair_done_codex_d95` | `local-usage.md` (pending) |
+| `monthly_attrib_accum_<tool>` | [Credits and monthly limits](credits-and-monthly-limits.md) |
+| `jsonl_backfill_watermark_<tool>`, `jsonl_attribution_enrichment_done_<tool>`, `jsonl_reemission_cleanup_done_codex`, `jsonl_forked_history_cleanup_done_codex`, `jsonl_surface_repair_done_codex_d95` | [Local usage](local-usage.md) |
 
 ## Migrations
 
@@ -370,7 +370,7 @@ UI)
   acts as for a second copy.
 
 What the user sees when the lock is taken, and how a second copy hands off to the first, is
-`app-lifecycle.md` (pending).
+[app lifecycle](app-lifecycle.md).
 
 ## Rejected alternatives
 
@@ -414,4 +414,4 @@ version), `SQLiteStoreTokenEventsTests` (`v19`), `SQLiteStoreQuotaLimitEventsTes
 `v13`), `LegacyDataMigratorTests`, `PIDLockTests`, `CredentialTreesUntouchedTests`; and
 `Packages/KvotarCLI/Tests/KvotarCLITests/CredentialTreesUntouchedTests.swift`.
 
-Checked against the code at 04468d8 + STEP_256
+Checked against the code at 595b1b9 + STEP_266

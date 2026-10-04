@@ -47,8 +47,8 @@ What this page does **not** own:
 | Percent left, the source tag, plan badge wording, every user string | [display-semantics.md](display-semantics.md) |
 | Cadence, the 429 ladder, holds, `Retry-After`, the refusal record | [polling.md](polling.md) |
 | Finding and reading `~/.codex/auth.json` (passive read, never written, never refreshed) | [credentials](credentials.md); [credentials and privacy](../credentials-and-privacy.md) and [decision 0001](../decisions/0001-never-refresh-a-token.md) |
-| Credits and the monthly limit as a product | `credits-and-monthly-limits.md` (pending) |
-| Codex session logs and its local databases as a source | `local-usage.md` (pending) |
+| Credits and the monthly limit as a product | [Credits and monthly limits](credits-and-monthly-limits.md) |
+| Codex session logs and its local databases as a source | [Local usage](local-usage.md) |
 | How readings, plan changes and the email are stored | [storage](storage.md) |
 
 ## Terms used here
@@ -185,7 +185,7 @@ on both transports. (tests `testUnexpectedShapesDegradeTheFieldNotThePoll`, `tes
 **A third over-quota signal: Codex's own goal database.** If `~/.codex/goals_1.sqlite` has any
 `thread_goals` row with status `usage_limited`, the over-quota flag is set to true on either
 transport, even on a null-window reading. It only ever turns the flag on; a missing file or table
-reads as no signal. How the file is opened is `local-usage.md`'s (pending).
+reads as no signal. How the file is opened is [local usage](local-usage.md)'s.
 (`applyUsageLimitedSignal`, `CodexSQLiteMetadataReader.hasUsageLimitedGoal`; test
 `testUsageLimitedGoalOverridesRateLimitReached`)
 
@@ -274,8 +274,8 @@ Code that reads the plan:
 | Monthly supplement gate (`enterprise`, `business`, case-insensitive) | Whether a window-less app-server reply also asks the web endpoint | This page (Decided 2) |
 | `QuotaSnapshot.isLowAllowanceShape` | Rate-derived states off | [state.md](state.md) |
 | `DisplayFormatter.planDisplayName` | The plan badge | `popover.md` (pending) |
-| `DisplayFormatter.codexCreditsSpend` | The Codex credits and spend section (Enterprise only) | `credits-and-monthly-limits.md` (pending) |
-| `DisplayFormatter.isOrganizationPlan` | "Organization pays" wording on the value note | `estimated-value.md` (pending) |
+| `DisplayFormatter.codexCreditsSpend` | The Codex credits and spend section (Enterprise only) | [Credits and monthly limits](credits-and-monthly-limits.md) |
+| `DisplayFormatter.isOrganizationPlan` | "Organization pays" wording on the value note | [Estimated value](estimated-value.md) |
 | `DiscontinuityDetector` (`plan_changed`, damped by `PlanChangeStability`) | Records a plan change; suppresses `early_reset` in that comparison | [quota-readings.md](quota-readings.md#resets), [storage](storage.md) |
 
 `LimitsDatabaseAdapter` is keyed by plan too, but nothing in the app calls it at runtime today.
@@ -320,4 +320,4 @@ Code that reads the plan:
 | Wiring (bundle lookup, capture, adapter) | `App/AppDelegate.swift` |
 | Tests | `Packages/CodexAdapter/Tests/CodexAdapterTests/`: `CodexAccountAdapterTests`, `CodexRPCClientTests`, `CodexWhamHTTPClientTests`, `CodexBinaryDiscoveryTests`, `NoRefreshNetworkSeamTests`; fixtures in `TestFixtures/` |
 
-Checked against the code at a484769 + STEP_252
+Checked against the code at 595b1b9 + STEP_266

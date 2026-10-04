@@ -44,9 +44,9 @@ What this page does **not** own:
 | Percent left, rounding, the runway's number form | [Display semantics](display-semantics.md) |
 | The verdict's words and layout, the burn figure and its display gate, the menu-bar runway slot | `popover.md`, `explanations.md`, `menu-bar.md` (pending) |
 | Which notifications use the runway or a delta | `notifications.md` (pending) |
-| The monthly spend rate and the monthly forecast | `credits-and-monthly-limits.md` (pending) |
-| The off-machine (Elsewhere) estimate | `local-usage.md` (pending) |
-| The personal observed ceiling; it does not feed the forecast | `capacity-learning.md` (pending) |
+| The monthly spend rate and the monthly forecast | [Credits and monthly limits](credits-and-monthly-limits.md) |
+| The off-machine (Elsewhere) estimate | [Local usage](local-usage.md) |
+| The personal observed ceiling; it does not feed the forecast | [Capacity learning](capacity-learning.md) |
 | Which windows count as completed and observed (`QuotaWindowOutcomes`) | `history.md` (pending) |
 
 ## What is forecast
@@ -55,7 +55,7 @@ The engine forecasts **one window per tool: the primary window**, whatever its w
 five-hour window, or a seven-day primary on a weekly-only Codex plan. A secondary (weekly) window
 gets no burn rate and no runway; it gets only the pace clock's elapsed share, which the long-limit
 tiers on [state](state.md#long-limits-as-states) read (see *The pace clock*). The monthly pool has
-its own rate, owned by `credits-and-monthly-limits.md` (pending).
+its own rate, owned by [credits and monthly limits](credits-and-monthly-limits.md).
 
 The engine is a pure reporter: it records samples and returns a `Forecast`. It never polls, never
 writes to the database and holds no app state. (`Forecast/ForecastEngine.swift`: `ForecastEngine`)
@@ -164,7 +164,7 @@ not set by the user. (`Forecast/Forecast.swift`: `ForecastTier`)
 | `unknown` | The low-allowance shape, or no primary used percent; also the hand-built placeholders on the launch-restore path and when no cached reading exists |
 
 Only `fullRunway` is read today: the money glyph's time-to-100 % needs it (`MoneyModel.etaTo100Minutes` in `State/MoneyState.swift`,
-`credits-and-monthly-limits.md`, pending). Nothing tells `creditBased` from `unknown` (Known gaps).
+[credits and monthly limits](credits-and-monthly-limits.md)). Nothing tells `creditBased` from `unknown` (Known gaps).
 
 ## Runway
 
@@ -309,7 +309,7 @@ read this one derivation; never fork it.
 - A **seven-day primary**, for the notification ladder only: `paceElapsedPct`.
 - The **2 % grace** is the same `paceGraceFraction`. (`LongLimitAssessmentTests.testTheGraceIsInclusiveAtItsEdge`)
 - The monthly pool's elapsed share comes from its calendar cycle
-  (`MonthlyLimit.elapsedPctInCycle`) and is `credits-and-monthly-limits.md`'s (pending).
+  (`MonthlyLimit.elapsedPctInCycle`) and is [credits and monthly limits](credits-and-monthly-limits.md)'s.
 
 ## Poll-pair deltas
 
@@ -552,7 +552,6 @@ The `kvotar` CLI ships a starter query that checks each logged `eta_to_100` agai
 | `burnWindow(for:)` has no caller | Its comment says the off-machine estimator measures over it; nothing in the app calls it, only tests | Delete it and its tests, or wire it, with the next change to `ForecastEngine` |
 | Multi-surface delta needs two samples in 120 s | `utilDelta(overSeconds: 120)` is the Codex multi-surface notification's input; at the 120 s cadence the previous sample is often just outside the window — the coupling fast burn dropped | Measure between the last two polls with a bound, like `fastBurnMaxPollGap`; the rule itself is `notifications.md`'s |
 | Poll-failure rows log a forecast from a cached reading | Every failed poll logs `burn_rate_pct_per_min` and `eta_to_100` computed from the cached reading and an un-aged buffer, past the staleness limit too; the buffer is cleared after the log write, and never during failures right after a launch. Rows from poll, local-change, poll-failure and restore paths share `trigger` = `sample` / `state_change`, so a grader cannot separate them; a missing shadow is ambiguous | Write `NULL` burn and eta on the poll-failure path (or clear the buffer when the restore registers the stale render); and add the evaluation trigger (`StateTrigger`) as a column in a new migration ([storage](storage.md#rules-for-a-new-migration)), `NULL` on old rows |
-| Quota readings says "no forecast is attached" to a stale reading | [Quota readings](quota-readings.md#fresh-and-stale-readings) reads "windows that have expired since are null; no forecast is attached". True for the screen (`applyCached` takes no forecast); false for the state evaluation and `forecast_log`, which receive one (row above) | In a follow-up step, change that phrase on quota-readings.md to "no forecast is shown (the evaluation and the forecast log still compute one; see `forecast.md`)" — not edited in this step |
 | Stale comments | `Forecast` and `ForecastEngine.record` say a null-window poll counts toward cold start (it adds no sample, and `pollCount` is the sample count); `utilDelta` says it powers fast burn; `Forecast.isEstimate` names a `~est.` label | Fix with the next change to each file |
 | Five-hour fallback and 60 s tolerance copies | `seed` and `ShadowTablesReader` use `?? 18_000`; `ForecastEngine.resetJitterTolerance` is its own 60 | Already on [quota readings](quota-readings.md#known-gaps); fix there |
 
@@ -575,4 +574,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `ForecastEngineTests`,
 `LongLimitAssessmentTests` (the pace inputs), `BurnTierTrackerTests`, `LowAllowanceShapeTests`
 (no rate on the shape), `StateEngineTests` (the grace).
 
-Checked against the code at 9e883af + STEP_265
+Checked against the code at 595b1b9 + STEP_266
