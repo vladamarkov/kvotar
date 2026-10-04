@@ -34,7 +34,7 @@ What this page does **not** own:
 | When a call is made: cadence, cold polls, profile and prepaid timing, the latch's effect on polling, 429s and holds | [polling.md](polling.md) |
 | Which state a reading puts the account in | [state.md](state.md) |
 | Wording and colour; the plan badge is neutral | [display-semantics.md](display-semantics.md) |
-| Plan display names (`DisplayFormatter.planDisplayName`) | `popover.md` (pending) |
+| Plan display names (`DisplayFormatter.planDisplayName`) | [account summary](account-summary.md#plan-badge-and-email) |
 | Usage credits, monthly spend and spend control as a product | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | What Kvotar is and the account kinds in brief | [product scope](product-scope.md) |
 | Response capture for diagnostics | [diagnostics.md](diagnostics.md) |
@@ -154,9 +154,13 @@ later, without notice, get the lenient decode.
 - **Used percent is the whole-number `percent`, verbatim.** It matches claude.ai's bar.
 - **The reset is parsed like a window's;** an unparseable one becomes `nil`, silently.
 - **The width is seven days,** because `weekly_scoped` names the period. No secondary window.
-- A scoped reset and the weekly reset differ by microseconds, so the display compares them with
-  the 60 s tolerance. (`DisplayFormatter.swift`, the scoped reset-row loop; test
-  `DisplayFormatterScopedLimitsTests.testScopedResetWithinToleranceDrawsNoSecondResetRow`)
+- A scoped reset and the weekly reset differ by microseconds. The 60 s comparison that drew one
+  reset row for both lives in `DisplayFormatter.quotaRows`, which nothing calls today
+  ([display semantics' Dead builders row](display-semantics.md#known-gaps) deletes it). Today's
+  [model warnings and `OTHER LIMITS` rows](account-summary.md#model-warnings) show each model
+  limit's own reset and compare nothing. (test
+  `DisplayFormatterScopedLimitsTests.testScopedResetWithinToleranceDrawsNoSecondResetRow` pins the
+  dead builder)
 - `seven_day_opus` and `seven_day_sonnet` are not read: null since `limits[]` replaced them.
 
 **No reset:** an entry with 0 % and no reset (missing or malformed) reads `not started` today. That
@@ -380,4 +384,4 @@ Why, how often, and the tests for the gate: [polling.md](polling.md), "Claude's 
 | Tests | `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/ClaudeAccountAdapterTests.swift`, `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/NoRefreshNetworkSeamTests.swift` |
 | Fixtures | `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/TestFixtures/` |
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

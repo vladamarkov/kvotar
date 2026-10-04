@@ -37,9 +37,10 @@ the same commit as the code it describes.
 
 What a reading, a window or a stale reading *means* is in [quota readings](quota-readings.md).
 Which state and severity apply is in [state](state.md). How often Kvotar asks is in
-[polling](polling.md). This page only says how those facts are *shown*. Layout belongs to pages
-not written yet: the menu bar's modes and string grammar to `menu-bar.md`, the popover's sections
-and rows to `popover.md`, and hover-card content to `explanations.md`.
+[polling](polling.md). This page only says how those facts are *shown*. Layout belongs to other
+pages: the menu bar's modes and string grammar to [menu bar](menu-bar.md), the popover's sections
+to [popover](popover.md), the header and `OTHER LIMITS` rows to
+[account summary](account-summary.md), and hover-card content to [explanations](explanations.md).
 
 ## One convention: the number says what is left
 
@@ -53,7 +54,9 @@ whole percent. Utilization (the used percent) is defined in [quota readings](quo
   test, the row colour thresholds — keeps the raw utilization.
 - **The word sits beside the number, not inside it.** The hero's caption says what the number is
   (`5-hour quota left`, `Weekly quota left`, `Monthly spend limit left`), and the number itself is
-  bare, equal to the menu bar digit for digit. A per-model warning reads `⚠ <model> · 42% left`.
+  bare, equal to the menu bar digit for digit, except while the bar shows the red long-limit shape
+  (`⚠wk 9%`) or a reminder: those name the long limit while the hero stays on the primary. In a
+  long-limit block both name the blocking limit ([menu bar](menu-bar.md#the-held-shapes)). A per-model warning reads `⚠ <model> · 42% left`.
   `OTHER LIMITS` rows show a bare percent under the limit's name (`Weekly` · `70% · on pace`);
   nothing on those rows says "left" (see Known gaps).
   (`Packages/KvotarUI/Sources/KvotarUI/Model/DisplayFormatter+LimitSelection.swift`:
@@ -87,7 +90,7 @@ one hover away. (D-97)
 | Notifications | Left | `13% left · runs out in ~11 min at this pace.` | `App/UserNotificationPresenter.swift`: `coreBody`, `nearlySpentBody`, `aheadOfPaceBody` |
 | Weekly ahead-of-pace notification average | Used per day, named | `this week has averaged 15% a day` | `aheadOfPaceBody` |
 | "Since you last looked" line | Movement, named | `13% burned`, `2% returned` | `DeltaLine.deltaToken` |
-| History quota chart and window rows | Used; 100 % at the top | `Ended at 87% used` | `HistoryDisplay+Quota.swift` |
+| History quota chart, window rows, and the Weekly recap's weekly lines | Used; 100 % at the top on the chart | `Ended at 87% used`, `43% used`, `reached the limit` | `HistoryDisplay+Quota.swift`; `HistoryDisplay+Recap.swift`: `recapLimit` |
 | History critical observations | Left | `At risk · 3:34 pm` → `8% left` | `HistoryDisplay.observationRow` |
 | CLI `status`, human column | Left, bare number | `CL  Healthy       42%  resets in 1h52m · 12s ago` | `Packages/KvotarCLI/Sources/KvotarCLI/Status.swift` |
 | CLI `status --json` | Used, as `utilization_pct` | — | same; a machine contract, unchanged |
@@ -144,7 +147,8 @@ machine: which state applies is decided in [state](state.md).
 - **A stale status dot greys out, except a block.** On a stale reading (see
   [quota readings](quota-readings.md)) the menu-bar dot and the tab dot are grey, because a colour
   would claim a current status. A [hard block](state.md) keeps its red while stale: quota cannot
-  un-spend itself. (`DisplayFormatter.staleMenuBar`; the limit status is withheld as `unknown`,
+  un-spend itself. One exception today: a long-limit block whose five-hour window has ended draws grey
+  `—— est` in the menu bar (a [menu bar](menu-bar.md#known-gaps) Known gap). (`DisplayFormatter.staleMenuBar`; the limit status is withheld as `unknown`,
   `AccountLimitSelectionTests.testStaleWithholdsStatusExceptTheKnownBlock`)
 - **Row value colours do not grey while stale.** A row's colour comes from its last used percent,
   so a stale row at 90 % used stays red (see Known gaps).
@@ -211,7 +215,8 @@ display follows one grammar, driven by the time the source last answered:
   popover is not wiped. (`DisplayFormatter.asOfStamp`)
 - **A stale menu bar** keeps the last percent, greys the dot and drops the time slot, because a
   cached countdown would lie. A stale monthly reading keeps its `↻Nd` slot (a calendar date does
-  not age). A stale block keeps red, the percent and which limit blocked.
+  not age). A stale block keeps red, the percent and which limit blocked, except a long-limit block
+  whose five-hour window has ended, which draws grey `—— est` ([menu bar](menu-bar.md#known-gaps)).
   (`DisplayFormatter.staleMenuBar`)
 - **An ended window never shows a countdown.** A reading whose reset has passed is shown as a null
   window. Display and state engine share one rule for this, so they cannot disagree.
@@ -338,4 +343,4 @@ window draws its menu-bar sample through the real `DisplayFormatter.menuBarRende
 | Dead builders | `DisplayFormatter.quotaRows`, `quotaRowLabel` and `windowAccountingRows` have no production caller; tests still pin `quotaRows` | Delete them and their tests with the next change to `DisplayFormatter` |
 | Older design records disagree | They describe a percentage on the tab, a menu-bar gauge, an overflow stripe past 100 %, green for idle and loading, and an amber stamp at 2 minutes | Code wins; nothing to change in code |
 
-Checked against the code at 595b1b9 + STEP_266.
+Checked against the code at 00ed0b1 + STEP_273

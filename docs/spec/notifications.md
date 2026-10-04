@@ -11,7 +11,7 @@ read_when: Changing NotificationEngine (evaluateCycle, the Path 1 or Path 2 cand
    click on the banner, opens the routed surface on its default tab, not the notified tool's,
    and highlights nothing, so a Codex notice can open on the Claude tab. The maintainer keeps
    this for now. Open: should the click select the notified tool's tab, and should the older
-   per-event highlight tables be dropped from the record or become a gap on `popover.md`?
+   per-event highlight tables be dropped from the record or become a gap on [popover](popover.md)?
 2. **Which name is the term for spend control?** The event is `spend_control`, the state is
    *Spend control* ([state](state.md#the-states)), [credits and monthly
    limits](credits-and-monthly-limits.md#spend-control-as-a-condition) calls it a condition, and
@@ -47,9 +47,9 @@ What neighbours own:
 | The `notification_events` table and its 90-day retention; the settings table | [Storage](storage.md#tables-by-purpose) |
 | The permission fact in Save Diagnostics… | [Diagnostics](diagnostics.md#save-diagnostics) |
 | The window-changed fact in History; the work-per-1% series | [Capacity learning](capacity-learning.md) |
-| Menu-bar reminders and their acknowledgement | `menu-bar.md` (pending) |
-| What the popover shows and its recommendation copy | `popover.md` (pending) |
-| History's Hard blocks | `history.md` (pending) |
+| Menu-bar reminders and their acknowledgement | [menu bar](menu-bar.md) |
+| What the popover shows and its recommendation copy | [popover](popover.md) |
+| History's Hard blocks | [History window](history.md) |
 
 **The hidden menu-bar item notice is not one of these notifications.** It is posted directly,
 outside the engine, groups, arbitration and caps; all of it is on
@@ -376,8 +376,7 @@ Inside the engine:
 - **Thresholds, caps, cooldowns and priorities do not change** with the groups.
 - **History reads this page's rows.** Its Hard blocks come from `over_quota` rows in
   `notification_events` (`SQLiteStore.limitHits`). With the Over quota group off, no row is
-  written, so History shows no blocks; Spend control rows are not read at all (`history.md`,
-  pending).
+  written, so History shows no blocks; Spend control rows are not read at all ([History window](history.md#hard-blocks-depend-on-the-over-quota-notifications)).
 
 ## Permission
 
@@ -559,7 +558,7 @@ An unknown value does nothing. (`App/NotificationFixture.swift`; `AppDelegate`, 
 | Screen 4 Window reset line over-promises | The first-run window says *Fresh quota, only after a window where you were warned.*; only the pre-reset notice needs a warning, the post-reset notice fires on any reset the app watched | A later code step changes the first-run copy to match the engine |
 | No *Window has reset* across a relaunch | Rollover detection is in memory, so a reset while Kvotar was not running sends nothing | Accept and keep, or persist the last reset per tool; owner's call |
 | Red line reached unannounced, then relaunch | "Reached" is remembered across a relaunch only through event 9's key. If the group was off (or a block came first), the app relaunched and the provider lowered the reading in the same week, an early step could follow | Accepted in the record; no such sequence observed. Persist "reached" if one is |
-| History blocks depend on a switch | `limitHits` reads `over_quota` rows only, so the Over quota group off means no blocks in History, and Spend control blocks never appear | Decide on `history.md`; for example read blocks from `state_transitions` |
+| History blocks depend on a switch | `limitHits` reads `over_quota` rows only, so the Over quota group off means no blocks in History, and Spend control blocks never appear | Decide on [History window](history.md#questions-for-owner); for example read blocks from `state_transitions` |
 | Duplicate thresholds | `NotificationEngine.fastBurnDeltaPct` (20) and `offMachineDeltaPct` (2) copy `StateEngine`'s constants of the same meaning | Point the engine at the `StateEngine` constants with its next change |
 | Multi-surface's 120 s delta | Often finds only one sample at the 120 s cadence | On [forecast](forecast.md#known-gaps) |
 | Notification percent, clock, unknown reset, copy-rule sweep | Truncated percent, system clock style, `a few min` for an unknown reset, most bodies not swept | On [display semantics](display-semantics.md#known-gaps) |
@@ -587,4 +586,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `NotificationEngineTests`
 `AppTests/`: `UserNotificationPresenterTests`, `NotificationFixtureTests`,
 `NotificationPermissionHintTests`, `OnboardingGateTests`.
 
-Checked against the code at 7338c44 + STEP_267
+Checked against the code at 00ed0b1 + STEP_273

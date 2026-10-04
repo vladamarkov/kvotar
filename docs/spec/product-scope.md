@@ -119,7 +119,7 @@ intervention or blocking.
 |---|---|---|
 | Comments promise the window for "Step 30" | `MenuBarController`, `AppDelegate`, `AppViewModel` and `MenuBarDisplay` say Step 30's settings window absorbs the display picker; Step 30 shipped without one | Replace the obsolete "Step 30" promise: settings available today live in the right-click menu; a separate Settings window remains planned future work, with no release target assigned (Decided 1) |
 | PATTERNS naming table fixes window names | Fixed `5-hour` and `Weekly`; quota-readings names windows from their width | Point the two PATTERNS rows at quota-readings |
-| `off-machine` in shipped copy | The since-last-look line says `+N% off-machine` (`DeltaLine.swift`); PATTERNS bans it | Say `elsewhere`, with the popover or explanations page (pending) |
+| `off-machine` in shipped copy | The since-last-look line says `+N% off-machine` (`DeltaLine.swift`); PATTERNS bans it | Say `elsewhere` ([explanations Decided 2](explanations.md#decided)) |
 
 ## Code and test pointers
 
@@ -132,4 +132,4 @@ intervention or blocking.
   Test: `DetectionStatusTests`.
 - `Packages/KvotarCore/Sources/KvotarCore/Attribution/CodexSurface.swift`: the Codex surfaces.
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

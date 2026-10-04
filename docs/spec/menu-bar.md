@@ -57,8 +57,8 @@ What this page does **not** own:
 | The status-item strip on the first-run window's third screen | [First-run window](first-run-window.md#screen-3--read-it-without-clicking-onboardingmenubarscreen) |
 | The settings table and the migration rules | [Storage](storage.md#the-settings-table) |
 | The weekly notification ladder and the *Limit nearly spent* alert (the bar reminder is not a notification) | [notifications](notifications.md) |
-| The "since you last looked" line's reading of the mode | `explanations.md` (pending) |
-| The default tab a single-tool mode pins, and the long-limit strip in the popover | `popover.md`, `account-summary.md` (pending) |
+| The "since you last looked" line's reading of the mode | [explanations](explanations.md) |
+| The default tab a single-tool mode pins, and the long-limit strip in the popover | [popover](popover.md), [account summary](account-summary.md) |
 
 ## One item, always there
 
@@ -472,4 +472,4 @@ seven-day cap is [credits'](credits-and-monthly-limits.md#dots-the-menu-bar-and-
   (`compactReset`), env-gated `MenuBarSnapshots`; in `Packages/KvotarCore/Tests/KvotarCoreTests/`:
   `SQLiteStoreTests.testV21RewritesRetiredMenuBarModes`.
 
-Checked against the code at 8ed7e0c + STEP_268
+Checked against the code at 00ed0b1 + STEP_273

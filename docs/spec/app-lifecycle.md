@@ -41,8 +41,8 @@ What this page does **not** own:
 | The polling word in the "already running" copy | [Polling — Known gaps](polling.md#known-gaps) |
 | When the first-run window opens, and its launch-at-login checkbox | [First-run window](first-run-window.md#when-it-opens) |
 | The **Open at Login** and **Open in Window** menu items, and the `⋯` menu | [menu actions](menu-actions.md) |
-| What the popover and the app window show | `popover.md` (pending) |
-| The quota notifications and their **Open Kvotar** action | `notifications.md` (pending) |
+| What the popover and the app window show | [popover](popover.md) |
+| The quota notifications and their **Open Kvotar** action | [notifications](notifications.md) |
 | The `launch`, `quit`, `sleep` and `wake` rows | [Diagnostics](diagnostics.md#where-it-is-stored-and-for-how-long) (`app_lifecycle_events`) |
 | Running without storage when the database cannot open | [Storage](storage.md#one-store-one-connection-pool) |
 
@@ -205,7 +205,7 @@ to, so this copy shows a window and does nothing else. This stays (maintainer's 
 ## When the app window opens and closes
 
 The app window shows exactly what the popover shows, from the same view and view model; its content
-is `popover.md`'s (pending). This section owns when it appears.
+is [popover](popover.md)'s. This section owns when it appears.
 
 | Trigger | Surface |
 |---|---|
@@ -339,7 +339,7 @@ keeps a margin at the notch. The system presentation options read nothing for a 
   of the four **Notify me** groups and has no switch, and it plays no sound. Reason: quota
   notifications are claims about quota; this is a claim about the app, and a user cannot opt out
   of being told where their app went. (`presentHiddenItemNotice`;
-  `testTheHiddenItemNoticeIsNotAnEngineEvent`) `notifications.md` (pending) links here.
+  `testTheHiddenItemNoticeIsNotAnEngineEvent`) [notifications](notifications.md) links here.
 - **Clicking it opens the app window**, by name (`onOpenWindow`).
 - **If macOS does not allow Kvotar's notifications, the user gets nothing,** and that is settled.
   A deliberate launch already opens the app window. The user who is left out arrives by a login
@@ -420,4 +420,4 @@ word in the conflict copy, and the unreachable "another Kvotar" string, are a
   `testAllThreeDarwinNamesAreDistinct` in
   `Packages/KvotarCore/Tests/KvotarCoreTests/DiagnosticsCaptureFlagTests.swift`; `PIDLockTests`.
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

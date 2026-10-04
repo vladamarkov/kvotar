@@ -273,7 +273,7 @@ Code that reads the plan:
 |---|---|---|
 | Monthly supplement gate (`enterprise`, `business`, case-insensitive) | Whether a window-less app-server reply also asks the web endpoint | This page (Decided 2) |
 | `QuotaSnapshot.isLowAllowanceShape` | Rate-derived states off | [state.md](state.md) |
-| `DisplayFormatter.planDisplayName` | The plan badge | `popover.md` (pending) |
+| `DisplayFormatter.planDisplayName` | The plan badge | [account summary](account-summary.md#plan-badge-and-email) |
 | `DisplayFormatter.codexCreditsSpend` | The Codex credits and spend section (Enterprise only) | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | `DisplayFormatter.isOrganizationPlan` | "Organization pays" wording on the value note | [Estimated value](estimated-value.md) |
 | `DiscontinuityDetector` (`plan_changed`, damped by `PlanChangeStability`) | Records a plan change; suppresses `early_reset` in that comparison | [quota-readings.md](quota-readings.md#resets), [storage](storage.md) |
@@ -320,4 +320,4 @@ Code that reads the plan:
 | Wiring (bundle lookup, capture, adapter) | `App/AppDelegate.swift` |
 | Tests | `Packages/CodexAdapter/Tests/CodexAdapterTests/`: `CodexAccountAdapterTests`, `CodexRPCClientTests`, `CodexWhamHTTPClientTests`, `CodexBinaryDiscoveryTests`, `NoRefreshNetworkSeamTests`; fixtures in `TestFixtures/` |
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

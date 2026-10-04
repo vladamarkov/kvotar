@@ -38,7 +38,7 @@ What this page does **not** own:
 | `parse_anomalies` rows (an undecodable log line) | [Diagnostics](diagnostics.md#where-it-is-stored-and-for-how-long) |
 | Prices and the estimated token value | [Estimated value](estimated-value.md) |
 | The monthly `This machine` / `Elsewhere` / `Not observed` split of spend | [Credits and monthly limits](credits-and-monthly-limits.md) |
-| Where the local figures sit in the popover, and their hover text | `popover.md`, `explanations.md` (pending) |
+| Where the local figures sit in the popover, and their hover text | [popover](popover.md), [explanations](explanations.md) |
 | The never-store and never-write rules | [AGENTS.md](../../AGENTS.md#the-four-safety-rules) |
 
 ## Terms used here
@@ -438,7 +438,7 @@ estimated value in the last 30 days and no surface split.
 
 The poll path and the between-poll path use the same order, so the figures never change grain
 between polls. The launch restore and the stale render use only steps 3 and 4 (see Known
-gaps). How each figure is laid out: `popover.md` (pending).
+gaps). How each figure is laid out: [popover](popover.md).
 
 ## The Elsewhere estimate
 
@@ -657,4 +657,4 @@ Tests:
   `CodexSQLiteMetadataReaderTests`, `NoContentStoredTests`.
 - `Packages/KvotarUI/Tests/KvotarUITests/`: `DisplayFormatterLocalActivityTests`.
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

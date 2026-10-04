@@ -60,13 +60,13 @@ meet the rest of the popover only through two optional fields on each tool's dis
 `header` and `otherLimits`. Everything from the top of the header to the last `OTHER LIMITS` row
 — which limit leads, the hero, caption and meter, the verdict lines, detail lines, header facts,
 the long-limit strip, model warnings, the plan badge and email, the source tag and every
-`OTHER LIMITS` row — is `account-summary.md` (pending). This page owns the frame around them.
+`OTHER LIMITS` row — is [account summary](account-summary.md). This page owns the frame around them.
 
 What this page does **not** own:
 
 | Topic | Page |
 |---|---|
-| The header and `OTHER LIMITS` (above) | `account-summary.md` (pending) |
+| The header and `OTHER LIMITS` (above) | [account summary](account-summary.md) |
 | Percent left, colours (the tab dot's), unknown and stale wording, source-tag grammar, the copy rule | [Display semantics](display-semantics.md) |
 | Which state each tool is in and the urgency order | [State](state.md#the-states) |
 | When the app window or the popover opens, closes and which one is used | [App lifecycle](app-lifecycle.md#when-the-app-window-opens-and-closes) |
@@ -75,8 +75,8 @@ What this page does **not** own:
 | The local figures (what is counted, the Today population, the shown projects) | [Local usage](local-usage.md#todays-local-report) |
 | The value rows and the value note | [Estimated value](estimated-value.md#spans-and-where-each-figure-shows) |
 | What the credits card and the Codex credits / spend section contain; the monthly near-cap box | [Credits and monthly limits](credits-and-monthly-limits.md) |
-| The "since you last looked" line, hover cards, the verdict's anatomy | `explanations.md` (pending) |
-| The History window and where a link lands | `history.md` (pending) |
+| The "since you last looked" line, hover cards, the verdict's anatomy | [explanations](explanations.md) |
+| The History window and where a link lands | [History window](history.md) |
 | Notification copy, and its **Open Kvotar** action | [notifications](notifications.md) |
 | The first-run window, which opens instead of the welcome when a tool is found | [First-run window](first-run-window.md#when-it-opens) |
 | The popover footer (rejected) and the Settings window (planned future work, no release target) | [Menu actions](menu-actions.md#rejected-alternatives); [product scope, Decided 1](product-scope.md#decided) |
@@ -169,7 +169,7 @@ Inside the tool view, each tab renders by its `PopoverPhase`:
 - **VoiceOver** reads the name and the status word, for example `Claude — needs attention`; the
   dot itself is hidden from it.
 - **A tab switch is a new look.** It releases a pinned hover card or anatomy
-  (`AppViewModel.activeTab` `didSet`); what that means is `explanations.md`'s (pending).
+  (`AppViewModel.activeTab` `didSet`); what that means is [explanations](explanations.md)'s.
 - **The tab bar stays outside the scroll body,** so the tabs stay visible however far the reader
   has scrolled.
 
@@ -211,11 +211,11 @@ In the content phase each tab stacks its sections in this order, with no gaps be
 
 | # | Section | Shown | Content owned by |
 |---|---|---|---|
-| 0 | The "since you last looked" line | Only on the open where it passed its gate | `explanations.md` (pending) |
-| 1 | Header | Always | `account-summary.md` (pending) |
+| 0 | The "since you last looked" line | Only on the open where it passed its gate | [explanations](explanations.md) |
+| 1 | Header | Always | [account summary](account-summary.md) |
 | 2 | Codex notes card (Codex tab only) | On the low-allowance shape, or a null window without a monthly limit | This page, below |
 | 3 | Recommendation | When the builder returns a sentence | This page, below |
-| 4 | `OTHER LIMITS` | When there is any limit besides the hero | `account-summary.md` (pending) |
+| 4 | `OTHER LIMITS` | When there is any limit besides the hero | [account summary](account-summary.md) |
 | 5 | `LOCAL ACTIVITY · TODAY` | Always | Layout here; figures [local usage](local-usage.md#todays-local-report) |
 | 6 | `LOCAL ACTIVITY · ESTIMATED VALUE` | Always, every plan | Layout here; rows and note [estimated value](estimated-value.md#the-value-note) |
 | 7 | Credits: `USAGE CREDITS` card (Claude) or `CREDITS / SPEND` (Codex) | When the reading carries a credits object (Claude), or the Codex plan is `enterprise` | [Credits and monthly limits](credits-and-monthly-limits.md#the-usage-credits-card-claude) |
@@ -273,8 +273,7 @@ Tests: `PopoverViewportTests` (`testAvailableHeightIsTheRoomUnderTheStatusItem`,
 ## While it is open
 
 - **Opening does not poll.** It refreshes the local daily report
-  ([polling](polling.md#extra-polls)) and acknowledges the menu-bar reminders ([menu bar](menu-bar.md),
-  pending). (`PollCoordinator.popoverOpened`)
+  ([polling](polling.md#extra-polls)) and acknowledges the menu-bar reminders ([menu bar](menu-bar.md#acknowledgement)). (`PollCoordinator.popoverOpened`)
 - **The age stamps keep moving.** Each ordinary open re-renders both tools against the current
   time, and a 30-second timer does it again while the surface stays up, so a source tag ages and
   turns amber in place ([display semantics](display-semantics.md#fresh-and-stale)).
@@ -438,7 +437,7 @@ Both links close the active surface (popover or app window) before History opens
   is the one the section's report describes, so the click and the numbers above it cannot name
   different days; with no report it is today. (`AppViewModel.openProjectHistory`)
 
-Where each lands and what History shows there is `history.md`'s (pending).
+Where each lands and what History shows there is [History window](history.md)'s.
 
 ## Palette
 
@@ -546,4 +545,4 @@ tests `AppViewModelGlanceTests`, `SQLiteStoreDiscontinuityTests`)
   `ThemeContrastTests`, `AppTests/QuotaSurfacePresenterTests.swift`; env-gated
   `PopoverCompositionSnapshots` (`KVOTAR_SNAPSHOT_DIR`).
 
-Checked against the code at 4a9ea72 + STEP_269
+Checked against the code at 00ed0b1 + STEP_273

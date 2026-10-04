@@ -27,15 +27,15 @@ item, the **Open at Login** item, and the copy of the Notify me permission hints
 
 | Behind the item | Page |
 |---|---|
-| What each menu-bar display mode draws, and where the choice is stored | `menu-bar.md` (pending) |
+| What each menu-bar display mode draws, and where the choice is stored | [menu bar](menu-bar.md) |
 | The four notification switches: their events, defaults and settings keys | [First-run window, screen 4](first-run-window.md#screen-4--when-should-kvotar-interrupt-you-onboardingnotificationsscreen) |
-| When notifications fire, and the permission request itself | `notifications.md` (pending) |
+| When notifications fire, and the permission request itself | [notifications](notifications.md) |
 | The first-run window that **Welcome to Kvotar…** reopens | [First-run window](first-run-window.md#when-it-opens) |
 | The app window, which surface opens, and what quitting tears down | [App lifecycle](app-lifecycle.md) |
-| The History window | `history.md` (pending) |
+| The History window | [History window](history.md) |
 | **Save Diagnostics…** and extended diagnostics | [Diagnostics](diagnostics.md) |
 | What an update check does, and the automatic-check schedule | [Updates and releases](updates-and-releases.md) |
-| The per-tool setup card (`FirstRunCardView`) that **Set up …** opens | `popover.md` (pending) |
+| The per-tool setup card (`FirstRunCardView`) that **Set up …** opens | [popover](popover.md) |
 
 Every string in the menu follows [the copy rule](display-semantics.md#the-copy-rule-no-polling-words):
 no polling words.
@@ -68,17 +68,17 @@ Separators are where the table shows them. "Greyed" means shown but not clickabl
 |---|---|---|---|---|---|
 | 1 | *Claude Code and Codex capacity intelligence* | Always | Always (a caption) | Nothing | This page |
 | | — separator — | | | | |
-| 2 | **Menu bar display** ▸ **Both (stacked)** · **Claude only** · **Codex only** | Always | Never | `onSelectMode` | `menu-bar.md` (pending) |
+| 2 | **Menu bar display** ▸ **Both (stacked)** · **Claude only** · **Codex only** | Always | Never | `onSelectMode` | [menu bar](menu-bar.md) |
 | | — separator — | | | | |
 | 3 | **Open at Login** | Always | Never | `onToggleLaunchAtLogin` | This page |
-| 4 | **Notify me** ▸ (or **Notify me — off in System Settings** ▸) | Always | See [below](#notify-me-and-its-permission-hints) | `onToggleNotificationGroup`, `onOpenNotificationSettings` | [First-run window](first-run-window.md#screen-4--when-should-kvotar-interrupt-you-onboardingnotificationsscreen); `notifications.md` (pending) |
+| 4 | **Notify me** ▸ (or **Notify me — off in System Settings** ▸) | Always | See [below](#notify-me-and-its-permission-hints) | `onToggleNotificationGroup`, `onOpenNotificationSettings` | [First-run window](first-run-window.md#screen-4--when-should-kvotar-interrupt-you-onboardingnotificationsscreen); [notifications](notifications.md) |
 | | — separator — | | | | |
-| 5 | **Set up Claude Code…** / **Set up Codex…** | Only while that tool is not detected | Never | `onPresent(.setup(tool))` | `popover.md` (pending), [app lifecycle](app-lifecycle.md) |
+| 5 | **Set up Claude Code…** / **Set up Codex…** | Only while that tool is not detected | Never | `onPresent(.setup(tool))` | [popover](popover.md), [app lifecycle](app-lifecycle.md) |
 | | — separator — (only when item 5 is shown) | | | | |
 | 6 | **Welcome to Kvotar…** | Always | Never | `onOpenWelcome` | [First-run window](first-run-window.md#when-it-opens) |
 | | — separator — | | | | |
 | 7 | **Open in Window** | Always | Never | `onOpenQuotaWindow` | [App lifecycle](app-lifecycle.md) |
-| 8 | **History…** | Always | Never | `onOpenHistory` | `history.md` (pending) |
+| 8 | **History…** | Always | Never | `onOpenHistory` | [History window](history.md) |
 | 9 | **Save Diagnostics…** | Always, in every build channel | Never | `onSaveDiagnostics` | [Diagnostics](diagnostics.md#save-diagnostics) |
 | 10 | **Enable Extended Diagnostics for 24 Hours…** / **Turn Off Extended Diagnostics…** | Always | Never | `onConfigureExtendedDiagnostics` | [Diagnostics](diagnostics.md#turning-it-on-and-off) |
 | | — separator — | | | | |
@@ -186,13 +186,13 @@ permission and the alert style together into one of three cases (`NotificationPe
 - **The parent title says "off" before the submenu opens,** so the state is readable at a glance.
   The Banners case keeps the plain title: a nudge, not an alarm.
 - **No row asks for permission.** The app never re-prompts; macOS asks once. When the request is
-  made is the first-run window's and `notifications.md`'s (pending).
+  made is the first-run window's and [notifications](notifications.md)'s.
 - **The submenu sets each row's enabled state itself** (`autoenablesItems = false`), so the hint
   row stays clickable while the four are greyed.
 - **When the case updates.** Each menu build asks for a fresh read
   (`AppDelegate.refreshNotificationAuthorization`). The read lands after the menu is built, so a
   change made in System Settings shows one open later. See *Known gaps*. The other moments the
-  permission is read are `notifications.md`'s (pending).
+  permission is read are [notifications](notifications.md)'s.
 
 Why the hints exist: a tester had notifications denied by macOS while every checkmark was on, so
 "on" in the menu read as "will show", and nothing did. Allowed with the style set to None looks the
@@ -271,4 +271,4 @@ the panel comes to the front. (`MenuBarController.showAbout`)
 - Tests: `AppTests/NotificationPermissionHintTests.swift`; `QuotaSurfacePresenterTests` (the
   presenter the menu calls). Nothing tests `contextMenu()` itself (see *Known gaps*).
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

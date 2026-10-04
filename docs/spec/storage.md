@@ -117,7 +117,7 @@ commands belong to [CLI](cli.md) and [diagnostics](diagnostics.md#cli-commands-t
 | Account quota | `poll_snapshots` | One account-quota poll, as normalized | 2 hours; the newest row per tool always stays; rolled up before deletion | [Quota readings](quota-readings.md) |
 | | `quota_series` | A slim copy of a poll whose [primary](quota-readings.md#the-vocabulary) window had a used percent and a reset, whatever its width (used %, reset, width, the secondary beside it, the last local activity) | Permanent | Quota readings; [local usage](local-usage.md) |
 | | `model_limit_series` | One window of one model allowance, from one poll | Permanent | [Claude account](claude-account.md), [Codex account](codex-account.md) |
-| | `history_rollups` | One tool-hour of `poll_snapshots`: min, max and last values | Permanent | `history.md` (pending) |
+| | `history_rollups` | One tool-hour of `poll_snapshots`: min, max and last values | Permanent | Read by the [History window](history.md) and [capacity learning](capacity-learning.md) |
 | | `accounts` | One tool's account email (plain text) and plan | Permanent, overwritten in place | [Claude account](claude-account.md), [Codex account](codex-account.md) |
 | | `discontinuity_events` | An instant something changed, for example a limit, the plan, credits, a window reset, early reset, withdrawal or width change, a monthly rollover | Permanent | [Quota readings](quota-readings.md#resets) |
 | Local usage | `local_sessions` | One Claude Code or Codex session: project folder, model, surface | Permanent | [Local usage](local-usage.md) |
@@ -127,9 +127,9 @@ commands belong to [CLI](cli.md) and [diagnostics](diagnostics.md#cli-commands-t
 | Polling | `poll_health_events` | One refused or failed poll of Kvotar's own | 90 days | [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota) |
 | | `quota_limit_events` | One quota 429 seen in a session log | Permanent | [Polling](polling.md#a-refused-poll-is-not-an-exhausted-quota); [capacity learning](capacity-learning.md) |
 | State and alerts | `state_transitions` | One change of state | 90 days | [State](state.md) |
-| | `notification_events` | One notification sent | 90 days | `notifications.md` (pending) |
+| | `notification_events` | One notification sent | 90 days | [notifications](notifications.md) |
 | | `forecast_log` | One forecast, with what was on screen then | Permanent | [Forecast](forecast.md) |
-| | `popover_opens` | One popover opening: tab and the states shown | Permanent | `popover.md` (pending) |
+| | `popover_opens` | One open of the popover or the app window: tab and the states shown | Permanent | [popover](popover.md#the-glance-row) |
 | Settings | `settings` | One key and its text value | Permanent | [The settings table](#the-settings-table) |
 | | `settings_changes` | One settings write, old value to new | Permanent | The settings table |
 | Diagnostics | `raw_payloads`, `payload_shapes`, `parse_anomalies`, `app_lifecycle_events` | | See [diagnostics](diagnostics.md#where-it-is-stored-and-for-how-long) | [Diagnostics](diagnostics.md) |
@@ -256,10 +256,10 @@ The keys in use, by owner:
 | `debug_mode_enabled`, `diagnostics_capture_enabled`, `diagnostics_capture_expires_at` | [Diagnostics](diagnostics.md) |
 | `poll_cooldown_until.<tool>` | [Polling](polling.md#the-hold) |
 | `onboarding_completed` | [First-run window](first-run-window.md) |
-| `notification_<group>_enabled` (`at_risk`, `fast_burn`, `over_quota`, `window_reset`), `notification_project_name_enabled` | [First-run window](first-run-window.md); `notifications.md` (pending) |
-| `block_episode.<tool>`, `nearly_spent.<tool>.<limit>`, `ladder.<tool>.<limit>` | `notifications.md` (pending) |
-| `menu_bar_display_mode`, `reminder_episode.<tool>.<limit>` | `menu-bar.md` (pending) |
-| `last_open_snapshot_<tool>` | `explanations.md` (pending) |
+| `notification_<group>_enabled` (`at_risk`, `fast_burn`, `over_quota`, `window_reset`), `notification_project_name_enabled` | [First-run window](first-run-window.md); [notifications](notifications.md) |
+| `block_episode.<tool>`, `nearly_spent.<tool>.<limit>`, `ladder.<tool>.<limit>` | [notifications](notifications.md) |
+| `menu_bar_display_mode`, `reminder_episode.<tool>.<limit>` | [menu bar](menu-bar.md) |
+| `last_open_snapshot_<tool>` | [explanations](explanations.md) |
 | `monthly_attrib_accum_<tool>` | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | `jsonl_backfill_watermark_<tool>`, `jsonl_attribution_enrichment_done_<tool>`, `jsonl_reemission_cleanup_done_codex`, `jsonl_forked_history_cleanup_done_codex`, `jsonl_surface_repair_done_codex_d95` | [Local usage](local-usage.md) |
 
@@ -414,4 +414,4 @@ version), `SQLiteStoreTokenEventsTests` (`v19`), `SQLiteStoreQuotaLimitEventsTes
 `v13`), `LegacyDataMigratorTests`, `PIDLockTests`, `CredentialTreesUntouchedTests`; and
 `Packages/KvotarCLI/Tests/KvotarCLITests/CredentialTreesUntouchedTests.swift`.
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

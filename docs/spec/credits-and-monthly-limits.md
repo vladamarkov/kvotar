@@ -44,10 +44,12 @@ What this page does **not** own:
 | The Spend control state, its rank, the long-limit tiers (incl. the monthly), the monthly layout's amber hand-off, the glyph's escalate-now / demote-later hold | [State](state.md#long-limits-as-states), [the hold](state.md#calming-down-the-de-escalation-hold) |
 | Percent left, `<1%` (Decided 3), money and credit number forms, the money glyph's colours, stale wording | [Display semantics](display-semantics.md#rounding-and-number-forms) |
 | Where `monthly_attrib_accum_<tool>` and the monthly columns are stored | [Storage](storage.md#the-settings-table) |
-| How the money glyph and the monthly slots are drawn in the menu bar | `menu-bar.md` (pending) |
-| Where the credits card, the Codex section and the monthly rows sit in the popover; verdict copy outside the monthly family | `popover.md` (pending) |
-| The spend-control and over-quota notifications, the long-limit notifications | `notifications.md` (pending) |
-| The five-hour forecast, burn tiers, the `fullRunway` tier | [Forecast](forecast.md) |
+| How the money glyph and the monthly slots are drawn in the menu bar | [menu bar](menu-bar.md) |
+| Where the credits card, the Codex section and the monthly rows sit in the popover | [popover](popover.md) |
+| Verdict copy outside the monthly family | [account summary](account-summary.md#verdict-lines-outside-the-monthly-family) |
+| The spend-control and over-quota notifications, the long-limit notifications | [notifications](notifications.md) |
+| The five-hour forecast, the forecast tiers, the `fullRunway` tier | [Forecast](forecast.md) |
+| The burn tier shown beside the rate (`DisplayFormatter.burnTier`) | [account summary](account-summary.md#header-facts) |
 | Local activity, the 8-minute liveness gap, the monthly layout's local-day grain | [Local usage](local-usage.md) |
 | Est. token value rows | [Estimated value](estimated-value.md) |
 | The CLI as a whole (it links here for `runway_days`) | [CLI](cli.md) |
@@ -115,8 +117,8 @@ notification fires. It picks copy on four surfaces: the credits card (below), th
 verdict (`you'll be blocked` when credits are off or the cap is spent, otherwise `slow down or
 you'll stop`), the over-quota verdict and recommendation while credits are paying (running on credits),
 and the over-quota notification's variant (`NotificationEngine.overQuotaVariant`: `capReached` is
-the hard-block variant). The wording of the last three is `popover.md`'s and `notifications.md`'s
-(pending). (Tests `MoneyStateTests.testMoneyStateArmedChargingNoBackstopBlocked`,
+the hard-block variant). The wording of the last three is the [account summary](account-summary.md#verdict-lines-outside-the-monthly-family)'s,
+the [popover](popover.md#the-recommendation)'s and [notifications](notifications.md)'s. (Tests `MoneyStateTests.testMoneyStateArmedChargingNoBackstopBlocked`,
 `testMoneyStateLastObservedAndAbsent`, `DisplayFormatterTests.testOverQuotaCase1CreditsAccruing`)
 
 ### Imminence: one test for the card and the glyph
@@ -157,8 +159,8 @@ reset or a withdrawn window: a red glyph measured against a window that no longe
 outlive it. Unlike the state's hold ([state](state.md#calming-down-the-de-escalation-hold)) there
 is no bypass on a drop to Idle or on resumed local activity. (`StateEngine.resolveGlyphHysteresis`;
 tests `MoneyStateTests.testGlyphEscalatesImmediately`, `testGlyphJsonlDeltaDoesNotAdvanceDemoteStreak`) Its colours are
-[display semantics](display-semantics.md#colours)'; its symbol and drawing are `menu-bar.md`'s
-(pending). (Tests `testGlyphChargingArmedCoast`, `testGlyphDemotesOnlyAfterTwoConfirmingPolls`)
+[display semantics](display-semantics.md#colours)'; its symbol and drawing are
+[menu bar](menu-bar.md#the-money-glyph-drawn)'s. (Tests `testGlyphChargingArmedCoast`, `testGlyphDemotesOnlyAfterTwoConfirmingPolls`)
 
 ## The usage credits card (Claude)
 
@@ -166,7 +168,7 @@ tests `MoneyStateTests.testGlyphEscalatesImmediately`, `testGlyphJsonlDeltaDoesN
 The off shape is the card's most useful state: it says a 100 % crossing will stop work. It is
 suppressed only when there is no object at all, which is the window-less Enterprise seat.
 (`DisplayFormatter.creditsCard`; `CreditsCardSectionView`) Its place in the popover is
-`popover.md`'s (pending).
+[popover](popover.md)'s.
 
 The amounts are billed money, not an estimate, so the card is exempt from the Est. token value
 grammar and may say `charging`.
@@ -241,7 +243,8 @@ credits' own currency and exponent (`creditsUsed`, `creditsUsedOfCap`, `creditsC
 
 **Shown only when the plan string is exactly `enterprise`** (case-insensitive). That gate is
 ruled to change: [Codex account Decided 1](codex-account.md#decided). (`codexCreditsSpend`;
-`CreditsSpendSectionView`, titled `Credits / spend`)
+`CreditsSpendSectionView`, titled `Credits / spend` and drawn `CREDITS / SPEND`, since
+`SectionCard` upper-cases its title)
 
 | Row | Full section | Slimmed section |
 |---|---|---|
@@ -279,7 +282,7 @@ the display and the notification engine. (`QuotaSnapshot.monthlyReached`;
   (`Spend limit reached` is claude.ai's own wording).
 - The state it raises, its rank and its survival while stale are [state.md](state.md#the-states)'s;
   its expiry with the monthly cycle is [quota readings](quota-readings.md#expired)'; its banner is
-  `notifications.md`'s (pending).
+  [notifications](notifications.md)'s.
 - With a monthly limit present, a spend-control block puts the monthly limit in the hero
   (`selectLimit`; test `AccountLimitSelectionTests.testSpendControlIsTheMonthlyBlockWhereAMeterExists`).
 
@@ -341,7 +344,7 @@ claim no reading while one is held.
 - **Menu-bar slot** (`monthlyMenuBarSlot`): `◔~[runway]` when the reading is fresh, the pool is not
   reached, the confidence half holds, the runway ends before the reset, and the runway is at most
   7 days; otherwise `↻[days to reset]`, or no slot once the reset has passed. A reached pool always shows the reset slot. The number is
-  percent left of the monthly limit. Drawing is `menu-bar.md`'s (pending). (Tests
+  percent left of the monthly limit. Drawing is [menu bar](menu-bar.md)'s. (Tests
   `testMonthlyPaceMenuBarRunwaySlot`, `testMonthlyReachedMenuBarAlwaysResetSlot`,
   `testMonthlyStaleMenuBarNeverShowsRunwaySlot`)
 - **Long-limit strip** for a monthly in the amber or red tier while it is not the hero: a money
@@ -510,4 +513,4 @@ rows do not return (Decided 1). `offMachine` and `unattributed` are internal nam
 | CLI `runway_days` | `Packages/KvotarCLI/Sources/KvotarCLI/CLIFormat.swift`, `Status.swift` |
 | Tests | `MoneyStateTests`, `MonthlySpendRateTests`, `MonthlyAttributionEstimatorTests`, `MonthlyLimitTests`, `StateEngineTests` (`Packages/KvotarCore/Tests/KvotarCoreTests/`); `DisplayFormatterMonthlyTests`, `DisplayFormatterTests`, `LongLimitSurfaceAgreementTests`, `AccountLimitSelectionTests` (`Packages/KvotarUI/Tests/KvotarUITests/`) |
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

@@ -50,7 +50,7 @@ What this page does **not** own:
 
 | Topic | Page |
 |---|---|
-| Which rows, facts and lines exist in the popover, their labels, and the verdict's words | [popover](popover.md), `account-summary.md` (pending) |
+| Which rows, facts and lines exist in the popover, their labels, and the verdict's words | [popover](popover.md), [account summary](account-summary.md) |
 | Percent left versus used, and the copy rule that bans polling words | [Display semantics](display-semantics.md) |
 | What a reading, a window or a stale reading means | [Quota readings](quota-readings.md) |
 | States, the long-limit tiers and the 90 % line | [State](state.md#long-limits-as-states) |
@@ -61,7 +61,7 @@ What this page does **not** own:
 | `explanation-snapshot.json` in the diagnostics bundle: when it is written, consent, privacy | [Diagnostics](diagnostics.md#save-diagnostics) |
 | When the popover and the app window open and close, and when Esc reaches the view model | [App lifecycle](app-lifecycle.md#when-the-app-window-opens-and-closes) |
 | The menu-bar display modes the delta line reads | [menu bar](menu-bar.md) |
-| A window's recorded outcome and the window-fact fold, and the History window's own day card | `history.md` (pending) |
+| A window's recorded outcome and the window-fact fold, and the History window's own day card | [History window](history.md) |
 | What the first-run window teaches instead | [First-run window](first-run-window.md) |
 
 ## Terms used here
@@ -180,7 +180,8 @@ Rules for the words, kept from the record and tested where a test can:
 
 ### Where each element is drawn
 
-Which rows exist is the popover's ([popover](popover.md), `account-summary.md`, pending). This table says which
+Which rows exist is the popover's and the account summary's ([popover](popover.md),
+[account summary](account-summary.md)). This table says which
 element each tagged place carries, and its live line.
 
 | Element | Drawn on | Live line |
@@ -580,7 +581,7 @@ each only when its trigger fired (`testTokenOrderWithDeltaAsContext`, `testClock
 - **Only a rise of the Elsewhere share counts**, at the same 5 points: the estimate is coarse and
   can settle downward. (`testOffMachineRiseIsATrigger`)
 - **Window facts** are read from the recorded window events after the look, one local read after
-  the open, and folded the way History folds them (`history.md`, pending). They lead the line because
+  the open, and folded the way History folds them ([History window](history.md)). They lead the line because
   they explain the rest. Widths are named, never sized.
   (`DeltaLine.windowFactTokens`; `testWindowFactTokensAreFoldedAndNamedByWidth`,
   `testAWindowFactFiresTheLineAndLeadsIt`, `testWindowFactsSinceTheLastLookRenderTheLine`)
@@ -592,8 +593,8 @@ each only when its trigger fired (`testTokenOrderWithDeltaAsContext`, `testClock
 
 ### The boundary form
 
-The previous window's outcome comes from one local read after the open (`history.md`, pending, owns
-the outcome). If the popover closes or moves on before the read returns, the result is dropped.
+The previous window's outcome comes from one local read after the open ([History window](history.md#the-quota-window-outcome-fold)
+owns the outcome). If the popover closes or moves on before the read returns, the result is dropped.
 (`DeltaLine.boundaryLine`, `appendingFacts`; `testBoundaryLineAwaitsTheWindowOutcomeRead`)
 
 | Case | Line |
@@ -693,4 +694,4 @@ first-run window teaches is [its page](first-run-window.md)'s.
 | Diagnostics snapshot | `ViewModel/AppViewModel+ExplanationSnapshot.swift`; `Packages/KvotarCore/Sources/KvotarCore/Diagnostics/ExplanationSnapshot.swift` |
 | Tests | `ExplanationRegistryTests` and `Fixtures/explanation_registry.md`; `DisplayFormatterAnatomyTests`; `DeltaLineTests`; `AppViewModelDeltaLineTests`; `AppViewModelExplanationSnapshotTests`; the peek, pin and Esc tests in `AppViewModelTests`; live-line tests in `DisplayFormatterTests`; `LongLimitSurfaceAgreementTests`. `ExplanationLiveDiagnostics` is a live, read-only check that runs only with `KVOTAR_LIVE` set |
 
-Checked against the code at bdc8771 + STEP_270
+Checked against the code at 00ed0b1 + STEP_273

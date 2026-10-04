@@ -42,12 +42,12 @@ What this page does **not** own:
 | When polls happen, including the session-start poll a burn-tier crossing can trigger | [Polling](polling.md#extra-polls) |
 | The `forecast_log` table's place in the database and its retention | [Storage](storage.md) |
 | Percent left, rounding, the runway's number form | [Display semantics](display-semantics.md) |
-| The verdict's words and layout, the burn figure and its display gate, the menu-bar runway slot | `popover.md`, `explanations.md`, `menu-bar.md` (pending) |
-| Which notifications use the runway or a delta | `notifications.md` (pending) |
+| The verdict's words, the burn figure and its display gate, the verdict's anatomy, the menu-bar runway slot | [account summary](account-summary.md), [explanations](explanations.md), [menu bar](menu-bar.md) |
+| Which notifications use the runway or a delta | [notifications](notifications.md) |
 | The monthly spend rate and the monthly forecast | [Credits and monthly limits](credits-and-monthly-limits.md) |
 | The off-machine (Elsewhere) estimate | [Local usage](local-usage.md) |
 | The personal observed ceiling; it does not feed the forecast | [Capacity learning](capacity-learning.md) |
-| Which windows count as completed and observed (`QuotaWindowOutcomes`) | `history.md` (pending) |
+| Which windows count as completed and observed (`QuotaWindowOutcomes`) | [History window](history.md) |
 
 ## What is forecast
 
@@ -142,7 +142,7 @@ ageing, clearing and null-window polls all lower or hold it.
 
 | Samples | Phase | What the forecast carries |
 |---|---|---|
-| 0–1 | Cold start | No burn rate, no runway. The pace clock still works (see *The pace clock*); how the popover words this is `popover.md`'s (pending) |
+| 0–1 | Cold start | No burn rate, no runway. The pace clock still works (see *The pace clock*); how the popover words this is the [account summary](account-summary.md#verdict-lines-outside-the-monthly-family)'s |
 | 2–9 | Partial | A rate and a runway where they resolve; `isEstimate` is true (to be deleted, Decided 1) |
 | 10 or more | Full | Same formula; `isEstimate` false. The engine logs "Burn rate fully initialised" once |
 
@@ -201,9 +201,10 @@ Two more numbers ride on the `Forecast`:
 
 The runway's readers: At risk and Elevated on [state](state.md#the-states); the exhaustion
 decision shared by the popover and the menu bar (`DisplayFormatter.exhaustionRunwayMinutes`, which
-also needs the pace clock — `popover.md`, pending); the At-risk notification and its re-arm
-(`notifications.md`, pending). The popover's evidence gate for showing the burn figure
-(`DisplayFormatter.burnHasDisplayEvidence`) is stricter than the engine and belongs to `popover.md`.
+also needs the pace clock — [account summary](account-summary.md#verdict-lines-outside-the-monthly-family)); the At-risk notification and its re-arm
+([notifications](notifications.md)). The popover's evidence gate for showing the burn figure
+(`DisplayFormatter.burnHasDisplayEvidence`) is stricter than the engine and belongs to the
+[account summary](account-summary.md#header-facts).
 
 ## The blended rate (Claude's five-hour runway)
 
@@ -294,8 +295,8 @@ against a whole window also needs the calendar to agree.
 
 **Readers.** Elevated on [state](state.md#the-states) (`StateEngine.classify`); the exhaustion
 decision (`DisplayFormatter.exhaustionRunwayMinutes`); the verdict, its anatomy and the long-window
-hero (`popover.md`, `explanations.md`, pending); and the weekly notification ladder for a
-seven-day primary (`QuotaSnapshot.weeklyForNotifications`, `notifications.md`, pending). Which
+hero ([account summary](account-summary.md), [explanations](explanations.md)); and the weekly notification ladder for a
+seven-day primary (`QuotaSnapshot.weeklyForNotifications`, [notifications](notifications.md)). Which
 states are pace-gated, and why, is on [state](state.md#the-states). State and display
 read this one derivation; never fork it.
 
@@ -317,9 +318,9 @@ The buffer also answers three narrower questions for other engines. Each reads t
 
 | Function | Answers | Read by |
 |---|---|---|
-| `utilDeltaLast2Polls(for:withinSeconds:now:)` with `fastBurnMaxPollGap` (300 s) | The rise between the last two samples, only if they are at most 300 s apart **and** the newer is at most 300 s old. Clamped at 0 | Fast burn spike ([state](state.md#the-states)) and the fast-burn notification (`notifications.md`, pending) |
-| `utilDeltaLast2Polls(for:)` | The same rise, unbounded. Clamped at 0 | Off-machine burn ([state](state.md#the-states)) and the off-machine notification (`notifications.md`, pending) |
-| `utilDelta(for:overSeconds: 120)` | The rise across the samples inside the last 120 s; `nil` unless two fall inside | The Codex multi-surface notification (`notifications.md`, pending) |
+| `utilDeltaLast2Polls(for:withinSeconds:now:)` with `fastBurnMaxPollGap` (300 s) | The rise between the last two samples, only if they are at most 300 s apart **and** the newer is at most 300 s old. Clamped at 0 | Fast burn spike ([state](state.md#the-states)) and the fast-burn notification ([notifications](notifications.md)) |
+| `utilDeltaLast2Polls(for:)` | The same rise, unbounded. Clamped at 0 | Off-machine burn ([state](state.md#the-states)) and the off-machine notification ([notifications](notifications.md)) |
+| `utilDelta(for:overSeconds: 120)` | The rise across the samples inside the last 120 s; `nil` unless two fall inside | The Codex multi-surface notification ([notifications](notifications.md)) |
 
 Why the fast-burn pair is bounded by poll gap, not by a wall clock: two samples inside 120 s
 almost never exist at the 120 s cadence, so the old wall-clock test barely fired. Measuring between
@@ -550,7 +551,7 @@ The `kvotar` CLI ships a starter query that checks each logged `eta_to_100` agai
 | Partial-average flag unused | `isEstimate` has no surface; read only by a fixture fallback in `burnHasDisplayEvidence` | (Decided 1) Delete `isEstimate`, its `~est.` comments and the fixture fallback's use of it, adjusting the fixtures and tests that set it |
 | `ForecastTier` mostly unread | Only `fullRunway` is read (`MoneyModel.etaTo100Minutes` in `State/MoneyState.swift`); nothing tells `creditBased` from `unknown`, and `creditBased` no longer means "local burn, no quota denominator" | Collapse to a boolean "runway applies", or document the two remaining values as unread, with the next change to `Forecast.swift` |
 | `burnWindow(for:)` has no caller | Its comment says the off-machine estimator measures over it; nothing in the app calls it, only tests | Delete it and its tests, or wire it, with the next change to `ForecastEngine` |
-| Multi-surface delta needs two samples in 120 s | `utilDelta(overSeconds: 120)` is the Codex multi-surface notification's input; at the 120 s cadence the previous sample is often just outside the window — the coupling fast burn dropped | Measure between the last two polls with a bound, like `fastBurnMaxPollGap`; the rule itself is `notifications.md`'s |
+| Multi-surface delta needs two samples in 120 s | `utilDelta(overSeconds: 120)` is the Codex multi-surface notification's input; at the 120 s cadence the previous sample is often just outside the window — the coupling fast burn dropped | Measure between the last two polls with a bound, like `fastBurnMaxPollGap`; the rule itself is [notifications](notifications.md)'s |
 | Poll-failure rows log a forecast from a cached reading | Every failed poll logs `burn_rate_pct_per_min` and `eta_to_100` computed from the cached reading and an un-aged buffer, past the staleness limit too; the buffer is cleared after the log write, and never during failures right after a launch. Rows from poll, local-change, poll-failure and restore paths share `trigger` = `sample` / `state_change`, so a grader cannot separate them; a missing shadow is ambiguous | Write `NULL` burn and eta on the poll-failure path (or clear the buffer when the restore registers the stale render); and add the evaluation trigger (`StateTrigger`) as a column in a new migration ([storage](storage.md#rules-for-a-new-migration)), `NULL` on old rows |
 | Stale comments | `Forecast` and `ForecastEngine.record` say a null-window poll counts toward cold start (it adds no sample, and `pollCount` is the sample count); `utilDelta` says it powers fast burn; `Forecast.isEstimate` names a `~est.` label | Fix with the next change to each file |
 | Five-hour fallback and 60 s tolerance copies | `seed` and `ShadowTablesReader` use `?? 18_000`; `ForecastEngine.resetJitterTolerance` is its own 60 | Already on [quota readings](quota-readings.md#known-gaps); fix there |
@@ -574,4 +575,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `ForecastEngineTests`,
 `LongLimitAssessmentTests` (the pace inputs), `BurnTierTrackerTests`, `LowAllowanceShapeTests`
 (no rate on the shape), `StateEngineTests` (the grace).
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

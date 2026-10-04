@@ -31,7 +31,7 @@ same commit as the code it describes.
 What a reading, a window, a reset and staleness *mean* is in [quota readings](quota-readings.md).
 How a state is worded and coloured on screen is in [display semantics](display-semantics.md). When
 polls happen is in [polling](polling.md). Three pages consume state:
-`notifications.md` (pending: what fires on a transition, the weekly ladder), [forecast](forecast.md)
+[notifications](notifications.md) (what fires on a transition, the weekly ladder), [forecast](forecast.md)
 (burn, runway and the pace clock) and [credits and monthly limits](credits-and-monthly-limits.md)
 (credits and the monthly pool's own layout).
 
@@ -117,8 +117,9 @@ not measured optima.
 | `cachedStateTTL`, `resetJitterTolerance` | defined in [quota readings](quota-readings.md) | When a reading is stale, when a window has expired |
 
 Three more constants sit in `StateEngine` but no state reads them: `weeklySecondNoticePct`,
-`weeklyPrimaryNearlySpentPct` (notification marks, `notifications.md`) and
-`modelWindowWarnLinePct` (85 %, where a per-model allowance is promoted in the popover; it is
+`weeklyPrimaryNearlySpentPct` (notification marks, [notifications](notifications.md)) and
+`modelWindowWarnLinePct` (85 %, where a per-model allowance becomes a model warning in the
+[account summary](account-summary.md#model-warnings); it is never the hero, and it is
 deliberately not the long-limit red line, so moving one never moves the other).
 
 The long-limit numbers are replay-derived over a small corpus. 90 % is the weakest: it was chosen
@@ -184,7 +185,7 @@ Each long limit gets one of four tiers, tested in this order
 - **One limit speaks: worst tier wins, then the nearer reset**, then the weekly before the monthly.
   State, display and the Limit nearly spent notification read this one ranking; the weekly
   notification ladder reads the weekly on its own (`QuotaSnapshot.weeklyForNotifications`,
-  `notifications.md`, pending).
+  [notifications](notifications.md)).
   (`QuotaSnapshot.longLimitsRanked`, `longLimit(now:)`)
 - **A weekly with no reported width paces against seven days**; Codex reports one and paces
   against it. (`QuotaSnapshot.secondaryWindowFallbackSeconds`)
@@ -251,9 +252,13 @@ display-only and adds no state (`StateEngine.resolveGlyphHysteresis`;
 `Packages/ClaudeAdapter/Sources/ClaudeAdapter/ClaudeLocalAdapter.swift`: `emitDelta`;
 `Packages/KvotarCore/Sources/KvotarCore/Adapters/JSONLDirectoryWatcher.swift`)
 
-**The first evaluation of a tool is silent**, so launching into a warning never notifies — except
-when it lands directly in a hard block or in Limit nearly spent. Those are position facts, not
-rates, and are emitted as a change from Idle; the notification keys dedupe relaunches.
+**The first evaluation of a tool is silent**, except when it lands directly in a hard block or in
+Limit nearly spent. Those are position facts, not rates, and are emitted as a change from Idle; the
+notification keys dedupe relaunches. On a usual relaunch the first evaluation is the launch
+restore, which classifies the saved reading as stale, so the tool sits at Idle unless a block still
+holds; the first fresh poll is then an ordinary transition and can notify. Notices on the poll
+signal need no transition. The launch rules are the
+[notifications](notifications.md#first-evaluation-and-launch) page's.
 (`StateEngineTests.testFirstEvaluationHardBlockEmitsChange`,
 `testFirstEvaluationNearlySpentEmitsChange`)
 
@@ -313,4 +318,4 @@ timing, the long-limit states or Healthy, where the app's own launch restore sho
 | CLI comment claims restore parity | `StatusReader`'s comment says it returns exactly the app's restore state; it judges staleness by row age instead (see above) | Fix the comment; or pass `isStale: true` if the owner wants parity |
 | Limit nearly spent and staleness | A stale Limit nearly spent drops to Idle; no test covers it | Decided 1: keep it in the stale branch while its limit's reset is ahead, as for a block; keep the "as of" time; no second alert on recovery; add tests for both |
 
-Checked against the code at 595b1b9 + STEP_266.
+Checked against the code at 00ed0b1 + STEP_273

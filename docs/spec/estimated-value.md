@@ -43,9 +43,9 @@ What this page does **not** own:
 | Where user-facing strings are built, and the copy rule | [Display semantics](display-semantics.md#where-strings-are-built) |
 | The `unpriced_models` table's place among the tables, and what "permanent" means | [Storage](storage.md#tables-by-purpose) |
 | How the plan string is decoded for each tool | [Claude account](claude-account.md#the-plan-string), [Codex account](codex-account.md#plan-types) |
-| The History window's layout, recap and `≈` mark | `history.md` (pending) |
-| The popover's sections and their order | `popover.md` (pending) |
-| The hover-card text | `explanations.md` (pending) |
+| The History window's layout, recap and `≈` mark | [History window](history.md) |
+| The popover's sections and their order | [popover](popover.md) |
+| The hover-card text | [explanations](explanations.md) |
 | The price-table line and the unknown-model list in a diagnostics bundle | [Diagnostics](diagnostics.md#save-diagnostics) |
 
 ## What the figure is
@@ -298,8 +298,8 @@ means the personal note (`isOrganizationPlan`; untested). Reason:
 on a seat someone else pays for, "your spend" is wrong.
 
 The History window uses its own fixed line, `Priced at published API rates for each model. Not a
-bill.` (`HistoryDisplay.pricingNote`, `HistoryDisplay.recapNotABill`); its layout is `history.md`'s
-(pending).
+bill.` (`HistoryDisplay.pricingNote`, `HistoryDisplay.recapNotABill`); its layout is the
+[History window](history.md#weekly-recap)'s.
 
 ## Rejected alternatives
 
@@ -327,9 +327,9 @@ bill.` (`HistoryDisplay.pricingNote`, `HistoryDisplay.recapNotABill`); its layou
 | No check that every model seen locally has an exact row | The record had a coverage check over the local database; this repository has none. A miss shows only in `unpriced_models`, the log and a diagnostics bundle | A `kvotar` CLI line or a debug-log summary listing unpriced pairs whose count rose recently |
 | `currency` is decoded and never read | Every rate is assumed USD; a row in another currency would be summed as dollars | A `ShippedPricingTableTests` case asserting `USD` on every row |
 | Claude Team seats get the personal note | `planType(from:)` never yields `team`, so `isOrganizationPlan` is false on a Claude Team seat | Close the [Claude account](claude-account.md#known-gaps) row "Team plan string not decoded" |
-| The 7-day and 30-day hover card says "calendar days" | `ExplanationRegistry` `.rollingHorizons` says "the last 7 and 30 calendar days"; the figures are rolling 7 × 24 and 30 × 24 hours | Say "the last 7 and 30 days" in the card, with `explanations.md` (pending) |
+| The 7-day and 30-day hover card says "calendar days" | `ExplanationRegistry` `.rollingHorizons` says "the last 7 and 30 calendar days"; the figures are rolling 7 × 24 and 30 × 24 hours | Say "the last 7 and 30 days" in the card, with [explanations](explanations.md) |
 | `windowValue` computed and unread | One store read and pricing pass per attribution, no reader | (Decided 1) Remove the field, its computation in `AttributionEngine.attribution`, and the test and live-diagnostics uses |
-| Two dollar forms for the estimate | History's recap rounds to whole dollars at $10 and above (`HistoryDisplay.recapDollars`); [display semantics](display-semantics.md#rounding-and-number-forms) lists only `$12.00` | Record the recap form on display semantics with `history.md` |
+| Two dollar forms for the estimate | History's recap rounds to whole dollars at $10 and above (`HistoryDisplay.recapDollars`); [display semantics](display-semantics.md#rounding-and-number-forms) lists only `$12.00` | Record the recap form on display semantics with [History window](history.md) |
 | Stale code comments | `PricingTable.version` says it "enables future remote-fetch conflict resolution"; no fetch exists. `EstimatedValueEngine.WindowValue` and `LocalAttribution.windowValue` comments describe a `This window` row that is gone | Fix with the next change to each file |
 
 ## Code and tests
@@ -352,4 +352,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `EstimatedValueEngineTest
 `DisplayFormatterLocalActivityTests`, `DisplayFormatterTests.testCodexEnterpriseCreditsCard`,
 `HistoryExperienceContractTests.testNoRenderedStringUsesRetiredVocabulary`.
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273

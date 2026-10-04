@@ -33,8 +33,8 @@ What this page does **not** own:
 | Finding and parsing session logs, the backfill, token counting | [Local usage](local-usage.md) |
 | Pricing and the [Est. token value](product-scope.md#terms-a-newcomer-needs) the series is built from | [Estimated value](estimated-value.md) |
 | Burn, runway and pace (no ceiling enters them) | [Forecast](forecast.md) |
-| How the History window shows the series | `history.md` (pending) |
-| The notification for a window added, removed or resized | `notifications.md` (pending) |
+| How the History window shows the series | [History window](history.md) |
+| The notification for a window added, removed or resized | [notifications](notifications.md) |
 | The Codex plan string the table is keyed by | [Codex account](codex-account.md#plan-types) |
 
 ## Why this exists
@@ -224,9 +224,9 @@ steps, and a drop that is only unexplained use. (Tests `testRateStepAllModels`,
 `testRateStepOneModel`, `testRateStepUnexplained`)
 
 **Who reads it.** Only the History window, through `HistoryReport.ToolReport.workPerPercent`; which
-cycles it shows and how is `history.md`'s (pending). **No notice reads the series**, and no copy
+cycles it shows and how is [History window](history.md)'s. **No notice reads the series**, and no copy
 says the allowance shrank. A window that is added, removed or resized is a recorded fact with its
-own notification, which does not use this series (`notifications.md`, pending).
+own notification, which does not use this series ([notifications](notifications.md)).
 
 ## Rejected alternatives
 
@@ -271,4 +271,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `LimitsDatabaseAdapterTes
 `CodexLocalAdapterWatcherTests` (`testQuota429ObservationEmittedFromTokenlessFlush`) and
 `ClaudeLocalAdapterBackfillTests`.
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 00ed0b1 + STEP_273
