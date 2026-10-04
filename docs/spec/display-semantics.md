@@ -7,23 +7,25 @@ read_when: Changing how a quota percentage, colour, placeholder, clock, countdow
 
 ## Questions for owner
 
-1. **12-hour or the system clock?** Four clock forms ship today, whatever the Mac's 12/24-hour
-   setting: `Fmt.clock` prints `9:47 pm` (popover, hover cards, History); `Fmt.monthDayTime` prints
-   a 24-hour `Aug 1, 02:00` for a monthly reset; the notification presenter's `weekdayClock` prints
-   `Sun 8:45 pm` but its `resetTime` prints the system's short style (`21:47` or `9:47 PM`); the
-   CLI's own `CLIFormat.clock` prints `9:47 pm` with system-locale month names. The record says why
-   the popover pins one form (stable am/pm across regions) but never decides whether a 24-hour
-   user should see 24-hour clocks. Which should every surface follow?
-2. **May a source tag name the transport?** Claude's account tag reads `Source: Claude account`;
-   Codex's reads `Source: wham/usage` or `Source: app-server RPC`. The banned-word list does not
-   catch either, but both name how Kvotar fetched the number. Keep them, or change Codex to
-   `Source: Codex account` to match Claude?
-3. **Can `0% left` show before the limit is reached?** Percent left is `100 − utilization`
-   rounded to the nearest whole number (half away from zero), so a utilization above 99.5 reads
-   `0%` while the provider has not blocked anything yet. Five-hour and weekly utilization arrive as
-   whole percents, so this happens only on fractional figures — mainly a monthly meter, whose
-   percent is `used ÷ limit`. Keep the plain rounding, or hold `1%` until utilization actually
-   reaches 100?
+None.
+
+## Decided
+
+The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
+has a row in *Known gaps* below, which a later build step closes.
+
+1. **Every human-facing time follows the Mac's 12/24-hour setting** — popover, hover cards,
+   History, notifications and the CLI's text output: `21:47` for a 24-hour user, `9:47 PM` for a
+   12-hour user. Machine-readable output (for example CLI JSON) keeps one fixed format. Reason:
+   people read times the way their Mac shows them everywhere else. Today four clock forms ship,
+   mostly a fixed 12-hour `9:47 pm`.
+2. **A source tag never names the transport.** Codex's tag reads `Source: Codex account`, like
+   Claude's `Source: Claude account`. Reason: how Kvotar fetched a number is an internal detail;
+   it stays in the log and diagnostics. Today Codex's tag names the endpoint or the RPC.
+3. **`<1% left` while a positive fraction below 1 % remains;** `0% left` only when usage reaches
+   100 %. Reason: `1%` overstates what is left and `0%` says it is gone while work still runs.
+   Five-hour and weekly figures arrive as whole percents, so this mostly affects monthly meters.
+   Today plain rounding shows `0%` above 99.5 % used.
 
 ## About this page
 
@@ -109,7 +111,7 @@ bare row value).
 | Value | Form | Rule | Code |
 |---|---|---|---|
 | Any displayed percent | `42%` | Nearest whole number; `.5` rounds away from zero | `Fmt.percentNumber`, `Fmt.percent` |
-| Percent left | `0%` at or past 100 % used | Never negative | `Fmt.remaining` |
+| Percent left | `0%` at or past 100 % used; `<1%` while a fraction below 1 remains (Decided 3; today rounding gives `0%` above 99.5 % used) | Never negative | `Fmt.remaining` |
 | An estimated share | `≈12% (est.)`; `<1% (est.)` when it rounds to zero | The `Not seen locally` header fact | `DisplayFormatter+LimitSelection.swift` |
 | Money the provider reports | `$69.16`, `€69.16`, `69.16 CHF` | Provider currency, never converted; symbol only for USD, EUR, GBP, JPY | `Fmt.money` |
 | Estimated token value | `$12.00` | Always USD (Kvotar's own estimate from a USD price list) | `Fmt.dollarValue` |
@@ -225,7 +227,7 @@ Tests: `AppViewModelTests.testFreshnessStampAgesAndTurnsAmber`,
 
 | Kind | Form | Rule | Code |
 |---|---|---|---|
-| Clock | `9:47 pm` | 12-hour, lowercase am/pm, fixed locale | `Fmt.clock` |
+| Clock | `9:47 pm` today | Ruled: the Mac's 12/24-hour setting (Decided 1). Today 12-hour, lowercase am/pm, fixed locale | `Fmt.clock` |
 | Clock tomorrow | `12:41 am tomorrow` | Any future clock that is not today and under 48 hours away (see Known gaps) | `Fmt.clockDay` |
 | Past clock | `3:12 pm`, `yesterday 11:40 pm`, `Aug 14, 11:40 pm` | Stand-alone stamp | `Fmt.clockDayPast` |
 | Date | `Jun 12` | A reset two days or more away | `Fmt.monthDay` |
@@ -317,11 +319,13 @@ window draws its menu-bar sample through the real `DisplayFormatter.menuBarRende
 
 | Gap | Today | Proposed |
 |---|---|---|
+| Source tag names the transport | Codex's tag reads `Source: wham/usage` or `Source: app-server RPC` (`DisplayFormatter.sourceTag`) | Decided 2: `Source: Codex account`; keep the transport in the log |
+| `0% left` before the stop | Plain rounding prints `0%` above 99.5 % used while the limit is not reached | Decided 3: `<1%` until usage reaches 100 %, in `Fmt.remaining`, with tests |
 | Red row boundary: `>` or `≥` 85 | `Fmt.thresholdDot` turns red **above** 85 % used, matching the row-colour table in the record; the record for the low-allowance repaint says `≥ 85`. The one function paints every primary, weekly and per-model row dot and the low-allowance repaint | Keep `> 85` and correct the low-allowance wording. If `≥ 85` is wanted, change `thresholdDot` itself, never `lowAllowanceDot` alone, so the boundary stays single |
 | `OTHER LIMITS` rows never say "left" | The row reads `Weekly` · `70%`; the hero caption carries "left" but a row has no caption | Add `left` to the row value or the section label |
 | Stale rows keep their colour | `tieredCue` falls back to `thresholdDot` while stale, and the primary's cue is always `thresholdDot`, so a stale 90 %-used row stays red while the dot greys | Grey a row's colour while stale except under a hard block, or record why rows keep it |
 | Notification percent truncates | `coreBody` prints `100 − Int(utilization)`; the popover rounds `100 − utilization`. At 57.6 % used the alert says `43% left`, the menu bar `42%`. Visible only on fractional inputs (monthly meters, recomputed figures) | Use `Fmt.percentLeft` in `coreBody` |
-| Notification clock | `resetTime` uses the system short time style; `weekdayClock`, `Fmt.clock` and `CLIFormat.clock` use a 12-hour form | Use the one formatter the owner picks (question 1) |
+| Notification clock | `resetTime` uses the system short time style; `weekdayClock`, `Fmt.clock` and `CLIFormat.clock` use a 12-hour form | Decided 1: one formatter that follows the Mac's 12/24-hour setting on every human-facing surface; CLI JSON stays fixed |
 | Unknown reset in notifications | A missing reset prints `a few min` (`resetIn`) or `Resets at reset time.` (`resetTime`): an invented or empty claim | Drop the reset clause when the reset is unknown |
 | `tomorrow` on a non-adjacent day | `Fmt.clockDay` adds `tomorrow` to any future date that is not today and under 48 hours, so Monday 23:00 → Wednesday 22:00 reads `10:00 pm tomorrow` | Check for the next calendar day; otherwise use `monthDay` |
 | Day slots round to nearest | `Fmt.dayScale` rounds to the nearest day; `Fmt.daysUntil` rounds up. It is used by the monthly menu-bar slot, the monthly verdict (`On pace — resets Aug 1 (16d)`) and the monthly near-cap hint, so one reset can differ by a day between surfaces | Make `dayScale` round up like `daysUntil` |
@@ -334,4 +338,4 @@ window draws its menu-bar sample through the real `DisplayFormatter.menuBarRende
 | Dead builders | `DisplayFormatter.quotaRows`, `quotaRowLabel` and `windowAccountingRows` have no production caller; tests still pin `quotaRows` | Delete them and their tests with the next change to `DisplayFormatter` |
 | Older design records disagree | They describe a percentage on the tab, a menu-bar gauge, an overflow stripe past 100 %, green for idle and loading, and an amber stamp at 2 minutes | Code wins; nothing to change in code |
 
-Checked against the code at fd97e26 + STEP_246.
+Checked against the code at 14dd256 + STEP_247.

@@ -7,19 +7,20 @@ read_when: Changing QuotaSnapshot or AdditionalRateLimit fields and derived prop
 
 ## Questions for owner
 
-1. **Should a Codex "not started" claim be retracted when local work postdates it, as Claude's
-   is?** Today rule W (below) is Claude-only; the code says Codex not-started semantics were left
-   open. A Codex user who starts working while polls fail keeps seeing "not started" until the next
-   good poll, including after the reading goes stale (the stale card keeps the claim). Proposed:
-   apply the same predicate to Codex, since the reason (local evidence falsifies a negative claim)
-   is not provider-specific.
-2. **Should the secondary window be named and sized from its reported width, like the primary?**
-   The private record says yes ("same rule" for both slots). The code calls every secondary window
-   `Weekly` and treats it as seven days wide for its row and for the window facts in history, while
-   the pace assessment already uses the reported width. No other secondary width is known today, so
-   nothing visible is wrong yet. Proposed: name and size the secondary from
-   `secondaryWindowSeconds`, falling back to `Weekly` / seven days only when no width is reported
-   (Claude).
+None.
+
+## Decided
+
+The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
+has a row in *Known gaps* below, which a later build step closes.
+
+1. **Rule W applies to Codex too.** A Codex "not started" claim is retracted by the same two
+   triggers as Claude's ([rule W](#retracting-a-falsified-not-started-claim-rule-w)). Reason: local
+   evidence falsifies a negative claim whichever provider made it. Today only Claude applies it.
+2. **The secondary window is named and sized from its reported width,** by the same rule as the
+   primary ([limits and windows](#limits-and-windows)). `Weekly` and seven days are only the
+   fallback when no width is reported. Reason: one rule for both slots; a provider can change a
+   width without warning. Today every secondary is called `Weekly` and treated as seven days.
 
 ## About this page
 
@@ -56,7 +57,7 @@ Every page uses these words with these meanings.
 | **Width** | How long the window is, in seconds, when the provider says so. `nil` means unknown. |
 | **Reset time** (`resets_at`, the **anchor**) | When the current window ends and its spend is forgiven. |
 | **Used percent** | The provider's utilization for a window. Windows are stored and reasoned about as *used*. "Percent left" is a display form ([display-semantics.md](display-semantics.md)). |
-| **Weekly** | A window seven days (10,080 minutes) wide. Today the code also calls any secondary window weekly (question 2). |
+| **Weekly** | A window seven days (10,080 minutes) wide. Today the code also calls any secondary window weekly; ruled otherwise (Decided 2). |
 | **Monthly limit** | A per-user pool on a calendar-month cycle (`MonthlyLimit`): credits on Codex, money on a Claude seat with no windows. |
 | **Model allowance** | A per-model limit (`AdditionalRateLimit`) with its own primary and optional secondary window, the same three facts each. |
 | **Null window** | The provider sent no window: used percent is `nil`. |
@@ -106,7 +107,7 @@ all off-machine. (`QuotaSnapshot.primaryWindowStart`; tests `QuotaSnapshotWindow
 **A window is named by its width, never by its slot or the plan.** 300 min is five-hour, 10,080 min
 weekly, 43,200 min monthly; another whole number of days (7 or more) or hours is named literally;
 anything else makes no name claim. On screen that reads `5-hour`, `Weekly`, `Monthly`, or a
-literal `14-day` or `72-hour`; today the secondary slot is always `Weekly` (Question 2). Two
+literal `14-day` or `72-hour`; the same rule names the secondary slot (Decided 2; today the code always says `Weekly`). Two
 functions apply this with different spellings: the display name (`Packages/KvotarUI/Sources/KvotarUI/Model/DisplayFormatter.swift`: `windowGrain`) and the
 stored `window_type` (`Packages/KvotarCore/Sources/KvotarCore/State/DiscontinuityDetector.swift`:
 `DiscontinuityObservation.windowTypeName`). (Tests `DisplayFormatterWindowGrainTests`)
@@ -188,7 +189,7 @@ as unknown whatever the local activity, because off-machine work (claude.ai) lea
 (`DisplayFormatter.swift`: `expiredOnStale`; test
 `DisplayFormatterTests.testStaleExpiredWindowUnknownRegardlessOfLocalActivity`)
 
-Codex does not apply rule W today (question 1).
+Rule W applies to Codex too (Decided 1); today the code applies it to Claude only.
 
 ## Resets
 
@@ -300,13 +301,13 @@ Claude prepaid wallet from its own fetch time. Neither changes the quota reading
 
 | Gap | Today | Proposed |
 |---|---|---|
-| Secondary named and sized as weekly regardless of width | `selectLimit` gives the secondary row `name: "Weekly"` and `periodSeconds: 7 days`; `longLimitName(.secondary)` is `Weekly`; `DiscontinuityDetector.secondaryWindowSeconds` is a fixed 604,800. The pace assessment uses the reported width | Question 2 |
-| Primary block named `5-hour` regardless of width | `longLimitName(.primary)` returns `5-hour`, used in "blocked by the …" on a row; on a Codex account whose primary is seven days wide this would say "5-hour" | Name the primary from `windowGrain(primaryWindowSeconds)`; settle with question 2 |
-| Codex not-started claim is never retracted | `notStartedWithdrawn` is called for Claude only | Question 1 |
+| Secondary named and sized as weekly regardless of width | `selectLimit` gives the secondary row `name: "Weekly"` and `periodSeconds: 7 days`; `longLimitName(.secondary)` is `Weekly`; `DiscontinuityDetector.secondaryWindowSeconds` is a fixed 604,800. The pace assessment uses the reported width | Decided 2: name and size from `secondaryWindowSeconds`, `Weekly` / seven days only when no width is reported |
+| Primary block named `5-hour` regardless of width | `longLimitName(.primary)` returns `5-hour`, used in "blocked by the …" on a row; on a Codex account whose primary is seven days wide this would say "5-hour" | Name the primary from `windowGrain(primaryWindowSeconds)`, with Decided 2 |
+| Codex not-started claim is never retracted | `notStartedWithdrawn` is called for Claude only | Decided 1: call it for Codex with the same predicate, with a test |
 | A reset missed while the app was closed is not recorded | The engine stores only a live anchor, so a restored reading whose reset already passed seeds nothing: no `window_reset` row and no reset event on the first live poll. The `PollCoordinator` restore comment claims otherwise | On restore, treat a restored anchor that has passed as an expiry-clause reset, or accept the gap and fix the comment |
 | Five-hour fallbacks outside `primaryWindowLength` | Separate fallbacks for a missing width: `NotificationEngine.fallbackWindowLength`, `OffMachineEstimator.fallbackWindowSeconds`, `ForecastEngine` (`item.windowSeconds ?? 18_000`), `ShadowTablesReader`, `DeltaLine`, `DisplayFormatter+Anatomy`, `SQLiteStore.lastActiveWindow` (a fixed `-18_000`, read today only for the Claude idle recap). Each would also apply to a Codex reading with no width. (`AttributionEngine.fallbackWindowSeconds` is a span floor, not a width, and is not in this list) | Read `primaryWindowLength` (or the stored width) everywhere; give Codex no window start when its width is missing. Low risk: no Codex payload without a width has been seen |
 | Copies of the 60 s tolerance | `QuotaSnapshot.resetJitterTolerance` is the rule, aliased only by `StateEngine`. Own `60` constants: `ClaudeAccountAdapter.resetJitterTolerance`, `ForecastEngine.resetJitterTolerance`, `MonthlySpendRate.resetJitterTolerance`, `OffMachineEstimator.resetJitterToleranceUnix`, `MonthlyAttributionEstimator.resetJitterToleranceUnix`, `DeltaLine.resetJitterTolerance`, `QuotaWindowOutcomes.anchorJitterTolerance`, `NotificationEngine.minResetAdvanceForRollover` | Alias each to `QuotaSnapshot.resetJitterTolerance` |
 | Stale "2 minutes" amber comments | Private Baseline §9.3 says the stamp turns amber after 2 minutes; the code uses 240 s. Comments in `DisplayFormatter.sourceTag` and `PopoverDisplay.swift` still say 2 minutes | This page and display-semantics.md win; fix the comments with the next change to those files |
 | Stale code comments about windows | `QuotaSnapshot` doc says Claude always fills both windows (it can send no `five_hour`, or a not-started one). `AdditionalRateLimit` and a `selectLimit` comment say Claude's scoped limits carry no width; the Claude adapter sets seven days, so a 0 %, reset-less scoped limit would read not started. A `StateEngine.classify` comment says the null-window rank catches a not-started window; it classifies Healthy (used 0) | Fix the comments with the next change to each file; settle on `claude-account.md` whether a scoped limit can be not started |
 
-Checked against the code at fd97e26 + STEP_246.
+Checked against the code at 14dd256 + STEP_247.

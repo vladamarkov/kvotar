@@ -7,22 +7,22 @@ read_when: Changing PollCoordinator's loop, sleeper, wake or re-check paths; Pol
 
 ## Questions for owner
 
-1. **What should a 429 with no `Retry-After` header mean?** The adapters turn a missing header
-   into 120 (`ClaudeAccountAdapter.checkUsageStatus`; `CodexWhamHTTPClient`), so
-   `PollBackoffPolicy.rateLimited` treats it as a 120 s countdown: it sets a hold (stored, blocks
-   wake and local-activity polls, enables the Claude token probe) and does not set the
-   refused-recently flag. The policy's own doc comment says a missing header is handled like `0`.
-   Options: (a) like `0`: 120 s wait, refused-recently flag, no hold; one-line adapter or policy
-   change plus a test, and the stored `retry_after_seconds` can keep 120. (b) like a 120 s
-   countdown, as today: no code change; fix the doc comment. The waits are the same 120 s either
-   way; only the hold and the flag differ. Recommendation: (a), because a missing header is not a
-   server-stated deadline, and a hold that survives relaunch should come only from one.
-2. **Should the wait after a 429 carry the ±5 s jitter?** Today `runLoop` sleeps exactly
-   `waitSeconds` (120 s for `Retry-After: 0`); only the steady cadence is jittered. The earlier
-   private spec said the 120 s retry was jittered too. Options: (a) add ±5 s to the
-   `Retry-After: 0` wait only: tiny change, keeps two machines on one account from retrying in
-   lock-step; (b) leave it exact and drop the claim: no change. Recommendation: (a), never applied
-   to a non-zero countdown, which must not be undercut.
+None.
+
+## Decided
+
+The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
+has a row in *Known gaps* below, which a later build step closes.
+
+1. **A 429 with no `Retry-After` header is handled like `Retry-After: 0`:** the plain 120 s retry
+   and the refused-recently floor, and no stored hold. Reason: a missing header is not a deadline
+   the server stated, and only a stated deadline should create a hold that survives a relaunch.
+   Today the adapters turn a missing header into 120, so it becomes a stored 120 s hold.
+2. **The plain 120 s retry gets positive jitter only:** a random wait of 120–125 s after a
+   `Retry-After: 0` refusal (and, by Decided 1, after a refusal with no header). Reason: two Macs on
+   one account should not retry in lock-step, and a retry earlier than the roughly 120 s refill
+   would likely be refused again. A non-zero wait stated by the server is never altered. Today the
+   retry waits exactly 120 s.
 
 ## About this page
 
@@ -161,8 +161,9 @@ Constants: `retryCadence` 120, `retryAfterFloor` 5, `retryAfterCap` 600, `retryA
 `testRepeat429StillBoundedByTheAbsoluteCeiling`,
 `testZeroRetryAfterEntersTheCadenceRungAndNeverClimbsPastIt`)
 
-A 429 with no `Retry-After` header becomes 120, so today it follows the countdown rows; whether it
-should follow the `0` row is Question 1. The 429 wait is not jittered; see Question 2.
+A 429 with no `Retry-After` header becomes 120, so today it follows the countdown rows; it is ruled
+to follow the `0` row (Decided 1). The 429 wait is not jittered today; it is ruled to wait
+120–125 s (Decided 2).
 
 Reasons:
 
@@ -334,9 +335,10 @@ Rejected after measurement or incidents; don't re-propose without new evidence.
 |---|---|---|
 | Session-start poll ignores the refused-recently floor | `JSONLTripwirePolicy.deltaArrived` compares only against 45 s. The `PollBackoffPolicy.isElevated` doc comment says this floor exists so a session start cannot poll 45 s after a refusal, as wake and turn end already cannot | Pass `PollCoordinator.pollFloor` into the tripwire, with a test |
 | A `Retry-After: 0` refusal leaves the stored hold | It clears the hold in memory, but `runLoop` writes `poll_cooldown_until.<tool>` only when a hold exists and never clears it on this path. A relaunch inside the old deadline restores a hold the previous process had dropped | Clear the row in the `Retry-After: 0` branch, with a test |
-| Missing `Retry-After`; unjittered 429 wait | See Questions 1 and 2 | Owner decides |
+| A missing `Retry-After` becomes a stored hold | The adapters turn a missing header into 120, so `PollBackoffPolicy.rateLimited` treats it as a countdown: a stored hold and no refused-recently flag | Decided 1: treat it like `Retry-After: 0` (120 s retry, refused-recently floor, no stored hold), with a test; fix the policy's doc comment |
+| The plain 429 retry is not jittered | `runLoop` sleeps exactly `waitSeconds`, 120 s for `Retry-After: 0` | Decided 2: wait a random 120–125 s on the plain retry only; never alter a non-zero server wait; with a test |
 | Stale code comments | `NullWindowExpeditePolicy` ("base now fixed at 60s"), `TurnBoundaryPolicy` ("60s base"), `PollCoordinator` (`backoff` "starts at 60s", `wakeRefresh` "300s ladder wait", type doc "persisted/decaying base"), `ClaudeAccountAdapter.credentialChanged` ("60 s credential cadence"), `SQLiteStore+PollHealth.swift` ("7-day retention"); `sleepRespectingHold` (says a system sleep ends the wait at the deadline); `TurnBoundaryPolicy` cites a private polling document that is not public | Fix with the next change to each file |
 | `PATTERNS.md` says the poll role includes "proactive slowdown" | That rule was deleted; nothing slows down ahead of a refusal | Remove the words with the next PATTERNS.md edit |
 | Polling word in the "already running" copy | `AlreadyRunningView.Conflict.message` says "Only one app polls at a time" (AgentPilot lock) and "Only one instance polls at a time" (unreachable: a second Kvotar hands off and quits, `SecondInstanceAction.decide`). "polls" breaks the copy rule, and no copy test sweeps this view. The rule has no exceptions | A separate code step: reword the AgentPilot sentence (for example "Only one app can run at a time."), update `AlreadyRunningViewTests` and the private old-name audit pattern, delete the unreachable string, and add the view to a copy sweep |
 
-Checked against the code at fd97e26 + STEP_246.
+Checked against the code at 14dd256 + STEP_247.

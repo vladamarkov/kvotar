@@ -14,9 +14,11 @@ with it. How to use the pages when you work on a task is in
 
 - **The description of today's behavior is the current rule.** A change that departs from it
   needs a build step that changes the page in the same commit.
-- **Questions for owner** and **Known gaps** are proposals, not approved changes. A recommendation
-  there is not permission to change the code. Each needs the maintainer's decision and its own
-  build step.
+- **Decided** entries are the maintainer's rulings that the code does not follow yet. The ruling is
+  the target; its Known-gaps row names the change, and a build step makes it.
+- **Questions for owner**, and Known-gaps rows that do not cite a Decided entry, are proposals, not
+  approved changes. A recommendation there is not permission to change the code. Each needs the
+  maintainer's decision and its own build step.
 
 ## How to find the right page
 
@@ -78,7 +80,7 @@ rules, read the code and the shared pages above, and say that the topic has no p
 ## Adding or changing a page
 
 - One topic per page. A new page starts with front matter (`summary`, `read_when`), then
-  **Questions for owner** (or "None"), the current rules with their reasons, rejected
+  **Questions for owner** (or "None"), any **Decided** rulings, the current rules with their reasons, rejected
   alternatives where they matter, **Known gaps**, code and test pointers, and a last line
   `Checked against the code at <parent commit> + STEP_nnn`.
 - When a page lands, move its row from *Topics without a page yet* to *Topic pages* in the same

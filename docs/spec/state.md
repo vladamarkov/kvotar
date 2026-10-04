@@ -7,19 +7,19 @@ read_when: Changing StateEngine, AppState, StateInputs, StateTrigger, StateChang
 
 ## Questions for owner
 
-1. **Should a stale *Limit nearly spent* keep its red, like a block does?** Today only the two
-   blocks (Over quota, Spend control) survive once the reading goes stale (see
-   [quota readings](quota-readings.md)); everything else, Limit nearly spent included, drops to
-   Idle. The reason blocks survive — a used percentage only rises inside a window, so an old
-   reading is a lower bound — holds for a weekly at 92 % too. Limit nearly spent was added after
-   that rule; the record never ruled on it and no test covers it. Two facts weigh on it: the
-   provider can end a window early, so a kept red could outlive a real early reset until the next
-   good poll (the block rule already accepts this); and the Limit nearly spent notification is
-   keyed once per limit instance, so greying out and coming back does not notify again.
-   Options: (a) keep today's behaviour — simple, costs only a grey dot during long poll gaps;
-   (b) let it survive while its limit's reset is ahead — consistent with the block rule, one more
-   branch in the stale path, and a stale red that can outlive an early reset. Recommendation:
-   (b), with a test; (a) is a fair choice given that it never re-notifies.
+None.
+
+## Decided
+
+The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
+has a row in *Known gaps* below, which a later build step closes.
+
+1. **A stale *Limit nearly spent* keeps its red while its limit's reset is still ahead,** like a
+   block. The reading keeps its "as of" time on screen
+   ([display semantics](display-semantics.md)), and returning to fresh data sends no second alert.
+   Reason: a used percentage only rises within a window, so an old 92 % is still true or worse; the
+   cost, a red that can outlive a provider's early reset until the next good poll, is the one the
+   block rule already accepts. Today it drops to Idle like every other non-block state.
 
 ## About this page
 
@@ -274,8 +274,9 @@ A state whose input is missing is skipped, and the list falls through to the nex
 | Local activity never observed | Off-machine burn cannot fire |
 | Codex low-allowance shape (Free or Go plan, or one window ≥ 30 days and nothing else) | No rate-derived ranks: Elevated at ≥ 60 % used, else Healthy; blocks still classify |
 
-Why blocks survive staleness and nothing else does: a used percentage only rises within a window,
-so a cached block is a fact with an expiry. Every rate-derived state rots with its inputs. Bad
+Why blocks survive staleness: a used percentage only rises within a window,
+so a cached block is a fact with an expiry. The same holds for Limit nearly spent, which is ruled to
+survive too (Decided 1) but does not yet. Every rate-derived state rots with its inputs. Bad
 timing is deliberately not kept either. (`StateEngine.classify` stale branch;
 `StateEngineTests.testRestoredHardBlockKeepsItsVerdict`, `testStaleWarningsStillClearAtTTL`,
 `testStaleBlockSurvivesOnTheWeeklyAnchorAfterThePrimaryExpires`)
@@ -309,6 +310,6 @@ timing, the long-limit states or Healthy, where the app's own launch restore sho
 | Stale comments | `classify`'s rank-12 and low-allowance comments still name *Weekly-elevated* and "weekly ≥ 85 %"; `testLevelWithTheCalendarIsOnPace` says the test is `used > elapsed` | Fix with the next change to either file |
 | 90 % red line not re-graded | Chosen on one exhausted long limit; the later ladder replay counted three | Re-run the long-limit replay for 85 / 90 / 95 against all three before the next threshold change |
 | CLI comment claims restore parity | `StatusReader`'s comment says it returns exactly the app's restore state; it judges staleness by row age instead (see above) | Fix the comment; or pass `isStale: true` if the owner wants parity |
-| Limit nearly spent and staleness | Untested and unruled (Question 1) | Add a test once the owner rules |
+| Limit nearly spent and staleness | A stale Limit nearly spent drops to Idle; no test covers it | Decided 1: keep it in the stale branch while its limit's reset is ahead, as for a block; keep the "as of" time; no second alert on recovery; add tests for both |
 
-Checked against the code at fd97e26 + STEP_246.
+Checked against the code at 14dd256 + STEP_247.
