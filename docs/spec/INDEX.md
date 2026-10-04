@@ -57,6 +57,7 @@ topic page also applies.
 | [App lifecycle](app-lifecycle.md) | Launch order, opened by the user or at login, opening Kvotar again while it runs, a second copy's hand-off, the AgentPilot conflict window, when the app window opens and closes, hidden menu-bar item detection and its notice, quit | `App/AppDelegate.swift`, `App/LaunchSource.swift`, `App/SecondInstanceAction.swift`, `App/HandoffInbox.swift`, `App/HiddenItemMonitor.swift`, `App/HiddenItemDetection.swift`, `App/QuotaSurfaceLifecycle.swift`, `App/QuotaSurfacePresenter.swift`, `App/QuotaWindowController.swift`, `AlreadyRunningView` |
 | [CLI](cli.md) | The `kvotar` command-line tool: commands and shared options, `status` text and JSON output, `doctor`, version, exit codes, building and installing, what it never does | `Packages/KvotarCLI`, `scripts/cli.sh` |
 | [Updates and releases](updates-and-releases.md) | Sparkle update checks and the user's two controls, the bundle identifier, the build channel versus the beta label, version and build numbers, distribution, how a merged commit reaches a release | `App/UpdaterService.swift`, `App/Info.plist`, `project.yml`, `BuildChannel` in `Packages/KvotarCore/Sources/KvotarCore/DiagnosticsCapture.swift` |
+| [Local usage](local-usage.md) | Finding and watching each tool's session logs, the launch backfill and its one-time repairs, parsing (no content decoded or stored), token counting and deduplication, subagent and surface attribution, Codex's local databases, the Elsewhere estimate, the local-day report | `Packages/KvotarCore/Sources/KvotarCore/Adapters/JSONLDirectoryWatcher.swift`, `JSONLBackfillReader.swift`, `LocalAdapter.swift`; `ClaudeJSONLParser`, `ClaudeLocalAdapter`, `CodexJSONLParser`, `CodexLocalAdapter`, `CodexSQLiteMetadataReader`; `Packages/KvotarCore/Sources/KvotarCore/Attribution`; `OffMachineEstimator` |
 
 ## Topics without a page yet
 
@@ -66,7 +67,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 
 | Planned page | Topic | Shared pages it builds on |
 |---|---|---|
-| local-usage | Local session discovery, token use, attribution | Quota readings |
 | capacity-learning | Community limits and the personal observed ceiling | Quota readings |
 | credits-and-monthly-limits | Credits, monthly limits and spend control | Quota readings, State |
 | estimated-value | Pricing and estimated token value | — |
