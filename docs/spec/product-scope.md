@@ -11,13 +11,15 @@ None.
 
 ## Decided
 
-The maintainer ruled on this on 2026-10-04 (STEP_248). The code does not follow it yet; its row in
-*Known gaps* below names the change.
+The maintainer ruled on this on 2026-10-04 (STEP_248, corrected in STEP_253). The code does not
+follow it yet; its row in *Known gaps* below names the change.
 
-1. **There is no Settings window, and none is planned. Settings live in the right-click menu.**
-   Reason: the [first-run window](first-run-window.md) page already rejects a Settings window for
-   the notification switches; one place for settings is enough. Today four code comments still
-   promise a future settings window.
+1. **There is no Settings window in Pre-Alpha. Settings live in the right-click menu today; the
+   Settings window stays deferred to Alpha.** Reason: the window was deferred to Alpha when the
+   first-run flow shipped without it, and until then one place for settings is enough. Separately,
+   the [first-run window](first-run-window.md) page keeps the notification switches in the
+   right-click menu. Today four code comments still promise the window for "Step 30", a step that
+   shipped without one.
 
 ## About this page
 
@@ -37,7 +39,7 @@ What it does and what "local" means: [README.md](../../README.md). Scope going f
 [VISION.md](../../VISION.md). Code layout: [ARCHITECTURE.md](../../ARCHITECTURE.md).
 
 It ships the menu bar and popover, notifications, the History window, the
-[first-run window](first-run-window.md), the right-click menu (which holds the settings; there is no Settings window, Decided 1), the
+[first-run window](first-run-window.md), the right-click menu (which holds the settings; no Settings window in Pre-Alpha, Decided 1), the
 `kvotar` command-line tool and one local database (`storage.md`, pending).
 
 ## What Kvotar is not
@@ -115,7 +117,7 @@ intervention or blocking.
 
 | Gap | Today | Proposed |
 |---|---|---|
-| Comments promise a Settings window | `MenuBarController`, `AppDelegate`, `AppViewModel` and `MenuBarDisplay` say a future settings window absorbs the display picker | Delete the promise from the four comments (Decided 1) |
+| Comments promise the window for "Step 30" | `MenuBarController`, `AppDelegate`, `AppViewModel` and `MenuBarDisplay` say Step 30's settings window absorbs the display picker; Step 30 shipped without one | Replace the obsolete "Step 30" promise with the Alpha deferral; keep the future window, which is not cancelled (Decided 1) |
 | PATTERNS naming table fixes window names | Fixed `5-hour` and `Weekly`; quota-readings names windows from their width | Point the two PATTERNS rows at quota-readings |
 | `off-machine` in shipped copy | The since-last-look line says `+N% off-machine` (`DeltaLine.swift`); PATTERNS bans it | Say `elsewhere`, with the popover or explanations page (pending) |
 
@@ -130,4 +132,4 @@ intervention or blocking.
   Test: `DetectionStatusTests`.
 - `Packages/KvotarCore/Sources/KvotarCore/Attribution/CodexSurface.swift`: the Codex surfaces.
 
-Checked against the code at bcf929e + STEP_248
+Checked against the code at 615292c + STEP_253

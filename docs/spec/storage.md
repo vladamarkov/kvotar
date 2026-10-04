@@ -7,17 +7,12 @@ read_when: Adding or changing a table, a column or a migration (SQLiteStore+Migr
 
 ## Questions for owner
 
-1. **Should a missing support folder still mean "run unguarded"?** When the Application Support
-   folder cannot be found, `PIDLock.defaultPath` fails and the app logs an error and polls with no
-   lock. Decided 1 says a lock that cannot be taken must not lead to a possibly second poller, but
-   the maintainer kept this case as a separate decision. Recommendation: treat it like Decided 1
-   (report a lock error, do not poll). Without that folder there is no database either, so an
-   unguarded run saves nothing and risks two pollers on one budget.
+None.
 
 ## Decided
 
-The maintainer ruled on this on 2026-10-04 (STEP_250). The code does not follow it yet; its row
-in *Known gaps* below names the change.
+The maintainer ruled on these on 2026-10-04 (STEP_250; the second in STEP_253). The code does not
+follow them yet; each has a row in *Known gaps* below, which a later build step closes.
 
 1. **A lock-file failure is a lock error, not "another copy is running".** If `kvotar.pid` cannot be
    opened or written, the app reports a lock error and does not poll. It never runs unguarded as a
@@ -25,6 +20,10 @@ in *Known gaps* below names the change.
    window) for it. Reason: two copies polling share one provider budget
    ([polling](polling.md)), and the user must see the real cause. Today `PIDLock.acquire` returns
    `.alreadyRunning(pid: -1)` on an open or write failure, and the app treats it as a second copy.
+2. **A missing support folder is a lock error too.** If the Application Support folder cannot be
+   found, the app reports a lock error and does not poll, as in Decided 1. Reason: without that
+   folder there is no database either, so an unguarded run saves nothing and risks two pollers on
+   one budget. Today `PIDLock.defaultPath` fails, the app logs an error and polls with no lock.
 
 ## About this page
 
@@ -365,7 +364,7 @@ UI)
   refuses to poll. If AgentPilot already holds it, Kvotar releases its own lock and stops. A clean
   install never creates AgentPilot's folder. This stays (maintainer's ruling).
 - **No lock path, no guard.** If the support folder cannot be found, the app logs an error and runs
-  unguarded rather than not at all. Whether that stays is Question 1.
+  unguarded. It must instead report a lock error and not poll (Decided 2).
 - **A lock file that cannot be opened or written** must be reported as a lock error, and the app
   must not poll (Decided 1). Today `acquire` reports "already running" with PID −1, and the app
   acts as for a second copy.
@@ -393,6 +392,7 @@ What the user sees when the lock is taken, and how a second copy hands off to th
 | The version pin is copied into six test files | Each migration edits six files by hand | One test constant read by each test, plus a test that it matches the last registered migration |
 | `extra_usage_is_enabled` cannot say "unknown" | `writePoll` writes `0` when a reading has no extra-usage data, including every Codex row; the restore always builds `isEnabled = false`. The column comment says Claude-only | Write `NULL` and restore `nil`, with a test; check the readers of a restored reading first |
 | A lock-file failure takes the second-copy path | `acquire` returns `.alreadyRunning(pid: -1)` on an open or write failure, and the app hands off and quits, quits silently, or shows the conflict window | (Decided 1) Report a distinct lock error (not PID −1), show the real cause, do not poll; tests for the open and write failures |
+| A missing support folder runs unguarded | `PIDLock.defaultPath` fails, the app logs an error and polls with no lock | (Decided 2) Report the same lock error and do not poll; a test with no support folder |
 | Columns never written | `poll_snapshots.raw_payload_redacted`, `primary_window_limit`, `secondary_window_limit` (and the two rollup copies); `poll_health_events.response_headers_json`, `response_body` | Keep them (rule 6); mark them retired in the `v1` / `v4` comments with the next change to that file |
 | `PATTERNS.md` names one GRDB carve-out | It omits `LegacyDataMigrator`, which `ARCHITECTURE.md` names | Add it with the next `PATTERNS.md` edit |
 | The privacy page's file list is incomplete | [What Kvotar keeps](../credentials-and-privacy.md#what-kvotar-keeps) omits the import receipt and the CLI's `analysis/` folder | Add both with the next edit to that page |
@@ -414,4 +414,4 @@ version), `SQLiteStoreTokenEventsTests` (`v19`), `SQLiteStoreQuotaLimitEventsTes
 `v13`), `LegacyDataMigratorTests`, `PIDLockTests`, `CredentialTreesUntouchedTests`; and
 `Packages/KvotarCLI/Tests/KvotarCLITests/CredentialTreesUntouchedTests.swift`.
 
-Checked against the code at 69002e9 + STEP_250
+Checked against the code at 615292c + STEP_253
