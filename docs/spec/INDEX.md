@@ -52,6 +52,7 @@ topic page also applies.
 | [Credentials](credentials.md) | Finding and reading the Claude and Codex credentials, the read-only posture, an expired, missing or unreadable credential, and what is never done | `KeychainTokenProvider`, `ClaudeTokenProvider` and `ClaudeCredential` in `Packages/ClaudeAdapter`; `CodexTokenProvider` and `CodexAuthFileReader` in `Packages/CodexAdapter`; the expiry gate in `ClaudeAccountAdapter`; `CredentialTreesUntouchedTests` |
 | [Storage](storage.md) | The local database, its tables by purpose, retention, migrations and the version pin, the settings table, the legacy AgentPilot import, the single-instance lock | `Packages/KvotarCore/Sources/KvotarCore/Storage`, `Packages/KvotarCore/Sources/KvotarCore/Lifecycle/RetentionScheduler.swift`, `Packages/KvotarCore/Sources/KvotarCore/Lifecycle/PIDLock.swift` |
 | [Claude account](claude-account.md) | What is sent with the Claude token, the endpoints and fields that become a reading, plans and account kinds, model-scoped weekly limits, prepaid and extra-usage decoding, the prepaid 401/403 latch | `Packages/ClaudeAdapter` (`ClaudeAccountAdapter`, `ClaudeResponses`) |
+| [Codex account](codex-account.md) | The app-server RPC and the `wham/usage` web fallback that become a reading, what is sent with the Codex token, the placeholder-reset rule, plan_type strings, binary discovery and the app-server launch flags | `Packages/CodexAdapter` (`CodexAccountAdapter`, `CodexRPCClient`, `CodexWhamHTTPClient`, responses), `Packages/KvotarCore/Sources/KvotarCore/Adapters/CodexBinaryCandidates.swift` |
 
 ## Topics without a page yet
 
@@ -61,7 +62,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 
 | Planned page | Topic | Shared pages it builds on |
 |---|---|---|
-| codex-account | Codex quota, the web fallback, Enterprise | Quota readings, Polling |
 | local-usage | Local session discovery, token use, attribution | Quota readings |
 | capacity-learning | Community limits and the personal observed ceiling | Quota readings |
 | credits-and-monthly-limits | Credits, monthly limits and spend control | Quota readings, State |
