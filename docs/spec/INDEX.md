@@ -48,6 +48,7 @@ topic page also applies.
 |---|---|---|
 | [Diagnostics](diagnostics.md) | Debug logging, extended diagnostics capture and its consent, Save Diagnostics…, the CLI commands that touch them | `Packages/KvotarCore/Sources/KvotarCore/Diagnostics`, `Packages/KvotarCore/Sources/KvotarCore/DiagnosticsCapture.swift` |
 | [First-run window](first-run-window.md) | When the first-run window opens, its screens and copy, the notification permission request, launch at login | `Packages/KvotarUI/Sources/KvotarUI/Views/Onboarding`, `App/OnboardingGate.swift` |
+| [Product scope](product-scope.md) | What Kvotar is and is not, the two tools and the account kinds it covers, the terms every page assumes, and where to read next | `Packages/KvotarCore/Sources/KvotarCore/Tool.swift`, `Packages/KvotarCore/Sources/KvotarCore/ProductIdentity.swift`; README, VISION, ARCHITECTURE |
 
 ## Topics without a page yet
 
@@ -57,7 +58,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 
 | Planned page | Topic | Shared pages it builds on |
 |---|---|---|
-| product-scope | What Kvotar is for, terms, architecture overview (brief; links README, VISION, ARCHITECTURE) | — |
 | credentials | Reading the Claude and Codex credentials, privacy | Polling |
 | storage | The database, retention and migrations | — |
 | claude-account | Claude quota and prepaid data, model-scoped weekly limits | Quota readings, Polling |
