@@ -49,6 +49,7 @@ topic page also applies.
 | [Diagnostics](diagnostics.md) | Debug logging, extended diagnostics capture and its consent, Save Diagnostics…, the CLI commands that touch them | `Packages/KvotarCore/Sources/KvotarCore/Diagnostics`, `Packages/KvotarCore/Sources/KvotarCore/DiagnosticsCapture.swift` |
 | [First-run window](first-run-window.md) | When the first-run window opens, its screens and copy, the notification permission request, launch at login | `Packages/KvotarUI/Sources/KvotarUI/Views/Onboarding`, `App/OnboardingGate.swift` |
 | [Product scope](product-scope.md) | What Kvotar is and is not, the two tools and the account kinds it covers, the terms every page assumes, and where to read next | `Packages/KvotarCore/Sources/KvotarCore/Tool.swift`, `Packages/KvotarCore/Sources/KvotarCore/ProductIdentity.swift`; README, VISION, ARCHITECTURE |
+| [Credentials](credentials.md) | Finding and reading the Claude and Codex credentials, the read-only posture, an expired, missing or unreadable credential, and what is never done | `KeychainTokenProvider`, `ClaudeTokenProvider` and `ClaudeCredential` in `Packages/ClaudeAdapter`; `CodexTokenProvider` and `CodexAuthFileReader` in `Packages/CodexAdapter`; the expiry gate in `ClaudeAccountAdapter`; `CredentialTreesUntouchedTests` |
 
 ## Topics without a page yet
 
@@ -58,7 +59,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 
 | Planned page | Topic | Shared pages it builds on |
 |---|---|---|
-| credentials | Reading the Claude and Codex credentials, privacy | Polling |
 | storage | The database, retention and migrations | — |
 | claude-account | Claude quota and prepaid data, model-scoped weekly limits | Quota readings, Polling |
 | codex-account | Codex quota, the web fallback, Enterprise | Quota readings, Polling |
