@@ -4,10 +4,12 @@ Instructions for every coding agent (and every human) changing Kvotar. Read this
 [ARCHITECTURE.md](ARCHITECTURE.md) and [PATTERNS.md](PATTERNS.md) (how code is written here). Read
 [VISION.md](VISION.md) before proposing anything new.
 
-The current requirements for a topic live in `docs/spec/` (today:
-[diagnostics](docs/spec/diagnostics.md) and the [first-run window](docs/spec/first-run-window.md)).
-A spec page wins over a code comment that disagrees with it. A topic with no page yet is described by
-its code, its tests and the [decision records](docs/decisions/).
+The current requirements for a topic live in `docs/spec/`. Start at the
+[spec index](docs/spec/INDEX.md): it maps features and code areas to pages and lists the topics with
+no page yet. A spec page wins over a code comment that disagrees with it. A topic with no page yet is
+described by its code, its tests and the [decision records](docs/decisions/).
+
+Don't add a CLAUDE.md; if one is ever needed, it must contain @AGENTS.md.
 
 ## Layout
 
@@ -126,4 +128,4 @@ New contracts use [TASKS/TEMPLATE.md](TASKS/TEMPLATE.md).
 - Whether it touches the approval list in [VISION.md](VISION.md). If it does, link the issue where
   that was agreed.
 
-Checked against the code at 62d7d98 + STEP_241.
+Checked against the code at fd97e26 + STEP_246.
