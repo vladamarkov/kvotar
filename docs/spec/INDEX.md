@@ -60,6 +60,7 @@ topic page also applies.
 | [Local usage](local-usage.md) | Finding and watching each tool's session logs, the launch backfill and its one-time repairs, parsing (no content decoded or stored), token counting and deduplication, subagent and surface attribution, Codex's local databases, the Elsewhere estimate, the local-day report | `Packages/KvotarCore/Sources/KvotarCore/Adapters/JSONLDirectoryWatcher.swift`, `JSONLBackfillReader.swift`, `LocalAdapter.swift`; `ClaudeJSONLParser`, `ClaudeLocalAdapter`, `CodexJSONLParser`, `CodexLocalAdapter`, `CodexSQLiteMetadataReader`; `Packages/KvotarCore/Sources/KvotarCore/Attribution`; `OffMachineEstimator` |
 | [Capacity learning](capacity-learning.md) | The community limit table, the personal observed ceiling and the quota 429 rows behind it (all dormant today), the work-per-1% series | `Packages/KvotarCore/Sources/KvotarCore/Limits`, `Packages/KvotarCore/Sources/KvotarCore/Storage/SQLiteStore+QuotaLimitEvents.swift`, `Packages/KvotarCore/Sources/KvotarCore/History/WorkPerPercentSeries.swift` |
 | [Credits and monthly limits](credits-and-monthly-limits.md) | Credits and monthly spend as a product: money states, the credits card, the Codex credits and spend section, the monthly layout, the monthly spend rate and forecast, the monthly attribution split, spend control, `runway_days` | `Packages/KvotarCore/Sources/KvotarCore/State/MoneyState.swift`, `Packages/KvotarCore/Sources/KvotarCore/Forecast/MonthlySpendRate.swift`, `MonthlyAttributionEstimator.swift`; the monthly and credits parts of `DisplayFormatter`; `CreditsCardSectionView`, `CreditsSpendSectionView` |
+| [Estimated value](estimated-value.md) | The bundled price list, model matching and the fallback, unpriced models, the estimated token value and its spans, why it is never called a cost | `Packages/KvotarCore/Sources/KvotarCore/Pricing`, `Resources/pricing.json`, `Packages/KvotarCore/Sources/KvotarCore/Storage/SQLiteStore+EstimatedValue.swift`, `SQLiteStore+UnpricedModels.swift` |
 
 ## Topics without a page yet
 
@@ -69,7 +70,6 @@ rules, read the code and the shared pages above, and say that the topic has no p
 
 | Planned page | Topic | Shared pages it builds on |
 |---|---|---|
-| estimated-value | Pricing and estimated token value | — |
 | forecast | Pace, burn and runway estimates | Quota readings, State |
 | notifications | When notifications fire, the weekly ladder, delivery | State, Display semantics |
 | menu-bar | The menu-bar item and its modes | Display semantics, State |
