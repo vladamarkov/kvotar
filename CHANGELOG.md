@@ -5,10 +5,17 @@ the line of their change.
 
 ## Unreleased
 
+## 0.3.0 beta.10 (19) — 2026-10-05
+
 - Source published under the Apache License 2.0.
 - On an account with only a weekly limit, the "nearly spent" notice arrives with the red state, at
   15 % left.
 - The "menu bar item may be hidden" notice is only sent in the first minute after launch.
+- The first-run Privacy screen names the calls the app makes: the quota checks to Anthropic and
+  OpenAI, and the daily update check.
+- The dialog that turns on extended diagnostics says the saved copy of the database is not redacted.
+- The support address in the About panel and in saved diagnostics is on kvotar.com.
+- A restarted Codex connection is no longer failed by the old one closing.
 
 ## 0.3.0 beta.9 (18) — 2026-10-01
 
