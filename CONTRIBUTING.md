@@ -36,6 +36,18 @@ real Kvotar database in a test, a screenshot or a pull request.
 4. **One line for [CHANGELOG.md](CHANGELOG.md)** under "Unreleased".
 5. Whether it touches the approval list, with a link to the issue where it was agreed.
 
+## Before a pull request merges
+
+GitHub holds every pull request to `main` to these settings:
+
+- The `checks` run must be green.
+- The branch must be up to date with `main`; if `main` has moved, update the branch and let
+  `checks` run again.
+- A first-time contributor's runs wait until a maintainer approves them.
+- No review approval is required by the settings; the maintainer still reviews before merging.
+- Force pushes to `main` and deleting `main` are blocked.
+- Repository administrators are not held to these settings.
+
 ## How a merged change reaches a release
 
 Kvotar is developed in this repository. When your pull request is accepted:
@@ -54,4 +66,4 @@ There is no `NOTICE` file. Apache-2.0 asks for one only when the work already ca
 of the bundled third-party components (Sparkle, GRDB.swift, swift-argument-parser, whose licenses are
 in `Resources/THIRD_PARTY_NOTICES`) ships a NOTICE file.
 
-Checked against the code at e9d2933 + STEP_276.
+Checked against the code at e63764f + STEP_276.
