@@ -65,9 +65,10 @@ keeps those replies for a short, consented window.
   `diagnostics_capture_enabled = "1"` **and** `diagnostics_capture_expires_at` (now + 24 hours, unix
   seconds). (`App/MenuBarController.swift`, the menu; `AppDelegate.configureExtendedDiagnostics`)
 - **The alert text says:** *Kvotar will temporarily retain safety-filtered quota and account response
-  details. It never retains prompts, code, transcripts, tool output, credentials, or local session
-  files. The data is deleted automatically when the window expires, or immediately if you turn it
-  off.*
+  details. A diagnostics bundle saved while it is on also includes an unredacted copy of Kvotar's
+  database, with your account email and project folder names. It never retains prompts, code,
+  transcripts, tool output, credentials, or local session files. The data is deleted automatically
+  when the window expires, or immediately if you turn it off.*
 - **Off.** While capture is on, the same menu item reads **Turn Off Extended Diagnostics…** and
   switches it off at once (no second dialog). `kvotar capture --disable` does the same from the
   terminal. Off writes `"0"`, clears the expiry and **deletes every captured reply**: off means gone,
@@ -246,4 +247,4 @@ kvotar import <bundle>...                          # read bundles into a separat
 | `kvotar capture --disable` leaves the expiry | It writes `"0"` and deletes the replies but keeps `diagnostics_capture_expires_at`; the app's off switch clears it. Harmless: `"0"` is off whatever the expiry says | Clear the expiry in `Capture.swift` with the next change to it |
 | Stale code comments | `DiagnosticsBundle.build`'s doc comment says the ordinary bundle has no logs; `LiveDiagnosticsSink.capture` says capture is "beta-gated" | Fix with the next change to either file |
 
-Checked against the code at 00ed0b1 + STEP_273
+Checked against the code at d5e44af + STEP_275

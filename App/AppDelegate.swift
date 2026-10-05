@@ -800,7 +800,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let alert = NSAlert()
         alert.messageText = "Enable Extended Diagnostics for 24 Hours?"
         alert.informativeText = "Kvotar will temporarily retain safety-filtered quota and account "
-            + "response details. It never retains prompts, code, transcripts, tool output, "
+            + "response details. A diagnostics bundle saved while it is on also includes an "
+            + "unredacted copy of Kvotar's database, with your account email and project folder "
+            + "names. It never retains prompts, code, transcripts, tool output, "
             + "credentials, or local session files. The data is deleted automatically when the "
             + "window expires, or immediately if you turn it off."
         alert.alertStyle = .warning

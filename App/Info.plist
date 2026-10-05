@@ -22,11 +22,6 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>KvotarChannel</key>
 	<string>$(KVOTAR_CHANNEL)</string>
-	<!-- Sparkle (REV-83 / D-105a-b, STEP_152). The feed URL is baked into every shipped
-	     binary and never changes. Checks daily, prompts to install, never installs by itself.
-	     SUPublicEDKey is the public half of the EdDSA key generated in STEP_153 (Keychain account
-	     `kvotar`, backup + rotation rule in planning/KVOTAR_RELEASE_SETUP.md §7); sign_and_notarize.sh
-	     refuses a bundle whose key differs from the Keychain's. SUEnableSystemProfiling is deliberately absent. -->
 	<key>SUFeedURL</key>
 	<string>https://updates.kvotar.com/appcast.xml</string>
 	<key>SUPublicEDKey</key>

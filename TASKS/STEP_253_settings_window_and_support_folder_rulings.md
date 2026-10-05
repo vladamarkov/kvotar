@@ -12,14 +12,14 @@
 
 ## Goal
 
-The product-scope and storage pages record the maintainer's rulings as given: no Settings window in
-Pre-Alpha, with the Alpha window still deferred, and a missing support folder treated as a lock
+The product-scope and storage pages record the maintainer's rulings as given: no Settings window today,
+the window planned with no release target, and a missing support folder treated as a lock
 error.
 
 ## Contract
 
-1. `product-scope.md` Decided 1: there is no Settings window in Pre-Alpha; settings live in the
-   right-click menu today; the Settings window stays deferred to Alpha. The Known gap on the four
+1. `product-scope.md` Decided 1: there is no Settings window today; settings live in the
+   right-click menu; the Settings window is planned, with no release target. The Known gap on the four
    code comments names their obsolete "Step 30" promise; it does not propose deleting the future
    window.
 2. `storage.md`: the open question on a missing support folder becomes Decided 2 — the app reports a

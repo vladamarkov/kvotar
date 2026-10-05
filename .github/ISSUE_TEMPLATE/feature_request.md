@@ -9,6 +9,6 @@ labels: enhancement
 **What would you like Kvotar to do?**
 
 **Does it touch the approval list?**
-Check [VISION.md](../../VISION.md). If the idea touches credentials, network or polling, storage,
+Check [VISION.md](https://github.com/vladamarkov/kvotar/blob/main/VISION.md). If the idea touches credentials, network or polling, storage,
 diagnostics or privacy, notifications, copy rules, forecast logic, dependencies, or new tools or platforms,
-please write it up with [docs/decisions/TEMPLATE.md](../../docs/decisions/TEMPLATE.md) and link it here.
+please write it up with [docs/decisions/TEMPLATE.md](https://github.com/vladamarkov/kvotar/blob/main/docs/decisions/TEMPLATE.md) and link it here.
