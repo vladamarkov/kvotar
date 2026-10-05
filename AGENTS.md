@@ -33,6 +33,8 @@ make test    # every package's tests + the app tests, with live variables unset
 make check   # static rule checks and the doc-path check
 ```
 
+The same three run on GitHub for every pull request (`.github/workflows/checks.yml`).
+
 `make test` fails on any skipped test that is not on the expected-skips list. Do not add to that list
 to make a run pass.
 
@@ -128,4 +130,4 @@ New contracts use [TASKS/TEMPLATE.md](TASKS/TEMPLATE.md).
 - Whether it touches the approval list in [VISION.md](VISION.md). If it does, link the issue where
   that was agreed.
 
-Checked against the code at fd97e26 + STEP_246.
+Checked against the code at e9d2933 + STEP_276.
