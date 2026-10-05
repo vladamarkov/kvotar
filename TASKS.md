@@ -8,3 +8,4 @@ the commit history is the record).
 
 | Step | Contract | Status |
 |---|---|---|
+| 276 — Every pull request and push to `main` runs the checks on GitHub, and a red run blocks the merge | [Contract](TASKS/STEP_276_github_checks.md) | [ ] |
