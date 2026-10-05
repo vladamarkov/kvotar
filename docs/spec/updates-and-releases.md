@@ -147,8 +147,8 @@ In `project.yml` (target `Kvotar`, `settings.base`):
 | Setting | Today | What it is |
 |---|---|---|
 | `MARKETING_VERSION` | `0.3.0` | The version |
-| `CURRENT_PROJECT_VERSION` | `18` | The build number |
-| `KVOTAR_PRERELEASE_LABEL` | `beta.9` | The beta label, for release file names only; it never reaches `Info.plist` |
+| `CURRENT_PROJECT_VERSION` | `19` | The build number |
+| `KVOTAR_PRERELEASE_LABEL` | `beta.10` | The beta label, for release file names only; it never reaches `Info.plist` |
 | `KVOTAR_CHANNEL` | `release` | The build channel |
 | `ENABLE_HARDENED_RUNTIME`, `CODE_SIGN_ENTITLEMENTS`, `ARCHS` | | See [Distribution](#distribution) |
 
@@ -200,8 +200,8 @@ setting's value and error codes, nothing else.
 - **The labels it changes:** the internal version string gets ` beta` appended (below), and the
   diagnostics bundle carries the channel in its name and manifest
   ([diagnostics](diagnostics.md#save-diagnostics)).
-- **It is not the beta label.** The `beta.9` in a release's name is `KVOTAR_PRERELEASE_LABEL`, which
-  only names release files. A build with that label is still a `release`-channel build unless
+- **It is not the beta label.** The `beta.10` in a release's name is `KVOTAR_PRERELEASE_LABEL`,
+  which only names release files. A build with that label is still a `release`-channel build unless
   `KVOTAR_CHANNEL` says otherwise.
 
 ## Version and build numbers
