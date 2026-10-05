@@ -8,15 +8,19 @@ import KvotarCore
 @MainActor
 final class HistoryDayHoverTests: XCTestCase {
 
+    private let clock = ManualClock()
+
     private func model() -> HistoryViewModel {
         let vm = HistoryViewModel(load: { nil })
         vm.hoverPeekDelay = .milliseconds(20)
         vm.hoverGraceLeave = .milliseconds(20)
+        vm.hoverClock = clock
         return vm
     }
 
-    private func settle(_ ms: UInt64 = 60) async {
-        try? await Task.sleep(nanoseconds: ms * 1_000_000)
+    /// Moves the injected clock past both timers; nothing here sleeps on the wall clock (STEP_277).
+    private func settle(_ ms: Int = 60) async {
+        await clock.advance(ms)
     }
 
     func testRestingOnADayOpensItsCardAfterTheDelayAndNotBefore() async {

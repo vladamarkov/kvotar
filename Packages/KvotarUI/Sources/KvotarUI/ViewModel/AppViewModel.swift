@@ -104,6 +104,9 @@ public final class AppViewModel: ObservableObject {
     /// anatomy and History cannot drift apart. Instance values so tests can shrink them.
     public var hoverPeekDelay: Duration = ExplanationTiming.peekDelay
     public var hoverGraceLeave: Duration = ExplanationTiming.graceLeave
+    /// The clock the peek and grace timers sleep on. The app keeps the default (what
+    /// `Task.sleep` uses); tests drive a manual one instead of sleeping on the wall clock (STEP_277).
+    public var hoverClock: any Clock<Duration> = ContinuousClock()
     public var hoverSettle: TimeInterval = ExplanationTiming.settle
 
     // MARK: "Since you last looked" (UI Spec Part 1 §2.8 / Part 2 §2.10, D-75 — STEP_112)

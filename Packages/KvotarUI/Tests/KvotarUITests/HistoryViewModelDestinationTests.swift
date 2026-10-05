@@ -8,6 +8,11 @@ import KvotarCore
 @MainActor
 final class HistoryViewModelDestinationTests: XCTestCase {
 
+    nonisolated override func setUp() {
+        super.setUp()
+        FixtureTimeZone.pin(self)
+    }
+
     private func activeTool() -> HistoryReport.ToolReport {
         HXFix.tool(.claude, days: HXFix.days([0, 200_000, 0, 300_000, 0]))
     }

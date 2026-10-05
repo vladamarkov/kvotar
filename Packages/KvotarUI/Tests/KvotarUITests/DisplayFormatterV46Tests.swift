@@ -7,6 +7,11 @@ import KvotarCore
 /// and over-quota overflow. The v4.6 weekly thin bar + runway timeline are gone (REV-25).
 final class DisplayFormatterV46Tests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        FixtureTimeZone.pin(self)
+    }
+
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     private func snapshot(

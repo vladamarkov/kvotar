@@ -17,6 +17,11 @@ import KvotarCore
 /// reasonable — an invented fixture would have looked reasonable too.
 final class DisplayFormatterWindowGrainTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        FixtureTimeZone.pin(self)
+    }
+
     // MARK: Fixtures — real corpus values
 
     /// `go` account, 2026-08-11. Anchored at first use 18:47:32 CEST; the reset lands

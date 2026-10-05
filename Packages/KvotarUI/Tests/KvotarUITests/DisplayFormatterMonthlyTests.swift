@@ -10,6 +10,11 @@ import KvotarCore
 /// same layout, `unit = .money`, synthetic base values in the shape of the 2026-07-16 capture.
 final class DisplayFormatterMonthlyTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        FixtureTimeZone.pin(self)
+    }
+
     /// Aug 1 2026 00:00:00 UTC — cycle end; Jul 1 2026 00:00:00 UTC — cycle start.
     private let augustFirst = Date(timeIntervalSince1970: 1_785_542_400)
     private let julyFirst = Date(timeIntervalSince1970: 1_782_864_000)

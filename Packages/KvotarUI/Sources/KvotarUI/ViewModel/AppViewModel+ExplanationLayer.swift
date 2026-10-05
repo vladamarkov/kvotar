@@ -43,7 +43,7 @@ extension AppViewModel {
             // grace. Sweeping opens nothing; resting opens one card.
             explanationTimer = Task { @MainActor [weak self] in
                 guard let self else { return }
-                try? await Task.sleep(for: self.hoverPeekDelay)
+                try? await self.hoverClock.sleep(for: self.hoverPeekDelay)
                 guard !Task.isCancelled, self.hoveredExplanation == target,
                       self.pinnedCard == nil else { return }
                 self.peekedCard = target
@@ -126,7 +126,7 @@ extension AppViewModel {
         guard let showing = peekedCard else { return }
         explanationEndTimer = Task { @MainActor [weak self] in
             guard let self else { return }
-            try? await Task.sleep(for: self.hoverGraceLeave)
+            try? await self.hoverClock.sleep(for: self.hoverGraceLeave)
             guard !Task.isCancelled, self.peekedCard == showing,
                   self.hoveredExplanation != showing,
                   !self.explanationCardHovered else { return }
