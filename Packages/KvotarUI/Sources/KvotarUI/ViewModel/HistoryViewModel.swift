@@ -301,6 +301,9 @@ public final class HistoryViewModel: ObservableObject {
     /// that read — where a list of rows is a reading surface and sliding is only travel.
     public var hoverPeekDelay: Duration = ExplanationTiming.peekDelay
     public var hoverGraceLeave: Duration = ExplanationTiming.graceLeave
+    /// The clock the peek and grace timers sleep on. The app keeps the default (what
+    /// `Task.sleep` uses); tests drive a manual one instead of sleeping on the wall clock (STEP_277).
+    public var hoverClock: any Clock<Duration> = ContinuousClock()
 
     private let load: () async -> HistoryReport?
     private var inFlight: Task<Void, Never>?
@@ -358,7 +361,7 @@ public final class HistoryViewModel: ObservableObject {
             }
             dayTimer = Task { @MainActor [weak self] in
                 guard let self else { return }
-                try? await Task.sleep(for: self.hoverPeekDelay)
+                try? await self.hoverClock.sleep(for: self.hoverPeekDelay)
                 guard !Task.isCancelled, self.hoveredDay == column else { return }
                 self.peekedDay = column
             }
@@ -368,7 +371,7 @@ public final class HistoryViewModel: ObservableObject {
             guard peekedDay != nil else { return }
             dayTimer = Task { @MainActor [weak self] in
                 guard let self else { return }
-                try? await Task.sleep(for: self.hoverGraceLeave)
+                try? await self.hoverClock.sleep(for: self.hoverGraceLeave)
                 guard !Task.isCancelled, self.hoveredDay == nil else { return }
                 self.peekedDay = nil
             }

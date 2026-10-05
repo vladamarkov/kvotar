@@ -23,6 +23,13 @@ final class FakeCodexTransport: CodexProcessTransport, @unchecked Sendable {
     var closeOnStart = false
     /// method -> result body JSON. Methods absent here get no response (the call times out).
     var responses: [String: String] = [:]
+    /// A slow exit (STEP_277): `terminate()` leaves the old stream open, so the client's old reader
+    /// is still alive when the restart begins. The first request sent to the next process finishes
+    /// the held stream, and every response arrives `responseDelay` after its request — long enough
+    /// for the old reader's exit to land while the new call is still waiting.
+    var holdStreamOnTerminate = false
+    var responseDelay: Duration?
+    private var heldContinuation: AsyncStream<String>.Continuation?
 
     // Observability.
     private(set) var startCount = 0
@@ -56,7 +63,20 @@ final class FakeCodexTransport: CodexProcessTransport, @unchecked Sendable {
         guard let (id, method) = Self.parse(line) else { return }
         guard let body = lock.withLock({ responses[method] }) else { return }
         let response = "{\"jsonrpc\":\"2.0\",\"id\":\(id),\"result\":\(body)}"
-        lock.withLock { continuation }?.yield(response)
+        let (current, held) = lock.withLock { () -> (AsyncStream<String>.Continuation?, AsyncStream<String>.Continuation?) in
+            let held = heldContinuation
+            heldContinuation = nil
+            return (continuation, held)
+        }
+        held?.finish()
+        if let responseDelay {
+            Task {
+                try? await Task.sleep(for: responseDelay)
+                current?.yield(response)
+            }
+        } else {
+            current?.yield(response)
+        }
     }
 
     func terminate() {
@@ -66,6 +86,10 @@ final class FakeCodexTransport: CodexProcessTransport, @unchecked Sendable {
             running = false
             let existing = self.continuation
             self.continuation = nil
+            if holdStreamOnTerminate, let existing {
+                heldContinuation = existing
+                return nil
+            }
             return existing
         }
         continuation?.finish()

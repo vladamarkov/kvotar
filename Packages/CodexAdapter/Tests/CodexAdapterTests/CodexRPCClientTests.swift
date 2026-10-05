@@ -86,6 +86,28 @@ final class CodexRPCClientTests: XCTestCase {
         client.shutdown()
     }
 
+    /// STEP_277 — the old process's exit lands after the restart has begun. Its reader was
+    /// cancelled, but its loop still ends; that end must not fail the new process's `initialize`
+    /// (it did, as `transportClosed`, on a slow machine) nor mark the client not started.
+    func testTheOldProcessExitDoesNotFailTheRestartedOne() async throws {
+        let transport = try healthyTransport()
+        let client = makeClient(transport)
+        _ = try await client.poll()
+
+        transport.holdStreamOnTerminate = true
+        transport.responseDelay = .milliseconds(200)
+        transport.terminate()
+
+        let result = try await client.poll()
+        XCTAssertEqual(result.account.account.planType, "enterprise")
+        XCTAssertEqual(transport.startCount, 2)
+
+        // Still started: the next poll reuses the process instead of restarting it.
+        _ = try await client.poll()
+        XCTAssertEqual(transport.startCount, 2, "the old exit must not mark the new process stopped")
+        client.shutdown()
+    }
+
     func testUnavailableAfterThreeRestartFailures() async {
         let transport = FakeCodexTransport()
         transport.startError = CocoaError(.fileNoSuchFile)  // spawn always fails

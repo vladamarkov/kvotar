@@ -599,10 +599,13 @@ final class AppViewModelHoverCardTests: XCTestCase {
 
     /// A model with a Claude anatomy available and the settle guard already elapsed, timings
     /// shrunk so a test takes milliseconds.
+    private let clock = ManualClock()
+
     private func makeVM() -> AppViewModel {
         let vm = AppViewModel()
         vm.hoverPeekDelay = .milliseconds(20)
         vm.hoverGraceLeave = .milliseconds(20)
+        vm.hoverClock = clock
         vm.hoverSettle = 0
         vm.apply(tool: .claude,
                  snapshot: QuotaSnapshot(tool: .claude, primaryUsedPct: 87,
@@ -616,8 +619,9 @@ final class AppViewModelHoverCardTests: XCTestCase {
         return vm
     }
 
-    private func settle(_ ms: UInt64) async {
-        try? await Task.sleep(for: .milliseconds(ms))
+    /// Moves the injected clock; nothing here sleeps on the wall clock (STEP_277).
+    private func settle(_ ms: Int) async {
+        await clock.advance(ms)
     }
 
     func testHoverPeeksAfterTheDelayNotBefore() async {

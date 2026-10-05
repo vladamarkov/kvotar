@@ -63,6 +63,10 @@ public final class CodexRPCClient: CodexRPCPolling, @unchecked Sendable {
     private var binaryMissingLogged = false
     private var readerTask: Task<Void, Never>?
     private var started = false
+    /// Numbers each started process. A cancelled reader's loop still ends and reports the exit, so
+    /// after a restart the old process's exit would fail the new one's first call (STEP_277); only
+    /// the current number's exit counts.
+    private var processGeneration = 0
 
     private var restartCooldownSeconds: TimeInterval {
         Double(restartCooldown.components.seconds)
@@ -219,7 +223,8 @@ public final class CodexRPCClient: CodexRPCPolling, @unchecked Sendable {
 
         do {
             let stream = try transport.start(binary: binary)
-            startReader(stream)
+            let generation = lock.withLock { () -> Int in processGeneration += 1; return processGeneration }
+            startReader(stream, generation: generation)
             let initParams = "{\"clientInfo\":{\"name\":\"Kvotar\",\"version\":\"\(appVersion)\"}}"
             _ = try await call(method: "initialize", paramsJSON: initParams, timeout: startupTimeout)
             lock.withLock {
@@ -292,12 +297,12 @@ public final class CodexRPCClient: CodexRPCPolling, @unchecked Sendable {
         }
     }
 
-    private func startReader(_ stream: AsyncStream<String>) {
+    private func startReader(_ stream: AsyncStream<String>, generation: Int) {
         let task = Task { [weak self] in
             for await line in stream {
                 self?.handleLine(line)
             }
-            self?.handleTransportClosed()
+            self?.handleTransportClosed(generation: generation)
         }
         lock.withLock { readerTask = task }
     }
@@ -337,9 +342,12 @@ public final class CodexRPCClient: CodexRPCPolling, @unchecked Sendable {
     }
 
     /// Process exited: fail every in-flight call so `poll()` surfaces the crash and triggers a
-    /// restart on the next call (Baseline §8.7 crash recovery).
-    private func handleTransportClosed() {
+    /// restart on the next call (Baseline §8.7 crash recovery). The exit of a process that has
+    /// already been replaced fails nothing: its calls are gone, and the waiting ones belong to the
+    /// new process.
+    private func handleTransportClosed(generation: Int) {
         let continuations = lock.withLock { () -> [CheckedContinuation<Data, Error>] in
+            guard generation == processGeneration else { return [] }
             let all = Array(pendingRequests.values)
             pendingRequests.removeAll()
             started = false

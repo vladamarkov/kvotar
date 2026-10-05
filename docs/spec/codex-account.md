@@ -121,7 +121,7 @@ sends `initialize` with `clientInfo` `{"name": "Kvotar", "version": …}`. Each 
 **Persistent process.** The child stays up between polls. A line with an integer `id` resolves the
 waiting call (an unknown id is dropped); a line with a `method` and no integer `id` is a
 notification, logged at DEBUG and dropped; anything else is dropped. A child that exits fails every
-waiting call, and the next poll restarts it and sends `initialize` again. After three start
+call waiting on it; the exit of a child that has already been replaced fails nothing. The next poll restarts the child and sends `initialize` again. After three start
 failures in a row the client reports unavailable (so the poll goes to the web endpoint) until 300 s
 after the last failure; then the count starts again, allowing up to three more tries. The child is
 terminated when the app quits. A start failure logs one line of the child's stderr (the first non-empty line of its last 2 KB, at most 300 characters). (`handleLine`, `handleTransportClosed`, `restartCooldown`, `PollCoordinator.stop`; tests `CodexRPCClientTests`) Reason: one long-lived child is cheaper than a start per poll; correctness rests on the two reads, never on notifications.
@@ -320,4 +320,4 @@ Code that reads the plan:
 | Wiring (bundle lookup, capture, adapter) | `App/AppDelegate.swift` |
 | Tests | `Packages/CodexAdapter/Tests/CodexAdapterTests/`: `CodexAccountAdapterTests`, `CodexRPCClientTests`, `CodexWhamHTTPClientTests`, `CodexBinaryDiscoveryTests`, `NoRefreshNetworkSeamTests`; fixtures in `TestFixtures/` |
 
-Checked against the code at 00ed0b1 + STEP_273
+Checked against the code at e9d2933 + STEP_277

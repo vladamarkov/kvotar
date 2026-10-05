@@ -11,6 +11,11 @@ import KvotarCore
 /// `MenuBarExhaustionAgreementTests`, which does the same job for the ◔ slot.
 final class LongLimitSurfaceAgreementTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        FixtureTimeZone.pin(self)
+    }
+
     private let now = LongLimitFixture.now
 
     // MARK: The fixtures describe states their own numbers produce
