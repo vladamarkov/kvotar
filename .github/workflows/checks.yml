@@ -1,0 +1,62 @@
+# The three Makefile targets on every pull request and every push to main (STEP_276).
+# No secret, no environment, no KVOTAR_* variable but the build folder (set from
+# RUNNER_TEMP in the first step, so the logs upload knows where to look); the tests run on fixtures.
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      XCODEGEN_VERSION: 2.45.4
+      XCODEGEN_SHA256: 090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build folder and Xcode 26.3
+        run: |
+          echo "KVOTAR_BUILD_DIR=$RUNNER_TEMP/kvotar-build" >> "$GITHUB_ENV"
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o xcodegen.zip \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+          echo "$XCODEGEN_SHA256  xcodegen.zip" | shasum -a 256 -c -
+          unzip -q xcodegen.zip
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/xcodegen/bin/xcodegen" --version
+
+      - name: make check
+        run: make check
+
+      - name: make test
+        if: ${{ !cancelled() }}
+        run: make test
+
+      - name: make build
+        if: ${{ !cancelled() }}
+        run: make build
+
+      - name: Upload test logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-logs
+          path: ${{ env.KVOTAR_BUILD_DIR }}/logs/
+          retention-days: 7

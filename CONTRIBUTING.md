@@ -20,6 +20,10 @@ make test
 make check
 ```
 
+GitHub runs the same three commands on every pull request and every push to `main`
+(`.github/workflows/checks.yml`), on macOS, with no account or credential. Run them locally
+first; the GitHub run is a second check, not a replacement.
+
 All three run without a Claude or Codex account. Never use real credentials, real session logs or a
 real Kvotar database in a test, a screenshot or a pull request.
 
@@ -50,4 +54,4 @@ There is no `NOTICE` file. Apache-2.0 asks for one only when the work already ca
 of the bundled third-party components (Sparkle, GRDB.swift, swift-argument-parser, whose licenses are
 in `Resources/THIRD_PARTY_NOTICES`) ships a NOTICE file.
 
-Checked against the code at 62d7d98 + STEP_241.
+Checked against the code at e9d2933 + STEP_276.
