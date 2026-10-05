@@ -5,7 +5,7 @@ the line of their change.
 
 ## Unreleased
 
-## 0.3.0 beta.10 (19) — 2026-10-05
+## [0.3.0 beta.10 (19)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.10) — 2026-10-05
 
 - Source published under the Apache License 2.0.
 - On an account with only a weekly limit, the "nearly spent" notice arrives with the red state, at

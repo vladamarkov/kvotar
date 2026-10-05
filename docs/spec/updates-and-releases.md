@@ -212,7 +212,7 @@ setting's value and error codes, nothing else.
   a reused or lower number is invisible to every installed copy. A withdrawn build is fixed by a new
   build with a higher number, never by going back.
 - **The version** (`MARKETING_VERSION`) changes with who the build is for, not with features. Every
-  public beta build so far is `0.3.0`, from `0.3.0 beta.2 (11)` to `0.3.0 beta.9 (18)`.
+  public beta build so far is `0.3.0`, from `0.3.0 beta.2 (11)` to `0.3.0 beta.10 (19)`.
 - **The beta label** (`KVOTAR_PRERELEASE_LABEL`, `beta.N`) goes up by one with each beta cut. A cut
   that was not released still used its number: beta.1 was build 10.
 - **A release bump** in `project.yml` changes the build number and the label, and the version only
@@ -237,7 +237,10 @@ What a reader can check in this repository today:
   build or group of builds with its version, build number and date, and an *Unreleased* section for merged changes not
   yet in a build.
 - **What the next build will be called:** the three numbers in `project.yml`.
-- **Which commit a published build came from:** nothing public says so yet (Known gaps).
+- **Which commit a published build came from:** from `0.3.0 beta.10 (19)` on, the tag
+  `v<version>-<label>` (for example `v0.3.0-beta.10`) marks the commit the build was made from, and
+  the GitHub Release of that tag gives the zip's SHA-256. Earlier builds were made before the code
+  was public and have no tag here.
 
 Signing, notarizing and publishing happen outside this repository.
 
@@ -256,7 +259,6 @@ Signing, notarizing and publishing happen outside this repository.
 
 | Gap | Today | Proposed |
 |---|---|---|
-| No public record maps a build to its source commit | The repository has no tags; [CHANGELOG.md](../../CHANGELOG.md) names builds and dates but no commits | Release tags, already planned: tag the commit each published build is made from |
 | Nothing tests the update policy | No test or check reads the `SU*` keys; `UpdaterService` is outside the test target. Flipping `SUAllowsAutomaticUpdates` or `SUAutomaticallyUpdate` fails nothing | A test or a `make check` rule that reads `App/Info.plist` and asserts the policy keys above |
 | The feed itself is not signed | Each download is signed and checked; the feed is fetched over HTTPS but carries no signature (`SURequireSignedFeed` absent) | Decide whether to require a signed feed; it needs every published feed signed first |
 | Comments describe the schedule loosely | `UpdaterService`'s doc comment says "a scheduled check on launch and every 24 h"; Sparkle checks at launch only when 24 hours have passed | Reword with the next change to the file |
@@ -278,4 +280,4 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `DiagnosticsCaptureFlagTe
 `ProductIdentityTests` (the channel key and setting names), `ForecastLogRecorderTests`
 (`testAppVersionFormatting`). Nothing tests `UpdaterService` or the `SU*` keys (Known gaps).
 
-Checked against the code at 595b1b9 + STEP_266
+Checked against the code at 2faa280 + STEP_279
