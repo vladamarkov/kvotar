@@ -259,7 +259,6 @@ Signing, notarizing and publishing happen outside this repository.
 | No public record maps a build to its source commit | The repository has no tags; [CHANGELOG.md](../../CHANGELOG.md) names builds and dates but no commits | Release tags, already planned: tag the commit each published build is made from |
 | Nothing tests the update policy | No test or check reads the `SU*` keys; `UpdaterService` is outside the test target. Flipping `SUAllowsAutomaticUpdates` or `SUAutomaticallyUpdate` fails nothing | A test or a `make check` rule that reads `App/Info.plist` and asserts the policy keys above |
 | The feed itself is not signed | Each download is signed and checked; the feed is fetched over HTTPS but carries no signature (`SURequireSignedFeed` absent) | Decide whether to require a signed feed; it needs every published feed signed first |
-| The README says builds "update themselves" | [README — Install](../../README.md#install) can be read as automatic installation | Reword with the next README edit: updates are offered and install when you click **Install** |
 | Comments describe the schedule loosely | `UpdaterService`'s doc comment says "a scheduled check on launch and every 24 h"; Sparkle checks at launch only when 24 hours have passed | Reword with the next change to the file |
 
 ## Code and test pointers
