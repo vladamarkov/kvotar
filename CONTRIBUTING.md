@@ -59,12 +59,42 @@ Kvotar is developed in this repository. When your pull request is accepted:
 2. It ships in the next release, which is built from this repository.
 3. If users can see your change, its line in [CHANGELOG.md](CHANGELOG.md) credits you by name.
 
+## Running a development build
+
+`make run` makes an unsigned Debug build for your Mac, asks a running Kvotar to quit once the build
+has succeeded, launches the new build and prints its path. It never touches the copy in
+Applications. To go back to the installed release, quit the development build and open Kvotar from
+Applications.
+
+- **It shares the installed copy's data.** The build has the same bundle identifier, so it polls
+  the providers with your real Claude and Codex sign-ins, and reads and writes the same database and
+  settings ([storage](docs/spec/storage.md#where-the-data-lives)). What it changes is still there
+  when you reopen the release.
+- **Only one copy runs at a time.** A second copy hands off to the first and quits, which is why
+  `make run` quits the running one first.
+- **A migration it applies stays applied.** A build with a new migration runs it on the real
+  database at launch. The installed release still opens that database: it runs only the migrations
+  it knows, skips any it does not, and undoes nothing. A table or nullable column it does not know
+  is harmless to it. Rows a migration deleted or rewrote stay that way, and a migration that removes
+  or renames something the release uses breaks the release until it is updated. A migration also
+  never runs twice, so one you change after running it leaves your database in its first shape.
+- **Two variables show states your account may never reach.** `make run` passes these two to the
+  app, and no others:
+  - `KVOTAR_MENU_BAR_FIXTURE=<name> make run` forces one long-limit warning onto the menu-bar item,
+    for example `claude-limit-nearly-spent`
+    ([menu bar](docs/spec/menu-bar.md#looking-at-it-without-a-live-warning)).
+  - `KVOTAR_NOTIFICATION_FIXTURE=<name> make run` sends one scripted set of banners, for example
+    `ladder-steps`
+    ([notifications](docs/spec/notifications.md#the-test-aid-kvotar_notification_fixture)).
+- **For the debugger,** quit Kvotar, run `xcodegen generate`, open `Kvotar.xcodeproj` in Xcode and
+  press Run.
+
 ## Maintainer only
 
 The maintainer agrees contracts and cuts releases ([docs/releasing.md](docs/releasing.md)). Agreeing
 a contract includes its stated live checks, unless the maintainer reserves them for themselves:
-build and launch the app for them and hand over only the clicks. A maintainer's "I'll do the live
-check" wins.
+build and launch the app for them with `make run` and hand over only the clicks. A maintainer's
+"I'll do the live check" wins.
 
 ## Licensing
 

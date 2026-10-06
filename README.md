@@ -148,12 +148,15 @@ git clone https://github.com/vladamarkov/kvotar.git
 cd kvotar
 brew install xcodegen
 make build   # builds an unsigned app and prints its path
+make run     # builds a debug copy and launches it in place of a running Kvotar
 make test    # runs package and app tests on synthetic fixtures
 make check   # checks static rules and documentation paths
 ```
 
-These commands need no Claude or Codex account. Open the app at the path printed by `make build`
-to run your build on your own Mac. The app build does not include the separate CLI.
+These commands need no Claude or Codex account. `make run` runs your build on your own Mac: it
+shares an installed Kvotar's sign-ins and data and leaves the copy in Applications untouched
+([details](CONTRIBUTING.md#running-a-development-build)). The app build does not include the
+separate CLI.
 
 ## Contributing
 

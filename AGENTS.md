@@ -20,7 +20,12 @@ Don't add a CLAUDE.md; if one is ever needed, it must contain @AGENTS.md.
 make build   # xcodegen + unsigned Release build; prints the .app path
 make test    # every package's tests + the app tests, with live variables unset
 make check   # static rule checks and the doc-path check
+make run     # Debug build; quits the running Kvotar, launches the build, prints its path
 ```
+
+`make run` is the only way an agent launches the app. The build uses the real sign-ins and the real
+database ([CONTRIBUTING.md](CONTRIBUTING.md#running-a-development-build)), so run it only when the
+person you work for asks.
 
 `make test` fails on any skipped test that is not on the expected-skips list. Do not add to that list
 to make a run pass.
