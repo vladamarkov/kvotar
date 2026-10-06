@@ -1,6 +1,12 @@
 # The three Makefile targets on every pull request and every push to main (STEP_276).
 # No secret, no environment, no KVOTAR_* variable but the build folder (set from
 # RUNNER_TEMP in the first step, so the logs upload knows where to look); the tests run on fixtures.
+#
+# A pull request that changes only docs (root-level Markdown, docs/, the issue and pull request
+# templates) runs `make check` alone: no test reads those files, and compiling everything for them
+# took 9–16 minutes. Anything else, including an empty or unreadable file list, runs all three
+# targets. A push to main always runs all three, so a wrongly skipped change is caught right after
+# the merge. The job keeps its name and its single result, so the required check is unchanged.
 name: checks
 
 on:
@@ -24,6 +30,34 @@ jobs:
       XCODEGEN_SHA256: 090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Two commits, so the docs-only step can compare the trial merge with its first parent.
+          fetch-depth: 2
+
+      # On a pull request the checkout is GitHub's trial merge of the pull request into its base;
+      # its first parent is the base, so this diff lists every file the pull request changes.
+      # --no-renames shows a moved file on both sides, so a source file moved into docs/ still
+      # counts as a source change. The allow-list is deliberately narrow: `*/*` rejects any
+      # Markdown below a folder other than docs/ (one is a test fixture under Packages/).
+      - name: Docs-only pull request?
+        id: scope
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          files=$(git diff --name-only --no-renames HEAD^1 HEAD) || files=""
+          docs_only=true
+          [ -n "$files" ] || docs_only=false
+          while IFS= read -r f; do
+            case "$f" in
+              docs/*|.github/ISSUE_TEMPLATE/*|.github/pull_request_template.md) ;;
+              */*) docs_only=false ;;
+              *.md) ;;
+              *) docs_only=false ;;
+            esac
+          done <<< "$files"
+          echo "Changed files:"
+          echo "$files" | sed 's/^/  /'
+          echo "docs_only=$docs_only"
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
 
       - name: Build folder and Xcode 26.3
         run: |
@@ -33,6 +67,7 @@ jobs:
           swift --version
 
       - name: Install XcodeGen
+        if: ${{ steps.scope.outputs.docs_only != 'true' }}
         run: |
           cd "$RUNNER_TEMP"
           curl -fsSL -o xcodegen.zip \
@@ -46,12 +81,18 @@ jobs:
         run: make check
 
       - name: make test
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.scope.outputs.docs_only != 'true' }}
         run: make test
 
       - name: make build
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.scope.outputs.docs_only != 'true' }}
         run: make build
+
+      # Written only once make check has passed, so the summary never claims more than happened.
+      - name: Say what the green result means
+        if: ${{ success() && steps.scope.outputs.docs_only == 'true' }}
+        run: |
+          echo "Docs-only pull request: static checks passed; tests and build skipped." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload test logs
         if: ${{ failure() }}
