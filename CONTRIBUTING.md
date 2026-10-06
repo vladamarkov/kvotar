@@ -57,7 +57,7 @@ Kvotar is developed in this repository. When your pull request is accepted:
 
 1. It is merged here directly, with your authorship kept.
 2. It ships in the next release, which is built from this repository.
-3. You are credited by name in [CHANGELOG.md](CHANGELOG.md).
+3. If users can see your change, its line in [CHANGELOG.md](CHANGELOG.md) credits you by name.
 
 ## Maintainer only
 

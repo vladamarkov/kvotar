@@ -74,10 +74,11 @@ agreement.
   point to private records; [docs/REFERENCES.md](docs/REFERENCES.md) explains them. Do not invent new
   IDs; explain the reason in the comment instead.
 - Keep changes small and in the style of the surrounding code.
+- Before handing off, run `make test` and `make check`, and say what passed, failed or was skipped.
 
 ## How a change lands
 
 A change that makes Kvotar do what the docs already say, or that no user or spec page would notice,
 goes straight to a pull request. A new feature, a change to what Kvotar is meant to do, or a change
-to how an area on the approval list in [VISION.md](VISION.md) works needs an agreed contract first.
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+to how an area on the approval list in [VISION.md](VISION.md) works, in a way no spec page already
+describes, needs an agreed contract first. See [CONTRIBUTING.md](CONTRIBUTING.md).
