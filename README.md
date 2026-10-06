@@ -13,7 +13,7 @@ while you work, and understand where your local tokens went.
 
 Works with **Claude Code, Codex, or both**.
 
-<img src="docs/images/kvotar-popover.png" width="360" alt="Kvotar in the macOS menu bar and its Claude popover: quota remaining, pace verdict, other limits, local activity by project and model, and estimated token value">
+<img src="docs/images/menu-bar-warning.png" width="640" alt="A macOS menu bar with the Kvotar item beside the Wi-Fi, battery and clock: an amber dot, CL 32% with a reset in 1h05m, and a green CX 58%. Below it, Kvotar's Claude popover: 32% of the 5-hour quota left, the amber verdict 'Won't make it — slow down or you'll stop in ~38m', stops ~7:53 pm, resets 8:20 pm, runway ~38m, the quota burn of 0.84% per minute, and the weekly quota at 69% left.">
 
 ## Install
 
@@ -53,12 +53,35 @@ If you cannot find the menu-bar item, open Kvotar again from Applications to bri
   the popover for the account's other limits: weekly, monthly and per-model, where available.
 - **Get time to react.** Pace estimates and optional notifications help you notice when usage
   may exhaust a limit before reset, so you can decide whether to slow down or defer work.
+
+  <img src="docs/images/menu-bar-calm.png" width="640" alt="A macOS menu bar with the Kvotar item beside the Wi-Fi, battery and clock: green dots, CL 62% with a reset in 1h52m, CX 58% with a reset in 2h04m.">
+
+  **Nothing to think about.** Both tools green, quota left and the reset clock in one glance, so you keep working without opening anything.
+
+  <img src="docs/images/menu-bar-weekly-reminder.png" width="640" alt="The same menu bar with the Kvotar item showing an amber dot and one line: CL, a warning sign, wk 30%.">
+
+  **The week is the problem.** The 5-hour number can look fine while the weekly limit runs ahead of its week. A short reminder names it, so you can defer the heavy work before the week runs out.
+
+  <img src="docs/images/menu-bar-runway.png" width="640" alt="The same menu bar with a red dot: CL 4% and a runway of about 11 minutes; Codex still green at 58%.">
+
+  **You will hit the wall before the reset.** At this pace Claude stops in about 11 minutes, so finish the thought rather than start the big refactor.
+
+  <img src="docs/images/menu-bar-blocked.png" width="640" alt="The same menu bar with a red dot: CL, a warning sign, wk 0% and a reset in 3 days; Codex still green at 58%.">
+
+  **Blocked, and when you are back.** The weekly is spent and work resumes in three days, while Codex still has room. No guessing, and no retyping a prompt into a tool that will refuse it.
+
 - **Understand the answer.** The explanation behind a pace verdict shows the figures and
   comparison that produced it.
+
+  <img src="docs/images/verdict-explained.png" width="340" alt="The same popover with the explanation pinned under the verdict: remaining 32% of window, burn 0.84% per minute over the last 9 minutes, runway ~38m so it stops ~7:53 pm, reset at 8:20 pm which is 1h 5m away, pace 68% used at 60% of the window. Below the rows: 'At this speed you run out in about 38m — before the reset, which is 1h 5m away', and the pace at which the verdict would change.">
+
 - **Catch up after a break.** When there is a meaningful change, a line at the top of the tab
   tells you what changed since your previous look.
 - **Understand where your tokens went.** Today's local activity shows projects and models,
   token counts and estimated value at published API prices.
+
+  <img src="docs/images/local-activity.png" width="340" alt="The popover's local activity for today: Claude Code, 49.3M tokens in 6 sessions, a recent local rate of about 422 tokens per minute and a 97% cache hit. Top projects by observed tokens: kvotar, 49.3M, split into opus-5-5 at 35.6M and fable-5-1 at 13.6M. Estimated value at published API rates: $34.50 today, $162.59 over 7 days, $1685.00 over 30 days.">
+
 - **Look back at your week.** History brings together a weekly recap, quota history, local
   usage breakdowns and recorded hard blocks, across a 30-day view.
 
@@ -160,12 +183,9 @@ separate CLI.
 
 ## Contributing
 
-Kvotar is developed in this repository. Accepted pull requests are merged here, included in the
-next release, and credited by name in the changelog.
-
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). Changes involving
-credentials, network behavior, storage, privacy and other sensitive areas need agreement before
-implementation; the full list is in [VISION.md](VISION.md).
+Kvotar is developed in this repository, and pull requests are welcome.
+[CONTRIBUTING.md](CONTRIBUTING.md) explains how a change lands, and [AGENTS.md](AGENTS.md) has the
+rules every change follows.
 
 ## License and affiliation
 
