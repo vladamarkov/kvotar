@@ -1,7 +1,7 @@
-# Three targets (STEP_237, STEP_239). Build output lives outside the source tree, under
+# Four targets (STEP_237, STEP_239). Build output lives outside the source tree, under
 # $KVOTAR_BUILD_DIR (default ${TMPDIR:-/tmp}/kvotar-build). Nothing here signs or notarizes.
 
-.PHONY: check test build
+.PHONY: check test build run
 
 # The absolute rules' static tripwires and the agent-doc path check (STEP_239).
 check:
@@ -18,3 +18,8 @@ build:
 		-derivedDataPath "$$BUILD/xcode" \
 		ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO -quiet; \
 	echo "Built (unsigned): $$BUILD/xcode/Build/Products/Release/Kvotar.app"
+
+# Local only: a Debug build for this Mac, launched in place of any running Kvotar. It uses the real
+# sign-ins and the real database (CONTRIBUTING.md, "Running a development build").
+run:
+	@scripts/run.sh
