@@ -75,5 +75,3 @@ replies once kept email addresses and organisation ids; identity fields are now 
 ## Status
 
 Accepted.
-
-Checked against the code at 8aebac0.

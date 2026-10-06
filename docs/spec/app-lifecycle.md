@@ -419,5 +419,3 @@ word in the conflict copy, and the unreachable "another Kvotar" string, are a
   `Packages/KvotarUI/Tests/KvotarUITests/AlreadyRunningViewTests.swift`;
   `testAllThreeDarwinNamesAreDistinct` in
   `Packages/KvotarCore/Tests/KvotarCoreTests/DiagnosticsCaptureFlagTests.swift`; `PIDLockTests`.
-
-Checked against the code at 00ed0b1 + STEP_273

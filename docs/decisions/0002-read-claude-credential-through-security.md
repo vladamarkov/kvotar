@@ -57,5 +57,3 @@ Tests use a scripted fake `security`; they never run the real tool.
 ## Status
 
 Accepted.
-
-Checked against the code at 8aebac0.

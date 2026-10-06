@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_250; the second in STEP_253). The code does not
-follow them yet; each has a row in *Known gaps* below, which a later build step closes.
+follow them yet; each has a row in *Known gaps* below, which a later contract closes.
 
 1. **A lock-file failure is a lock error, not "another copy is running".** If `kvotar.pid` cannot be
    opened or written, the app reports a lock error and does not poll. It never runs unguarded as a
@@ -298,7 +298,7 @@ diagnostics bundles report (`latestSchemaMigration`).
    `SQLiteStoreModelLimitSeriesTests` (`v25`) are the pattern.
 
 A migration changes storage, which is on the approval list in [VISION.md](../../VISION.md); it needs
-the maintainer's agreement and a build step that updates this page.
+an agreed contract whose pull request updates this page.
 
 ### The version pin
 
@@ -413,5 +413,3 @@ settings audit, `v21`), `SQLiteStoreRetentionTests`, `SQLiteStorePollTests`,
 version), `SQLiteStoreTokenEventsTests` (`v19`), `SQLiteStoreQuotaLimitEventsTests` (`v11`,
 `v13`), `LegacyDataMigratorTests`, `PIDLockTests`, `CredentialTreesUntouchedTests`; and
 `Packages/KvotarCLI/Tests/KvotarCLITests/CredentialTreesUntouchedTests.swift`.
-
-Checked against the code at 00ed0b1 + STEP_273

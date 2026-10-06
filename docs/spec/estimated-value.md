@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_264). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later build step closes.
+has a row in *Known gaps* below, which a later contract closes.
 
 1. **Remove `LocalAttribution.windowValue`.** Reason: no screen has read it since the popover's
    value rows became Today / 7-day / 30-day, and computing it costs a store read and a pricing pass
@@ -351,5 +351,3 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `EstimatedValueEngineTest
 `HistoryReportReaderTests`. In `Packages/KvotarUI/Tests/KvotarUITests/`:
 `DisplayFormatterLocalActivityTests`, `DisplayFormatterTests.testCodexEnterpriseCreditsCard`,
 `HistoryExperienceContractTests.testNoRenderedStringUsesRetiredVocabulary`.
-
-Checked against the code at 00ed0b1 + STEP_273

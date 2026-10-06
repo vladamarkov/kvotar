@@ -131,5 +131,3 @@ intervention or blocking.
 - `Packages/KvotarCore/Sources/KvotarCore/Adapters/AccountAdapter.swift`: `DetectionStatus.classify`.
   Test: `DetectionStatusTests`.
 - `Packages/KvotarCore/Sources/KvotarCore/Attribution/CodexSurface.swift`: the Codex surfaces.
-
-Checked against the code at 00ed0b1 + STEP_273

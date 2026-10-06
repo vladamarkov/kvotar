@@ -192,5 +192,3 @@ the product's argument, so every sentence on this screen must be literally true.
 ## Known gaps
 
 None.
-
-Checked against the code at 595b1b9 + STEP_266.

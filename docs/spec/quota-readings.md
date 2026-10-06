@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later build step closes.
+has a row in *Known gaps* below, which a later contract closes.
 
 1. **Rule W applies to Codex too.** A Codex "not started" claim is retracted by the same two
    triggers as Claude's ([rule W](#retracting-a-falsified-not-started-claim-rule-w)). Reason: local
@@ -311,5 +311,3 @@ Claude prepaid wallet from its own fetch time. Neither changes the quota reading
 | Copies of the 60 s tolerance | `QuotaSnapshot.resetJitterTolerance` is the rule, aliased only by `StateEngine`. Own `60` constants: `ClaudeAccountAdapter.resetJitterTolerance`, `ForecastEngine.resetJitterTolerance`, `MonthlySpendRate.resetJitterTolerance`, `OffMachineEstimator.resetJitterToleranceUnix`, `MonthlyAttributionEstimator.resetJitterToleranceUnix`, `DeltaLine.resetJitterTolerance`, `QuotaWindowOutcomes.anchorJitterTolerance`, `NotificationEngine.minResetAdvanceForRollover` | Alias each to `QuotaSnapshot.resetJitterTolerance` |
 | Stale "2 minutes" amber comments | Private Baseline §9.3 says the stamp turns amber after 2 minutes; the code uses 240 s. Comments in `DisplayFormatter.sourceTag` and `PopoverDisplay.swift` still say 2 minutes | This page and display-semantics.md win; fix the comments with the next change to those files |
 | Stale code comments about windows | `QuotaSnapshot` doc says Claude always fills both windows (it can send no `five_hour`, or a not-started one). `AdditionalRateLimit` and a `selectLimit` comment say Claude's scoped limits carry no width; the Claude adapter sets seven days, so a 0 %, reset-less scoped limit would read not started. A `StateEngine.classify` comment says the null-window rank catches a not-started window; it classifies Healthy (used 0) | Fix the comments with the next change to each file; settle on [Claude account](claude-account.md#questions-for-owner) whether a scoped limit can be not started |
-
-Checked against the code at 595b1b9 + STEP_266.

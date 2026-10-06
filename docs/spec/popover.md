@@ -23,7 +23,7 @@ read_when: Changing PopoverView, ClaudePopoverContent, CodexPopoverContent, Stat
 ## Decided
 
 The maintainer ruled on these on 2026-10-04. The code does not follow them yet; each has a row in
-*Known gaps* below, which a later build step closes.
+*Known gaps* below, which a later contract closes.
 
 1. **The History footer gets a label that matches what it opens.** Today it reads
    `History · last 30 days` but opens History's weekly recap, which is about completed weeks; the
@@ -544,5 +544,3 @@ tests `AppViewModelGlanceTests`, `SQLiteStoreDiscontinuityTests`)
   `DisplayFormatterLowAllowanceTests`, the recommendation tests in `DisplayFormatterTests`,
   `ThemeContrastTests`, `AppTests/QuotaSurfacePresenterTests.swift`; env-gated
   `PopoverCompositionSnapshots` (`KVOTAR_SNAPSHOT_DIR`).
-
-Checked against the code at 00ed0b1 + STEP_273

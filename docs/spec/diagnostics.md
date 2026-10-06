@@ -246,5 +246,3 @@ kvotar import <bundle>...                          # read bundles into a separat
 |---|---|---|
 | `kvotar capture --disable` leaves the expiry | It writes `"0"` and deletes the replies but keeps `diagnostics_capture_expires_at`; the app's off switch clears it. Harmless: `"0"` is off whatever the expiry says | Clear the expiry in `Capture.swift` with the next change to it |
 | Stale code comments | `DiagnosticsBundle.build`'s doc comment says the ordinary bundle has no logs; `LiveDiagnosticsSink.capture` says capture is "beta-gated" | Fix with the next change to either file |
-
-Checked against the code at d5e44af + STEP_275

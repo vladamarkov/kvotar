@@ -1,28 +1,28 @@
 ---
 summary: The map of Kvotar's spec pages — which page owns which feature and code area, how the pages depend on each other, and which topics have no page yet.
-read_when: Starting any change, choosing which spec pages to read for a task or bug fix, adding a spec page, or moving a rule from one page to another.
+read_when: Starting any change, choosing which spec pages to read for a contract or bug fix, adding a spec page, or moving a rule from one page to another.
 ---
 
 # Spec index
 
 Each page in `docs/spec/` is the current specification for one topic: the rule, its reason, the
 code that implements it and the gaps still open. A page wins over a code comment that disagrees
-with it. How to use the pages when you work on a task is in
-[AGENTS.md — Working on a task](../../AGENTS.md#working-on-a-task).
+with it. How the pages fit into a change is in
+[CONTRIBUTING.md — Working on a contract](../../CONTRIBUTING.md#working-on-a-contract).
 
 ## What on a page is a rule
 
 - **The description of today's behavior is the current rule.** A change that departs from it
-  needs a build step that changes the page in the same commit.
+  needs an agreed contract, and its pull request changes the page.
 - **Decided** entries are the maintainer's rulings that the code does not follow yet. The ruling is
-  the target; its Known-gaps row names the change, and a build step makes it.
+  the target; its Known-gaps row names the change, and a contract makes it.
 - **Questions for owner**, and Known-gaps rows that do not cite a Decided entry, are proposals, not
   approved changes. A recommendation there is not permission to change the code. Each needs the
-  maintainer's decision and its own build step.
+  maintainer's decision and its own contract.
 
 ## How to find the right page
 
-1. If your task contract has a `refs:` line, read exactly those pages first.
+1. If you are working on a contract, read the pages it names first.
 2. Otherwise find the feature words or the code you will touch in the tables below. Each page's
    `read_when` line, at its top, names the code and behavior it governs.
 3. Follow the links a page makes to the shared pages. A topic page links to a shared rule; it
@@ -81,8 +81,7 @@ Every planned topic has a page today.
 
 - One topic per page. A new page starts with front matter (`summary`, `read_when`), then
   **Questions for owner** (or "None"), any **Decided** rulings, the current rules with their reasons, rejected
-  alternatives where they matter, **Known gaps**, code and test pointers, and a last line
-  `Checked against the code at <parent commit> + STEP_nnn`.
+  alternatives where they matter, **Known gaps**, and code and test pointers.
 - When a page lands, move its row from *Topics without a page yet* to *Topic pages* in the same
-  commit.
+  pull request.
 - A rule lives on exactly one page. If you need it elsewhere, link to it.

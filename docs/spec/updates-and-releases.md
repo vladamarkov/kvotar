@@ -168,7 +168,7 @@ place that promises "once a day": [README.md](../../README.md),
 ([first-run window](first-run-window.md)). Sparkle never schedules checks more than once an hour,
 whatever the key says, and an `SUScheduledCheckInterval` value in the app's user defaults would
 override the `Info.plist` one; Kvotar writes none. Network use is on the approval list in
-[VISION.md](../../VISION.md#needs-approval-first); agree it first.
+[VISION.md](../../VISION.md#the-approval-list); agree it first.
 
 ## Update log lines
 
@@ -261,6 +261,7 @@ Signing, notarizing and publishing happen outside this repository.
 |---|---|---|
 | Nothing tests the update policy | No test or check reads the `SU*` keys; `UpdaterService` is outside the test target. Flipping `SUAllowsAutomaticUpdates` or `SUAutomaticallyUpdate` fails nothing | A test or a `make check` rule that reads `App/Info.plist` and asserts the policy keys above |
 | The feed itself is not signed | Each download is signed and checked; the feed is fetched over HTTPS but carries no signature (`SURequireSignedFeed` absent) | Decide whether to require a signed feed; it needs every published feed signed first |
+| Release tags are not signed | A release tag is annotated but carries no signature; the maintainer has no signing key set up for git. The protected `main` and the published SHA-256 are the guarantee today | Decide whether to sign tags once a signing key is set up |
 | Comments describe the schedule loosely | `UpdaterService`'s doc comment says "a scheduled check on launch and every 24 h"; Sparkle checks at launch only when 24 hours have passed | Reword with the next change to the file |
 
 ## Code and test pointers
@@ -279,5 +280,3 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `DiagnosticsCaptureFlagTe
 (`testChannelDefaultsToReleaseWhenUnset`, `testVersionStringCarriesChannelOnlyForBeta`),
 `ProductIdentityTests` (the channel key and setting names), `ForecastLogRecorderTests`
 (`testAppVersionFormatting`). Nothing tests `UpdaterService` or the `SU*` keys (Known gaps).
-
-Checked against the code at 2faa280 + STEP_279

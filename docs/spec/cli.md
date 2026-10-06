@@ -121,8 +121,8 @@ plus `humanText` for the terminal. `CLIOutput.print` prints one or the other. (`
 
 - **JSON is pretty-printed with sorted keys and unescaped slashes.** Reason: the same input gives
   the same bytes, so scripts and diffs are stable.
-- **Field names are snake_case and are a machine contract.** Rename or remove one only with a
-  build step that changes this page. Reason: scripts read them.
+- **Field names are snake_case and are a machine contract.** Rename or remove one only with an
+  agreed contract whose pull request changes this page. Reason: scripts read them.
 - **A missing value is left out, not written as `null`.** Optional fields use the default
   `Encodable` behaviour, which omits `nil`.
 - **Text cells never leak into JSON.** `StatusReport.Row` keeps its pre-rendered text cells out of
@@ -309,5 +309,3 @@ Tests in `Packages/KvotarCLI/Tests/KvotarCLITests/`: `StatusRenderTests` (percen
 used in JSON), `CLIFormatTests` (not-started, absent and reset-less limits),
 `CredentialTreesUntouchedTests`, and for the diagnostics commands `CaptureCommandTests`,
 `ImportCommandTests`, `BundleReaderTests`, `AnalysisStoreTests`, `LogLineTests`.
-
-Checked against the code at 595b1b9 + STEP_266

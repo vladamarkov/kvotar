@@ -270,5 +270,3 @@ the panel comes to the front. (`MenuBarController.showAbout`)
 - `Packages/KvotarUI/Sources/KvotarUI/Model/MenuBarDisplay.swift`: `MenuBarDisplayMode.label`.
 - Tests: `AppTests/NotificationPermissionHintTests.swift`; `QuotaSurfacePresenterTests` (the
   presenter the menu calls). Nothing tests `contextMenu()` itself (see *Known gaps*).
-
-Checked against the code at 00ed0b1 + STEP_273

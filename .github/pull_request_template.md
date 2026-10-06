@@ -1,3 +1,6 @@
+<!-- Changelog: if users can see this change, add one line to CHANGELOG.md under "Unreleased" in
+     this pull request. Otherwise add none. -->
+
 ## Summary
 
 What changes and why, in a few lines.
@@ -9,14 +12,10 @@ What changes and why, in a few lines.
 
 ## Proof
 
-Synthetic data only (see `.github/pr-proof/README.md`). What does it show, and what does it not show?
+Synthetic data only (see `.github/pr-proof/README.md`). What was proven, and what was not?
 
-## Changelog line
+## Contract
 
-One line for `CHANGELOG.md`:
+Closes #
 
-## Approval list
-
-- [ ] This touches the approval list in `VISION.md` (credentials, network or polling, storage,
-      diagnostics or privacy, notifications, copy rules, forecast logic, dependencies, tools or platforms).
-      Agreed in issue #
+<!-- Delete the Contract section if the change did not need a contract. -->
