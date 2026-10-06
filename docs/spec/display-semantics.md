@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later build step closes.
+has a row in *Known gaps* below, which a later contract closes.
 
 1. **Every human-facing time follows the Mac's 12/24-hour setting** — popover, hover cards,
    History, notifications and the CLI's text output: `21:47` for a 24-hour user, `9:47 PM` for a
@@ -342,5 +342,3 @@ window draws its menu-bar sample through the real `DisplayFormatter.menuBarRende
 | Stale code comments | `UserCopyRules` says History reads the list; `Fmt.relativeAge` and `sourceTag` say the stamp turns amber at 2 minutes; `ExplanationRegistry` says the bridge line is the only place a used figure appears | Fix with the next change to each file |
 | Dead builders | `DisplayFormatter.quotaRows`, `quotaRowLabel` and `windowAccountingRows` have no production caller; tests still pin `quotaRows` | Delete them and their tests with the next change to `DisplayFormatter` |
 | Older design records disagree | They describe a percentage on the tab, a menu-bar gauge, an overflow stripe past 100 %, green for idle and loading, and an amber stamp at 2 minutes | Code wins; nothing to change in code |
-
-Checked against the code at 00ed0b1 + STEP_273

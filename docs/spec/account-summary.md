@@ -526,5 +526,3 @@ Tests, in `Packages/KvotarUI/Tests/KvotarUITests/`: `AccountLimitSelectionTests`
 `MenuBarExhaustionAgreementTests`, and the header parts of `DisplayFormatterTests` and
 `DisplayFormatterV46Tests`. `DisplayFormatterScopedLimitsTests` pins the dead `quotaRows` builder,
 not anything drawn today.
-
-Checked against the code at 212197f + STEP_272

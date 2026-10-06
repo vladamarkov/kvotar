@@ -2,10 +2,10 @@
 .DS_Store
 **/.DS_Store
 
-# Claude local settings (ignore all of .claude/ EXCEPT the shared, version-controlled skills)
-.claude/*
-!.claude/skills/
-.claude/settings.local.json
+# Local agent tooling and settings
+.agents/
+.claude/
+skills-lock.json
 
 # Microsoft Word temporary files
 ~$*

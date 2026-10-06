@@ -746,5 +746,3 @@ one, and only when the person you work for asks ([AGENTS.md](../../AGENTS.md)). 
 (`SQLiteStore.defaultPath()`), and both harnesses open the database writable with migrations on
 (`SQLiteStore(path:)` defaults), despite the diagnostics' "read-only" comment. Other live
 tests share the fallback (see Known gaps).
-
-Checked against the code at faa525f + STEP_271

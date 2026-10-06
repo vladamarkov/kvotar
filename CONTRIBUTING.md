@@ -1,52 +1,55 @@
 # Contributing to Kvotar
 
-Thanks for helping. Start with [AGENTS.md](AGENTS.md) (it applies to people as much as to agents) and
-[VISION.md](VISION.md).
+A change reaches Kvotar by one of two paths: straight to a pull request, or an agreed contract first.
+The rules that hold on both paths are in [AGENTS.md](AGENTS.md).
 
-## Before you write code
+## Which path
 
-- **Anything on the approval list in [VISION.md](VISION.md)** (credentials, network or polling,
-  storage, diagnostics and privacy, notifications, copy rules, forecast logic, new dependencies, new tools or
-  platforms): open an issue first, using [docs/decisions/TEMPLATE.md](docs/decisions/TEMPLATE.md).
-  Wait for agreement before writing the change.
-- Bug fixes, tests, docs and small UI fixes that follow the existing copy rules can go straight to a
-  pull request.
+- **Straight to a pull request:** the change makes Kvotar do what the docs already say it should, or
+  changes nothing a user or a spec page would notice. A bug fix in a sensitive area counts, as long
+  as the pull request shows it with a test.
+- **An agreed contract first:** the change adds a feature, changes what Kvotar is meant to do (so a
+  spec page would have to say something different), or changes how an area on the approval list in
+  [VISION.md](VISION.md) works in a way no spec page already describes.
 
-## Build and check
+Tests, CI, docs wording, refactors and version bumps usually take the first path, but the two tests
+above decide, not the kind of change.
 
-```sh
-make build
-make test
-make check
-```
+## Proposing work
 
-GitHub runs the same three commands on every pull request and every push to `main`
-(`.github/workflows/checks.yml`), on macOS, with no account or credential. Run them locally
-first; the GitHub run is a second check, not a replacement.
+Open an issue with one of the three templates: bug report, feature request or contract. A
+**contract** is a GitHub issue with four short sections: Goal, Contract, Proof and Deliberately
+untouched. The maintainer approves it by adding the `agreed` label. A feature request that gets
+agreed is expanded in place into a contract; nobody opens a second issue. The issue number is the
+contract's only ID.
 
-All three run without a Claude or Codex account. Never use real credentials, real session logs or a
-real Kvotar database in a test, a screenshot or a pull request.
+## Working on a contract
+
+1. Read the contract issue and the docs it names. If it needs something that is not in the
+   repository, stop and say so.
+2. The agreed contract is the plan. If you would have to depart from it, or the code and a spec page
+   disagree in a way it does not cover, stop and ask; do not fix it on the side.
+3. One contract per session and per pull request. Finish it and stop.
+4. The spec page changes in the same pull request as the code. A mismatch you find between a spec
+   page and the code goes into that page's *Known gaps* table, with a proposed fix.
+5. Run `make test` and `make check` before handing off, and say what passed, failed or was skipped.
 
 ## What a pull request contains
 
-1. **Summary**: what changes and why, in a few lines.
-2. **Commands run** and their result: at least `make test` and `make check`.
-3. **Proof using synthetic data only**: a test, a fixture, or a screenshot of fixture data. Say what
-   the proof shows and what it does not. See [.github/pr-proof/README.md](.github/pr-proof/README.md).
-4. **One line for [CHANGELOG.md](CHANGELOG.md)** under "Unreleased".
-5. Whether it touches the approval list, with a link to the issue where it was agreed.
+1. **Summary**: what changes and why.
+2. **Commands run** and their result: `make test` and `make check`.
+3. **Proof using synthetic data only**, saying what was and was not proven
+   ([.github/pr-proof/README.md](.github/pr-proof/README.md)).
+4. **`Closes #n`** when the change needed a contract.
 
-## Before a pull request merges
+A change that users can see also adds one line to [CHANGELOG.md](CHANGELOG.md) under "Unreleased",
+in the file itself. Any other change adds no changelog line.
 
-GitHub holds every pull request to `main` to these settings:
+## Merging
 
-- The `checks` run must be green.
-- The branch must be up to date with `main`; if `main` has moved, update the branch and let
-  `checks` run again.
-- A first-time contributor's runs wait until a maintainer approves them.
-- No review approval is required by the settings; the maintainer still reviews before merging.
-- Force pushes to `main` and deleting `main` are blocked.
-- Repository administrators are not held to these settings.
+One branch and one pull request per change, squash-merged, so each pull request is one commit on
+`main`. The title says what is now true, in plain words, with no prefix. Before the merge, the
+`checks` run (`.github/workflows/checks.yml`) must be green and the branch up to date with `main`.
 
 ## How a merged change reaches a release
 
@@ -55,6 +58,13 @@ Kvotar is developed in this repository. When your pull request is accepted:
 1. It is merged here directly, with your authorship kept.
 2. It ships in the next release, which is built from this repository.
 3. You are credited by name in [CHANGELOG.md](CHANGELOG.md).
+
+## Maintainer only
+
+The maintainer agrees contracts and cuts releases ([docs/releasing.md](docs/releasing.md)). Agreeing
+a contract includes its stated live checks, unless the maintainer reserves them for themselves:
+build and launch the app for them and hand over only the clicks. A maintainer's "I'll do the live
+check" wins.
 
 ## Licensing
 
@@ -65,5 +75,3 @@ like the rest of the repository. The name "Kvotar" is reserved for official rele
 There is no `NOTICE` file. Apache-2.0 asks for one only when the work already carries one, and none
 of the bundled third-party components (Sparkle, GRDB.swift, swift-argument-parser, whose licenses are
 in `Resources/THIRD_PARTY_NOTICES`) ships a NOTICE file.
-
-Checked against the code at e63764f + STEP_276.

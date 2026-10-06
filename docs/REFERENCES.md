@@ -8,7 +8,7 @@ read_when: A code comment cites an ID or a section (STEP_165, REV-96, D-58, Base
 Before this repository became its home, Kvotar was built against a written specification that is
 kept outside it. Comments in the code point back to that record. About 2,600 comment lines in shipped code and about 1,100 in tests name a
 STEP, REV or D number, and several hundred more cite a section of the Baseline or the UI Spec (counted
-at the commit below).
+at commit 62d7d98).
 
 Those records are not published. The comments still tell you something: that the behavior was
 decided on purpose, and roughly when. **Treat a cited line as intentional.** If you want to change
@@ -19,7 +19,7 @@ it, say so in an issue first, especially if the topic is on the approval list in
 
 | Form | What it is |
 |---|---|
-| `STEP_nnn` | One build step: a small, numbered unit of work with its own contract and tests. Higher numbers are newer. |
+| `STEP_nnn` | One build step: a small, numbered unit of work with its own contract and tests. Higher numbers are newer. The series ended at STEP_279. |
 | `REV-nn` | A revision to the specification: a change of behavior or copy, decided before it was built. Usually implemented by one or more STEPs. |
 | `D-nnn` | A recorded UI or product decision (copy, layout, interaction). |
 | `P1-nn` | An entry in the known-issues list. |
@@ -27,6 +27,13 @@ it, say so in an issue first, especially if the topic is on the approval list in
 | `Baseline §n` | A section of the Implementation Baseline: behavior, architecture, data sources, timeouts, storage. |
 | `UI Spec §n`, `Part 2 §n`, `Part 3 §n` | A section of the UI Spec: copy, layout, interaction. Part 1 is Claude, Part 2 is Codex, Part 3 is app chrome and the explanation layer. |
 | `Spike A`, `Spike C`, … | A measurement run on real accounts that informed a decision. |
+
+## After STEP_279
+
+The STEP series ended at STEP_279. Later work is identified by its issue and pull request number,
+and no new IDs of these kinds are made. The contracts for STEP_242 to STEP_279 were written in this
+repository; they can be read in git history at commit 700e9a6, in the TASKS folder that was removed
+after it.
 
 ## IDs with a public record
 
@@ -61,5 +68,3 @@ until a topic doc is written.
 | REV-75, REV-67, D-90 | The explanation layer (hover cards, verdict anatomy) |
 | REV-95, REV-105 | Forecast calibration and the blended burn rate |
 | D-58, D-35, D-101 | The header caption, stale readings, the unknown `—` form |
-
-Checked against the code at 62d7d98 + STEP_241.

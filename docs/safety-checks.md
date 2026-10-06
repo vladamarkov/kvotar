@@ -89,5 +89,3 @@ Over every file under `Packages/*/Sources` and `App`, the run fails on:
 - What the `codex` binary does internally once Kvotar launches it. Kvotar launches it read-only; see `docs/credentials-and-privacy.md`.
 - How often Kvotar polls and how it backs off. Those are product decisions with their own records in `docs/decisions/`.
 - **The copy rule.** User-facing text never names polling internals ("throttled", "retry", "rate limit"…). It is a product voice rule, not a safety rule: one shared word list (`UserCopyRules.pollingWords`) is checked by the explanation-registry and notification tests, and changing the rule needs the maintainer's approval.
-
-Checked against the code at 8aebac0.

@@ -1,9 +1,25 @@
 ---
 summary: How code is written in this repository — concurrency, state and view rules, storage, logging, JSONL parsing, watching, naming, testing — with the reason behind each rule.
-read_when: Before writing or reviewing any code change.
+read_when: Before writing or reviewing code, read the section for the kind of code you are changing; the table at the top maps code areas to sections.
 ---
 
 # Kvotar — PATTERNS.md
+
+Read the section for the kind of code you are changing.
+
+| If you are changing | Read |
+|---|---|
+| Anything that awaits, streams events or holds state across calls | [Async model](#async-model), [Actor usage](#actor-usage) |
+| View models, SwiftUI views, the menu bar or a window | [SwiftUI state management](#swiftui-state-management) |
+| The database: `SQLiteStore`, a migration, retention | [SQLite access](#sqlite-access-baseline-17) |
+| Any log line | [Logger usage](#logger-usage-baseline-101) |
+| The session-log parsers | [JSONL parsing rules](#jsonl-parsing-rules) |
+| Which surface a Codex session is counted under | [Originator → surface bucket mapping](#originator--surface-bucket-mapping-baseline-84) |
+| File watching or the launch backfill | [JSONL watching](#jsonl-watching) |
+| The Codex app-server client | [Codex RPC client](#codex-rpc-client) |
+| A new type, file or table | [Naming conventions](#naming-conventions-baseline-4) |
+| Tests and fixtures | [Testing strategy per layer](#testing-strategy-per-layer-baseline-19) |
+| Anything, as a last check | [Do / don't](#do--dont) |
 
 ## Async model
 

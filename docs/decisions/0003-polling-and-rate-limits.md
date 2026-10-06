@@ -87,5 +87,3 @@ reads "Reconnecting…", and a recorded hard block keeps its own message.
 ## Status
 
 Accepted. Changing any number here needs approval and measurement on a real account first.
-
-Checked against the code at 8aebac0.

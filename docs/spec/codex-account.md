@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_252). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later build step closes.
+has a row in *Known gaps* below, which a later contract closes.
 
 1. **The plan follows `account/read`.** Once `account/read` names a plan, the app-server's
    `rateLimits.planType` and the web `plan_type` only fill an empty one. The cached identity (plan
@@ -24,7 +24,7 @@ has a row in *Known gaps* below, which a later build step closes.
    and the Codex credits section appears only for the exact plan `enterprise`.
 2. **The monthly supplement also accepts `enterprise_cbp_usage_based` and
    `self_serve_business_usage_based`,** and a refusal of the supplement call is reported to polling
-   (or the call is skipped while a hold is pending) before or in the same code step. Reason: the
+   (or the call is skipped while a hold is pending) before or in the same pull request. Reason: the
    badge already treats those strings as Enterprise and Business, and more accounts must not
    repeatedly call an endpoint that is refusing them. Today the gate accepts only `enterprise` and
    `business`, and a refused supplement call is swallowed.
@@ -319,5 +319,3 @@ Code that reads the plan:
 | Binary candidates | `Packages/KvotarCore/Sources/KvotarCore/Adapters/CodexBinaryCandidates.swift` |
 | Wiring (bundle lookup, capture, adapter) | `App/AppDelegate.swift` |
 | Tests | `Packages/CodexAdapter/Tests/CodexAdapterTests/`: `CodexAccountAdapterTests`, `CodexRPCClientTests`, `CodexWhamHTTPClientTests`, `CodexBinaryDiscoveryTests`, `NoRefreshNetworkSeamTests`; fixtures in `TestFixtures/` |
-
-Checked against the code at e9d2933 + STEP_277

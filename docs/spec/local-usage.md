@@ -621,7 +621,7 @@ From the private records; reopening any needs the maintainer's approval.
 | An incomplete first Codex line is not retried (unverified by a test) | `captureOriginator` runs once per new file, from the watcher's discovery hook; if `session_meta` has no newline yet, nothing is cached and `parseEvents` never retries, so that thread's live requests stay `Unknown` until the next launch's backfill | Retry `captureOriginator` in `parseEvents` while the file is uncached; a test |
 | A new Codex field is dropped unseen | `cache_write_input_tokens` appears on some lines (zero so far) and is not decoded; nothing would notice if it became non-zero | Record a parse anomaly when it is non-zero |
 | No app-level test for the watermark and repair order | `runBackfill`, the repair order and their keys in `PollCoordinator` are untested; the parts below them are tested | A test with an injected store and adapters |
-| `session_summaries` has no reader | Written by the retention job, read nowhere in the app | Keep (permanent, small); give it a reader or retire the writer in a storage step |
+| `session_summaries` has no reader | Written by the retention job, read nowhere in the app | Keep (permanent, small); give it a reader or retire the writer in a storage contract |
 | Stale code comments | Both local adapters: "a future consumer persists the stream"; `CodexLocalAdapter`: "Codex has no subagent concept"; `CodexJSONLParser`: refers to a `parseTokenLine` that does not exist | Fix with the next change to each file |
 
 ## Code and tests
@@ -656,5 +656,3 @@ Tests:
   `CodexLocalAdapterWatcherTests`, `CodexLocalAdapterBackfillTests`, `CodexParseAnomalyTests`,
   `CodexSQLiteMetadataReaderTests`, `NoContentStoredTests`.
 - `Packages/KvotarUI/Tests/KvotarUITests/`: `DisplayFormatterLocalActivityTests`.
-
-Checked against the code at 00ed0b1 + STEP_273

@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_249). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later build step closes.
+has a row in *Known gaps* below, which a later contract closes.
 
 1. **An observe-only spike checks what Codex does with its own sign-in inside the
    `codex app-server` child.** It runs only the child and records whether `auth.json` changed (for
@@ -192,7 +192,7 @@ The rules are in [AGENTS.md](../../AGENTS.md#the-four-safety-rules). In this cod
   *Known gaps*.)
 - **No other source.** No browser cookies and no claude.ai session keys (decision 0002), and no
   API keys (see *Rejected alternatives*).
-- **The CLI reads no credential.** `kvotar` never calls a provider ([AGENTS.md](../../AGENTS.md#layout)).
+- **The CLI reads no credential.** `kvotar` never calls a provider ([ARCHITECTURE.md](../../ARCHITECTURE.md#the-cli)).
 
 ## Files next to the credentials
 
@@ -248,5 +248,3 @@ The rules are in [AGENTS.md](../../AGENTS.md#the-four-safety-rules). In this cod
   `NoRefreshNetworkSeamTests`, `CodexWhamHTTPClientTests` (CodexAdapter); `DetectionStatusTests`
   and `CredentialTreesUntouchedTests` (KvotarCore); `CredentialTreesUntouchedTests` (KvotarCLI).
 - Static checks: `scripts/check_rules.sh`, described in [safety checks](../safety-checks.md).
-
-Checked against the code at 595b1b9 + STEP_266

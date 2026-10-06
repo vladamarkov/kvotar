@@ -383,5 +383,3 @@ Why, how often, and the tests for the gate: [polling.md](polling.md), "Claude's 
 | Reading fields | `Packages/KvotarCore/Sources/KvotarCore/Adapters/AccountAdapter.swift` |
 | Tests | `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/ClaudeAccountAdapterTests.swift`, `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/NoRefreshNetworkSeamTests.swift` |
 | Fixtures | `Packages/ClaudeAdapter/Tests/ClaudeAdapterTests/TestFixtures/` |
-
-Checked against the code at 00ed0b1 + STEP_273

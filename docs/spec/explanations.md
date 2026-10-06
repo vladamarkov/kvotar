@@ -14,11 +14,11 @@ read_when: Changing a hover card's text or live line (ExplanationRegistry, Expla
 ## Decided
 
 The maintainer ruled on these on 2026-10-04. The code does not follow them yet; each has a row in
-*Known gaps* below, which a later build step closes.
+*Known gaps* below, which a later contract closes.
 
 1. **The two header-fact cards join the copy table.** The `Quota burn` and `Not seen locally` cards
    become rows of the registry and its fixture, tested byte for byte like every other card. The
-   step that adds them decides how the dead E-05, E-07 and E-21 text is retired. Reason: two cards
+   contract that adds them decides how the dead E-05, E-07 and E-21 text is retired. Reason: two cards
    that users see are tested only by substring, while three table cells for the same elements
    never render. Today the two texts are built outside the table (`burnFactCard`,
    `notSeenLocallyFactCard`), and the table below stays a byte-for-byte copy of today's fixture.
@@ -661,15 +661,15 @@ first-run window teaches is [its page](first-run-window.md)'s.
 
 | Gap | Today | Proposed fix |
 |---|---|---|
-| The test does not read this page | `ExplanationRegistryTests` reads the fixture; this page's table is a copy, and the private drift guard skips here. The fixture header and `ExplanationRegistry`'s doc comment still say to edit the private UI Spec first | A later step points the test at this page's table (or checks fixture against page) and rewrites the fixture header and the doc comment |
+| The test does not read this page | `ExplanationRegistryTests` reads the fixture; this page's table is a copy, and the private drift guard skips here. The fixture header and `ExplanationRegistry`'s doc comment still say to edit the private UI Spec first | A later contract points the test at this page's table (or checks fixture against page) and rewrites the fixture header and the doc comment |
 | Header-fact cards are not in the table | `burnFactCard` and `notSeenLocallyFactCard` are built outside the registry table and checked by substring only | (Decided 1) Add both to the registry and the fixture, tested byte for byte, and update this page's table in the same step |
-| Dead card text outside credits Decided 1 | The E-05 `Burn`, E-07 `Elsewhere` and E-21 `Spend rate` cells never render (the facts pass their own body). E-05 still says the burn shows `Measuring…`, which it no longer does | (Decided 1) The step that adds the header-fact cards retires these cells and their fixture rows |
+| Dead card text outside credits Decided 1 | The E-05 `Burn`, E-07 `Elsewhere` and E-21 `Spend rate` cells never render (the facts pass their own body). E-05 still says the burn shows `Measuring…`, which it no longer does | (Decided 1) The contract that adds the header-fact cards retires these cells and their fixture rows |
 | Dead live lines | `E-07·live` and `E-07·none` are produced only by `DisplayFormatter.offMachineLive`, which nothing in the app calls; tests still pin it | Delete the two rows, the function and its test, or give the `Not seen locally` card a live line |
 | Dead monthly split cards | E-18, E-19 body, E-20 | [Credits Decided 1](credits-and-monthly-limits.md#decided) |
 | `calendar days` in E-13 | The figures are rolling 7 × 24 and 30 × 24 hours | [Estimated value — Known gaps](estimated-value.md#known-gaps) |
 | `off-machine` in the delta line | The token reads `+14% off-machine` (`DeltaLine.evaluate`), a banned word | (Decided 2) Say `elsewhere`, with its test; the same gap is on [product scope](product-scope.md#known-gaps) |
-| E-24 says "window" for an editor window | "It doesn't mean the window is open" (`ExplanationRegistry`, `.projectRecency`) | (Decided 3) Reword the card, its fixture row and this page's table row in one step |
-| Unreached anatomy forms | `longLimitAnatomy`'s ahead-of-pace form and monthly labels have no verdict that reaches them | Delete them, or give the monthly family an anatomy in its own step |
+| E-24 says "window" for an editor window | "It doesn't mean the window is open" (`ExplanationRegistry`, `.projectRecency`) | (Decided 3) Reword the card, its fixture row and this page's table row in one pull request |
+| Unreached anatomy forms | `longLimitAnatomy`'s ahead-of-pace form and monthly labels have no verdict that reaches them | Delete them, or give the monthly family an anatomy in its own contract |
 | E-06 missing from the diagnostics snapshot | The local-app rows are tagged on screen, but the snapshot walker does not record E-06 | Add E-06 (fixed site, no app names) to `ExplanationWalk.localActivity` |
 | Two spellings of organization | E-15 says `organisation's`; E-12 `·orgManaged` and the verdict copy say `organization` | Pick one with the next copy change; a fixture row change |
 | `quota period quota` | With no reported window width, the windowed burn card reads "How fast the quota period quota is being used" (`headerFacts` passes `quota period` to `burnFactCard`) | Pass a word that fits both cards, or let `burnFactCard` drop the period when it is unknown |
@@ -693,5 +693,3 @@ first-run window teaches is [its page](first-run-window.md)'s.
 | Esc and open/close hooks | `App/MenuBarController.swift`, `App/QuotaWindowController.swift`, `App/QuotaSurfaceLifecycle.swift` |
 | Diagnostics snapshot | `ViewModel/AppViewModel+ExplanationSnapshot.swift`; `Packages/KvotarCore/Sources/KvotarCore/Diagnostics/ExplanationSnapshot.swift` |
 | Tests | `ExplanationRegistryTests` and `Fixtures/explanation_registry.md`; `DisplayFormatterAnatomyTests`; `DeltaLineTests`; `AppViewModelDeltaLineTests`; `AppViewModelExplanationSnapshotTests`; the peek, pin and Esc tests in `AppViewModelTests`; live-line tests in `DisplayFormatterTests`; `LongLimitSurfaceAgreementTests`. `ExplanationLiveDiagnostics` is a live, read-only check that runs only with `KVOTAR_LIVE` set |
-
-Checked against the code at 00ed0b1 + STEP_273

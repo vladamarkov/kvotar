@@ -133,5 +133,3 @@ saved are yours and are not touched.
 
 Even an ordinary bundle describes how you work. **Never attach one to a public issue**; send it to
 `hello@kvotar.com`. See [decision 0004](decisions/0004-diagnostics-consent-and-redaction.md).
-
-Checked against the code at 8aebac0.

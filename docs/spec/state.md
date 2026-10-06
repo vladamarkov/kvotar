@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later build step closes.
+has a row in *Known gaps* below, which a later contract closes.
 
 1. **A stale *Limit nearly spent* keeps its red while its limit's reset is still ahead,** like a
    block. The reading keeps its "as of" time on screen
@@ -317,5 +317,3 @@ timing, the long-limit states or Healthy, where the app's own launch restore sho
 | 90 % red line not re-graded | Chosen on one exhausted long limit; the later ladder replay counted three | Re-run the long-limit replay for 85 / 90 / 95 against all three before the next threshold change |
 | CLI comment claims restore parity | `StatusReader`'s comment says it returns exactly the app's restore state; it judges staleness by row age instead (see above) | Fix the comment; or pass `isStale: true` if the owner wants parity |
 | Limit nearly spent and staleness | A stale Limit nearly spent drops to Idle; no test covers it | Decided 1: keep it in the stale branch while its limit's reset is ahead, as for a block; keep the "as of" time; no second alert on recovery; add tests for both |
-
-Checked against the code at 00ed0b1 + STEP_273

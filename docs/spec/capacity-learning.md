@@ -67,7 +67,7 @@ evidence only.
 
 The maintainer ruled on 2026-10-04 that this code stays dormant: whether to keep, wire or remove
 it is decided later, and wiring needs a real quota 429 capture first (see Known gaps). The rules below describe what the
-code does when called, so a later step starts from the truth.
+code does when called, so later work starts from the truth.
 
 ## The community limit table
 
@@ -270,5 +270,3 @@ Tests in `Packages/KvotarCore/Tests/KvotarCoreTests/`: `LimitsDatabaseAdapterTes
 `BurnTierTrackerTests` (the marker); in the adapters, `ClaudeLocalAdapterWatcherTests` and
 `CodexLocalAdapterWatcherTests` (`testQuota429ObservationEmittedFromTokenlessFlush`) and
 `ClaudeLocalAdapterBackfillTests`.
-
-Checked against the code at 00ed0b1 + STEP_273

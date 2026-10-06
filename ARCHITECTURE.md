@@ -22,6 +22,14 @@ KvotarCLI ──► KvotarCore (+ swift-argument-parser)
 | `App/` | Wiring: builds the adapters and injects them, schedules polls, owns the menu bar, windows, notifications and Sparkle | — |
 | `KvotarCLI` | The `kvotar` tool: status, logs, doctor, the debug switch, turning capture off, bundle import | Call a provider, or turn capture on |
 
+Outside the packages and `App/`:
+
+| Path | What it is |
+|---|---|
+| `AppTests/` | App-level tests (the `KvotarTests` scheme). |
+| `Resources/` | Bundled pricing table, third-party notices, brand assets. |
+| `project.yml` | XcodeGen spec. The `.xcodeproj` is generated, never committed. |
+
 Adapters are created in `AppDelegate` and handed to `PollCoordinator`. Engine code depends only on the
 protocols in `KvotarCore/Adapters` (`AccountAdapter` for quota, `LocalAdapter` for session logs), so
 tests inject mocks.
@@ -121,5 +129,3 @@ Kvotar from polling at the same time. Both stay because some people still have t
 
 `App/UpdaterService.swift` wraps Sparkle. The feed URL and public signing key are in `App/Info.plist`;
 it checks once a day and never installs without a click.
-
-Checked against the code at 02b738e + STEP_242.

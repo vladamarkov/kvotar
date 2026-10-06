@@ -65,5 +65,3 @@ Codex is held to the same rule for the same reason: its sign-in belongs to Codex
 ## Status
 
 Accepted. Not open to exceptions.
-
-Checked against the code at 8aebac0.

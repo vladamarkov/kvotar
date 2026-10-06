@@ -1,12 +1,14 @@
 ---
-summary: The template for proposing a change on the approval list (credentials, network, storage, privacy, notifications, forecast, dependencies, platforms).
-read_when: Before opening an issue or pull request for anything on the "needs approval first" list in VISION.md.
+summary: The shape of a decision record — the lasting explanation of a rule that is hard to reverse. Not a proposal form; a change is proposed as a contract issue.
+read_when: An agreed contract creates or changes a rule that is hard to reverse and that a future reader would question, and the maintainer is writing its record.
 ---
 
 # NNNN — Short title of the decision
 
-Copy this file into this folder under the next free number, fill it in, and open an issue linking it
-before writing the code. Keep it to one page.
+A decision record is the lasting explanation of a rule. The maintainer writes one only when an
+agreed contract creates or changes a rule that is hard to reverse and that a future reader would
+question. It is not how a change is proposed: that is a contract issue
+([CONTRIBUTING.md](../../CONTRIBUTING.md#proposing-work)). Keep it to one page.
 
 ## Decision
 
@@ -37,4 +39,4 @@ touches, and why it does not break them.
 
 ## Status
 
-Proposed.
+Accepted, with the date and the number of the contract issue that agreed it.
