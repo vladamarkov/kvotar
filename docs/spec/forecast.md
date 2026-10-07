@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on this on 2026-10-04 (STEP_265). The code does not follow it yet; it has a
-row in *Known gaps* below, which a later contract closes.
+row in *Known gaps* below, which a later agreed issue closes.
 
 1. **Delete the partial-average flag.** Remove `Forecast.isEstimate` and the comments that describe
    a `~est.` label for it. Reason: no surface draws it, and the popover's own evidence gate already

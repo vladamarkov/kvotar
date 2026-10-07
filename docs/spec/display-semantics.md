@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later contract closes.
+has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **Every human-facing time follows the Mac's 12/24-hour setting** — popover, hover cards,
    History, notifications and the CLI's text output: `21:47` for a 24-hour user, `9:47 PM` for a

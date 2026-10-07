@@ -23,7 +23,7 @@ read_when: Changing PopoverView, ClaudePopoverContent, CodexPopoverContent, Stat
 ## Decided
 
 The maintainer ruled on these on 2026-10-04. The code does not follow them yet; each has a row in
-*Known gaps* below, which a later contract closes.
+*Known gaps* below, which a later agreed issue closes.
 
 1. **The History footer gets a label that matches what it opens.** Today it reads
    `History · last 30 days` but opens History's weekly recap, which is about completed weeks; the
