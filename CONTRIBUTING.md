@@ -1,49 +1,46 @@
 # Contributing to Kvotar
 
-A change reaches Kvotar by one of two paths: straight to a pull request, or an agreed contract first.
-The rules that hold on both paths are in [AGENTS.md](AGENTS.md).
+- A fix that restores documented behaviour, or a change nobody and no spec page would notice:
+  open a pull request.
+- A new feature, or a change to what Kvotar is meant to do: open an issue first, describe the
+  problem and the outcome you want, and wait for the `agreed` label.
+- Unsure: open an issue and it gets scoped there.
 
-## Which path
+An agreed issue records the problem, the behaviour agreed, what is deliberately left out and how to
+tell it is done. How to build it is not settled there.
 
-- **Straight to a pull request:** the change makes Kvotar do what the docs already say it should, or
-  changes nothing a user or a spec page would notice. A bug fix in a sensitive area counts, as long
-  as the pull request shows it with a test.
-- **An agreed contract first:** the change adds a feature, changes what Kvotar is meant to do (so a
-  spec page would have to say something different), or changes how an area on the approval list in
-  [VISION.md](VISION.md) works in a way no spec page already describes.
+The safety rules in [AGENTS.md](AGENTS.md) bind every change.
 
-Tests, CI, docs wording, refactors and version bumps usually take the first path, but the two tests
-above decide, not the kind of change.
+## Your first pull request
 
-## Proposing work
-
-Open an issue with one of the three templates: bug report, feature request or contract. A
-**contract** is a GitHub issue with four short sections: Goal, Contract, Proof and Deliberately
-untouched. The maintainer approves it by adding the `agreed` label. A feature request that gets
-agreed is expanded in place into a contract; nobody opens a second issue. The issue number is the
-contract's only ID.
-
-## Working on a contract
-
-1. Read the contract issue and the docs it names. If it needs something that is not in the
-   repository, stop and say so.
-2. The agreed contract is the plan. If you would have to depart from it, or the code and a spec page
-   disagree in a way it does not cover, stop and ask; do not fix it on the side.
-3. One contract per session and per pull request. Finish it and stop.
-4. The spec page changes in the same pull request as the code. A mismatch you find between a spec
-   page and the code goes into that page's *Known gaps* table, with a proposed fix.
-5. Run `make test` and `make check` before handing off, and say what passed, failed or was skipped.
+1. Fork the repository and clone your fork.
+2. For a code change, `brew install xcodegen` and run `make test` once, so you know your Mac can
+   build and test Kvotar. The prerequisites are in [README.md](README.md#build-from-source). A
+   docs-only change needs nothing but git.
+3. The rules every change follows are in [AGENTS.md](AGENTS.md). Coding agents read it on their
+   own.
+4. Open the pull request with the template. The `checks` run must be green.
 
 ## What a pull request contains
 
+The pull request follows [.github/pull_request_template.md](.github/pull_request_template.md):
+
 1. **Summary**: what changes and why.
-2. **Commands run** and their result: `make test` and `make check`.
+2. **Checks**: `make test` and `make check` and their results. A docs-only change runs `make check`
+   alone.
 3. **Proof using synthetic data only**, saying what was and was not proven
    ([.github/pr-proof/README.md](.github/pr-proof/README.md)).
-4. **`Closes #n`** when the change needed a contract.
+4. **`Closes #n`** when the change needed an agreed issue.
+
+The spec page changes in the same pull request as the code. A mismatch you find between a spec page
+and the code goes into that page's *Known gaps* table, with a proposed fix.
 
 A change that users can see also adds one line to [CHANGELOG.md](CHANGELOG.md) under "Unreleased",
 in the file itself. Any other change adds no changelog line.
+
+The maintainer reviews every pull request, usually within a few days. If review asks for changes
+you cannot make, say so: the pull request is then finished for you with your authorship kept, or
+closed.
 
 ## Merging
 
@@ -91,10 +88,11 @@ Applications.
 
 ## Maintainer only
 
-The maintainer agrees contracts and cuts releases ([docs/releasing.md](docs/releasing.md)). Agreeing
-a contract includes its stated live checks, unless the maintainer reserves them for themselves:
-build and launch the app for them with `make run` and hand over only the clicks. A maintainer's
-"I'll do the live check" wins.
+The maintainer agrees issues and cuts releases ([docs/releasing.md](docs/releasing.md)). The
+maintainer's own work needs no agreed issue; one is opened when the change should be visible before
+it lands. Agreeing an issue includes its stated live checks, unless the maintainer reserves them for
+themselves: build and launch the app for them with `make run` and hand over only the clicks. A
+maintainer's "I'll do the live check" wins.
 
 ## Licensing
 

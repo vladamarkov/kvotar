@@ -12,7 +12,7 @@ Only the maintainer cuts a release. What a version, a build number and a beta la
    `KVOTAR_PRERELEASE_LABEL` to the next beta label. In [CHANGELOG.md](../CHANGELOG.md), move the
    "Unreleased" lines under a new heading, `<version> <label> (<build>) — <date>`, linked to the
    tag's GitHub Release. Update the same numbers on the updates and releases page. It is one plain
-   pull request, with no contract.
+   pull request, with no agreed issue.
 2. **Build from the merged commit.** Build, sign and notarize it with the private tooling. If
    something else merges first, still build the bump's commit, never a later one.
 3. **Publish the update feed.** Publish to the staging feed, check it, then promote it to

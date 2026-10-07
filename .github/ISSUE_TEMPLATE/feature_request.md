@@ -1,6 +1,6 @@
 ---
-name: Feature request
-about: Suggest a change or a new capability
+name: Feature or change
+about: Suggest a new capability or a change to what Kvotar does
 labels: enhancement
 ---
 
@@ -9,6 +9,7 @@ labels: enhancement
 **What would you like Kvotar to do?**
 
 **What happens next**
-A new feature needs an agreed contract before any code ([CONTRIBUTING.md](https://github.com/vladamarkov/kvotar/blob/main/CONTRIBUTING.md)).
-If the maintainer agrees to this request, this issue is expanded in place into a contract (Goal,
-Contract, Proof, Deliberately untouched) and gets the `agreed` label. Nobody opens a second issue.
+A new feature, or a change to what Kvotar is meant to do, needs an agreed issue before any code
+([CONTRIBUTING.md](https://github.com/vladamarkov/kvotar/blob/main/CONTRIBUTING.md)). If the
+maintainer agrees, the scope is settled in this issue and it gets the `agreed` label. Nobody opens a
+second issue.

@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_250; the second in STEP_253). The code does not
-follow them yet; each has a row in *Known gaps* below, which a later contract closes.
+follow them yet; each has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **A lock-file failure is a lock error, not "another copy is running".** If `kvotar.pid` cannot be
    opened or written, the app reports a lock error and does not poll. It never runs unguarded as a
@@ -298,7 +298,7 @@ diagnostics bundles report (`latestSchemaMigration`).
    `SQLiteStoreModelLimitSeriesTests` (`v25`) are the pattern.
 
 A migration changes storage, which is on the approval list in [VISION.md](../../VISION.md); it needs
-an agreed contract whose pull request updates this page.
+an agreed issue whose pull request updates this page.
 
 ### The version pin
 

@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_249). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later contract closes.
+has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **An observe-only spike checks what Codex does with its own sign-in inside the
    `codex app-server` child.** It runs only the child and records whether `auth.json` changed (for

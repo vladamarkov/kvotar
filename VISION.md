@@ -19,30 +19,14 @@ on your Mac, with the credentials your tools already have, and without asking yo
 - Cloud sync, accounts or a Kvotar server, for now.
 - Anything that needs a credential the user's tools do not already have on the Mac.
 
-## Straight to a pull request
+## Which changes need an agreed issue
 
-A change goes straight to a pull request when it makes Kvotar do what the docs already say it
-should, or changes nothing a user or a spec page would notice. It is still reviewed before it
-merges. For example:
-
-- Fixes with a clear cause, shown by a test or a synthetic reproduction. A fix that restores
-  documented behavior takes this path even in an area on the approval list below.
-- Tests.
-- Documentation.
-- Small UI fixes that follow the existing copy rules (the registry and copy tests in
-  `Packages/KvotarUI/Tests` say what those are).
-- Performance improvements that change no behavior.
-
-## An agreed contract first
-
-Open a contract issue and get the maintainer's agreement **before** writing code for any of these:
-
-- A new feature.
-- A change to what Kvotar is meant to do, so that a spec page would have to say something different.
-- A change to how an area on the approval list works, in a way no spec page already describes.
-
-A contract is a GitHub issue that the maintainer approves with the `agreed` label;
-[CONTRIBUTING.md](CONTRIBUTING.md) describes it and the rest of the process.
+A new feature, a change to what Kvotar is meant to do (so that a spec page would have to say
+something different), or a change to how an area on the approval list below works in a way no spec
+page already describes, needs an issue the maintainer has labelled `agreed` before any code. A fix
+that restores documented behavior, a test, a docs change or a refactor goes straight to a pull
+request, even in an area on the approval list. [CONTRIBUTING.md](CONTRIBUTING.md) describes the
+process.
 
 ### The approval list
 

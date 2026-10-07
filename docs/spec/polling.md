@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later contract closes.
+has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **A 429 with no `Retry-After` header is handled like `Retry-After: 0`:** the plain 120 s retry
    and the refused-recently floor, and no stored hold. Reason: a missing header is not a deadline
@@ -342,4 +342,4 @@ Rejected after measurement or incidents; don't re-propose without new evidence.
 | The plain 429 retry is not jittered | `runLoop` sleeps exactly `waitSeconds`, 120 s for `Retry-After: 0` | Decided 2: wait a random 120–125 s on the plain retry only; never alter a non-zero server wait; with a test |
 | Stale code comments | `NullWindowExpeditePolicy` ("base now fixed at 60s"), `TurnBoundaryPolicy` ("60s base"), `PollCoordinator` (`backoff` "starts at 60s", `wakeRefresh` "300s ladder wait", type doc "persisted/decaying base"), `ClaudeAccountAdapter.credentialChanged` ("60 s credential cadence"), `SQLiteStore+PollHealth.swift` ("7-day retention"); `sleepRespectingHold` (says a system sleep ends the wait at the deadline); `TurnBoundaryPolicy` cites a private polling document that is not public | Fix with the next change to each file |
 | `PATTERNS.md` says the poll role includes "proactive slowdown" | That rule was deleted; nothing slows down ahead of a refusal | Remove the words with the next PATTERNS.md edit |
-| Polling word in the "already running" copy | `AlreadyRunningView.Conflict.message` says "Only one app polls at a time" (AgentPilot lock) and "Only one instance polls at a time" (unreachable: a second Kvotar hands off and quits, `SecondInstanceAction.decide`). "polls" breaks the copy rule, and no copy test sweeps this view. The rule has no exceptions | A separate contract: reword the AgentPilot sentence (for example "Only one app can run at a time."), update `AlreadyRunningViewTests` and the private old-name audit pattern, delete the unreachable string, and add the view to a copy sweep |
+| Polling word in the "already running" copy | `AlreadyRunningView.Conflict.message` says "Only one app polls at a time" (AgentPilot lock) and "Only one instance polls at a time" (unreachable: a second Kvotar hands off and quits, `SecondInstanceAction.decide`). "polls" breaks the copy rule, and no copy test sweeps this view. The rule has no exceptions | A separate agreed issue: reword the AgentPilot sentence (for example "Only one app can run at a time."), update `AlreadyRunningViewTests` and the private old-name audit pattern, delete the unreachable string, and add the view to a copy sweep |

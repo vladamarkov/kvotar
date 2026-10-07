@@ -48,8 +48,9 @@ in [docs/safety-checks.md](docs/safety-checks.md).
    `/usr/bin/security` (the trusted app on the `Claude Code-credentials` ACL, so no dialog appears);
    passive read of `~/.codex/auth.json`. Never present an auth dialog.
    Why: [read the Claude credential through `security`](docs/decisions/0002-read-claude-credential-through-security.md).
-A change that touches any of these needs the maintainer's agreement before you write it
-(see [VISION.md](VISION.md)).
+The four rules say what the code may do; they do not fence off files. A fix that makes the code obey
+a rule it already states goes straight to a pull request with a test. Only a change that would make a
+rule say something different needs the maintainer's agreement first (see [VISION.md](VISION.md)).
 
 ## The copy rule
 
@@ -83,7 +84,8 @@ agreement.
 
 ## How a change lands
 
-A change that makes Kvotar do what the docs already say, or that no user or spec page would notice,
-goes straight to a pull request. A new feature, a change to what Kvotar is meant to do, or a change
-to how an area on the approval list in [VISION.md](VISION.md) works, in a way no spec page already
-describes, needs an agreed contract first. See [CONTRIBUTING.md](CONTRIBUTING.md).
+A new feature or a change to what Kvotar is meant to do needs an issue labelled `agreed` before any
+code, unless the maintainer asked for it themselves; [CONTRIBUTING.md](CONTRIBUTING.md) says which.
+Build what was agreed, in the issue or with the person you work for, and nothing beside it. If the
+code and a spec page disagree in a way the agreement does not cover, stop and ask. A pull request is
+one change, and follows `.github/pull_request_template.md`.

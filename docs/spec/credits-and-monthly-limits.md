@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_263). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later contract closes.
+has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **The monthly split's hover cards are deleted, and its rows do not come back.** Delete the
    `This machine` and `Unattributed` cards and the unused `Elsewhere` card text (keeping the
@@ -494,7 +494,7 @@ rows do not return (Decided 1). `offMachine` and `unattributed` are internal nam
 | Unknown local value counts as elsewhere | `record` files a rise to elsewhere when the local value is `nil` (a failed value read), not only when it is zero | Treat `nil` as not observed, or skip the rise, with a test |
 | Glyph cannot warn ahead of a weekly | Imminence reads the five-hour window only, while "a window is spent" includes the weekly, so a weekly about to run out never arms the glyph | Decide whether the weekly should arm it; if so, extend `isImminent` |
 | Two 90 % constants | `monthlyRedUsedPct` (forecast dot, verdict, near-cap) and `StateEngine.longLimitNearlySpentPct` (the long-limit red tier) are separate | Read one constant, or record why they may differ |
-| Provider remaining percent unused | `MonthlyLimit.remainingPercent` is decoded and stored, but no display reads it; its doc says the row layer does | Fix the doc, or drop it with a storage contract |
+| Provider remaining percent unused | `MonthlyLimit.remainingPercent` is decoded and stored, but no display reads it; its doc says the row layer does | Fix the doc, or drop it with an agreed issue |
 | Unreachable grey burn tier | `monthlyBurnTier`'s `—` grey for a missing rate cannot be reached: `headerFacts` hides the fact before calling it (the `—` for a passed reset can) | Remove the missing-rate branch or fix its doc |
 | Stale comments | `QuotaSnapshot.extraUsage` says always `nil` for Codex (the adapter sends the disabled shape); `PollCoordinator` says the monthly amounts go in as Claude dollars (they are minor units); `CreditsSpendSectionView` lists every row, not the slimmed form | Fix with the next change to each file |
 
