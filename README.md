@@ -21,6 +21,10 @@ Works with **Claude Code, Codex, or both**.
 2. Unzip it and drag **Kvotar.app** into **Applications**.
 3. Open Kvotar.
 
+Or with Homebrew: `brew install --cask vladamarkov/tap/kvotar`. Kvotar still updates itself; see
+the [tap's notes](https://github.com/vladamarkov/homebrew-tap#kvotar) for how it and `brew upgrade`
+interact.
+
 Release builds are signed and notarized. Kvotar checks for updates daily and installs an update
 only when you click **Install**. You can turn off daily checks in the right-click menu.
 

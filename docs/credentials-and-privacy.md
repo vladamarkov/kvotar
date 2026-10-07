@@ -101,9 +101,13 @@ behavior, not Kvotar's. Kvotar never asks it to run a command or touch a file.
 | `~/Library/Logs/Kvotar/` | The app's own logs (and the CLI's, in a separate file): about 5 MB per file, the active file plus up to ten older ones each. They contain your home folder path; emails are written as `<redacted>` |
 | `~/Library/Application Support/Kvotar/kvotar.pid` | A lock so only one copy polls at a time |
 
-To remove Kvotar's data: quit Kvotar, delete the app, and delete those two folders. Diagnostics zips
-you saved stay on your Desktop until you delete them, and the update settings live in Kvotar's
-preferences (`defaults delete com.vladimirmarkovic.kvotar`).
+To remove Kvotar's data: quit Kvotar, delete the app, and delete those two folders. macOS and the
+updater also keep caches under Kvotar's identifier: `~/Library/Caches/com.vladimirmarkovic.kvotar`,
+`~/Library/HTTPStorages/com.vladimirmarkovic.kvotar` and `~/Library/WebKit/com.vladimirmarkovic.kvotar`;
+delete them too. Diagnostics zips you saved stay on your Desktop until you delete them, and the
+update settings live in Kvotar's preferences (`defaults delete com.vladimirmarkovic.kvotar`). If
+you installed Kvotar with Homebrew, `brew uninstall --zap --cask kvotar` removes the app and all
+of these except the zips.
 
 ## Diagnostics
 

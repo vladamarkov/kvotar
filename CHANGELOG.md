@@ -5,6 +5,8 @@ the line of their change.
 
 ## Unreleased
 
+- Kvotar can be installed with Homebrew: `brew install --cask vladamarkov/tap/kvotar`.
+
 ## [0.3.0 beta.10 (19)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.10) — 2026-10-05
 
 - Source published under the Apache License 2.0.
