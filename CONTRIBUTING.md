@@ -6,6 +6,9 @@
   problem and the outcome you want, and wait for the `agreed` label.
 - Unsure: open an issue and it gets scoped there.
 
+An agreed issue records the problem, the behaviour agreed, what is deliberately left out and how to
+tell it is done. How to build it is not settled there.
+
 The safety rules in [AGENTS.md](AGENTS.md) bind every change.
 
 ## Your first pull request
@@ -85,10 +88,11 @@ Applications.
 
 ## Maintainer only
 
-The maintainer agrees issues and cuts releases ([docs/releasing.md](docs/releasing.md)). Agreeing
-an issue includes its stated live checks, unless the maintainer reserves them for themselves:
-build and launch the app for them with `make run` and hand over only the clicks. A maintainer's
-"I'll do the live check" wins.
+The maintainer agrees issues and cuts releases ([docs/releasing.md](docs/releasing.md)). The
+maintainer's own work needs no agreed issue; one is opened when the change should be visible before
+it lands. Agreeing an issue includes its stated live checks, unless the maintainer reserves them for
+themselves: build and launch the app for them with `make run` and hand over only the clicks. A
+maintainer's "I'll do the live check" wins.
 
 ## Licensing
 
