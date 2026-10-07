@@ -23,7 +23,8 @@ Only the maintainer cuts a release. What a version, a build number and a beta la
    zip's SHA-256 and the zip's address under `https://updates.kvotar.com/builds/`. Its files are
    the zip and its `.sha256`, byte for byte the ones the feed serves.
 5. **Update the Homebrew cask,** once the tap exists: set its version and SHA-256 to this release
-   on the same day.
+   on the same day. If a release is withdrawn, the cask goes back to the previous build in the
+   feed, or is disabled when there is none.
 
 ## Rulings that hold for every release
 

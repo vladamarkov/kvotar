@@ -41,6 +41,16 @@ What this page does **not** own:
 - **Direct download, not the Mac App Store.** People download a zip from the website and drag
   `Kvotar.app` into Applications ([README — Install](../../README.md#install)). Release builds are
   signed and notarized; later versions arrive through the updater below.
+- **Homebrew, from the maintainer's tap.** `brew install --cask vladamarkov/tap/kvotar` installs
+  the same versioned zip the website serves, checked against its SHA-256
+  ([vladamarkov/homebrew-tap](https://github.com/vladamarkov/homebrew-tap), `Casks/kvotar.rb`).
+  The cask is marked `auto_updates true`. Homebrew can still replace the app: a plain
+  `brew upgrade` does when the installed app's version is older than the cask's; `brew upgrade
+  --cask kvotar` or `--greedy` does whenever the cask's version differs from the one Homebrew
+  recorded at install, which after a Sparkle update can mean an older build. When Homebrew replaces
+  the app it quits it first and reopens it afterwards. The cask points only at tagged releases. If a release is withdrawn, the cask goes back to the previous build in the
+  feed, or is disabled when there is none. The cask is not in Homebrew's main repository.
+  Reason: many developers look for a `brew install` line first.
 - **Not sandboxed.** The app declares one entitlement, `com.apple.security.network.client`, and no
   sandbox. Reason: it reads Claude Code's and Codex's files in your home folder directly, and the CLI
   shares its data folder without an app group (see [storage](storage.md#where-the-data-lives)).
@@ -263,6 +273,7 @@ Signing, notarizing and publishing happen outside this repository.
 | The feed itself is not signed | Each download is signed and checked; the feed is fetched over HTTPS but carries no signature (`SURequireSignedFeed` absent) | Decide whether to require a signed feed; it needs every published feed signed first |
 | Release tags are not signed | A release tag is annotated but carries no signature; the maintainer has no signing key set up for git. The protected `main` and the published SHA-256 are the guarantee today | Decide whether to sign tags once a signing key is set up |
 | Comments describe the schedule loosely | `UpdaterService`'s doc comment says "a scheduled check on launch and every 24 h"; Sparkle checks at launch only when 24 hours have passed | Reword with the next change to the file |
+| The cask can lag a release | The cask's version and SHA-256 are changed by hand after a release is published. Until then a new Homebrew install gets the previous build, and a named `brew upgrade` can take a self-updated copy back to it | Bump the cask on the day of each release |
 
 ## Code and test pointers
 
