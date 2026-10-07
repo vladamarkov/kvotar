@@ -85,6 +85,7 @@ agreement.
 ## How a change lands
 
 A new feature or a change to what Kvotar is meant to do needs an issue labelled `agreed` before any
-code; [CONTRIBUTING.md](CONTRIBUTING.md) says which. Build what the agreed issue says, nothing beside
-it. If the code and a spec page disagree in a way the issue does not cover, stop and ask. A pull
-request is one change, and follows `.github/pull_request_template.md`.
+code, unless the maintainer asked for it themselves; [CONTRIBUTING.md](CONTRIBUTING.md) says which.
+Build what was agreed, in the issue or with the person you work for, and nothing beside it. If the
+code and a spec page disagree in a way the agreement does not cover, stop and ask. A pull request is
+one change, and follows `.github/pull_request_template.md`.
