@@ -610,6 +610,15 @@ From the private records; reopening any needs the maintainer's approval.
   root only when another session had been stored under one of its sub-folders, which happens by
   accident, so one old session launched from a container like `~/Documents` absorbed every repo
   beneath it. Replaced by earliest-request labelling and one row per folder.
+- **Finding the checkout on disk**, to fold a sub-folder or a git worktree into its repository
+  (walking up to the nearest `.git` entry, reading a worktree's `.git` file, or running `git`).
+  Tried on 2026-10-07 and dropped: projects live in Documents or Desktop, and the first access
+  to a path there from Kvotar, even a check that the path exists, makes macOS ask the user for
+  that folder, and the call waits for the answer (on the maintainer's Mac it held the backfill
+  for seven minutes). Kvotar shows no system dialog for this. Matching a worktree to a stored
+  checkout by name was rejected on the way: two repositories can each have a worktree of that
+  name, so one match proves nothing. Worktrees and sub-folders stay their own rows; a mapping the
+  user defines, or a project the provider itself records, would be separate work.
 
 ## Known gaps
 
