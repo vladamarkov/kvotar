@@ -14,8 +14,12 @@ extension SQLiteStore {
     /// Persists one flushed batch of `TokenEvent`s. Empty batches are a no-op.
     ///
     /// `local_sessions` is upserted per event: `last_seen_at` advances to the latest event,
-    /// `started_at` keeps the earliest known value, and metadata columns adopt the newest
-    /// non-null value. `local_usage_events` uses INSERT OR IGNORE so replays of already-seen
+    /// `started_at` keeps the earliest known value, `project` is the folder of the earliest
+    /// request, and every other metadata column adopts the newest non-null value. The project
+    /// rule compares request times, not arrival order: the live watcher reads a file from its
+    /// end at launch and the backfill reads the beginning later, so the folder a session ended
+    /// in arrives first ([local usage](docs/spec/local-usage.md#storing-a-request)).
+    /// `local_usage_events` uses INSERT OR IGNORE so replays of already-seen
     /// `(session_id, tool, dedup_key)` rows are dropped (Baseline §7.2 deduplication) — and,
     /// since STEP_94, an event whose key already exists under **any** session id is skipped
     /// entirely (the `duplicateExists` guard below): a resumed/forked Claude session rewrites
@@ -34,7 +38,8 @@ extension SQLiteStore {
                         if try Self.duplicateExists(db, event: event) { continue }
 
                         // local_sessions — upsert; keep earliest started_at, advance last_seen_at,
-                        // adopt newest non-null metadata. A zero-usage event's model is withheld
+                        // take the project from the earliest request, adopt newest non-null
+                        // metadata otherwise. A zero-usage event's model is withheld
                         // (STEP_93 task 3): `<synthetic>` — Claude Code's zero-token placeholder
                         // for a turn that died before the API — must never rename the session it
                         // happens to land last in (REV-62 §4.3: one such line relabelled 196
@@ -45,7 +50,12 @@ extension SQLiteStore {
                                 started_at, last_seen_at
                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(session_id, tool) DO UPDATE SET
-                                project = COALESCE(excluded.project, local_sessions.project),
+                                project = CASE
+                                    WHEN excluded.project IS NULL THEN local_sessions.project
+                                    WHEN local_sessions.project IS NULL THEN excluded.project
+                                    WHEN excluded.started_at < local_sessions.started_at THEN excluded.project
+                                    ELSE local_sessions.project
+                                END,
                                 model = COALESCE(excluded.model, local_sessions.model),
                                 originator = COALESCE(excluded.originator, local_sessions.originator),
                                 surface_bucket = COALESCE(excluded.surface_bucket, local_sessions.surface_bucket),
@@ -159,7 +169,12 @@ extension SQLiteStore {
                                 started_at, last_seen_at
                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(session_id, tool) DO UPDATE SET
-                                project = COALESCE(excluded.project, local_sessions.project),
+                                project = CASE
+                                    WHEN excluded.project IS NULL THEN local_sessions.project
+                                    WHEN local_sessions.project IS NULL THEN excluded.project
+                                    WHEN excluded.started_at < local_sessions.started_at THEN excluded.project
+                                    ELSE local_sessions.project
+                                END,
                                 model = COALESCE(excluded.model, local_sessions.model),
                                 originator = COALESCE(excluded.originator, local_sessions.originator),
                                 surface_bucket = COALESCE(excluded.surface_bucket, local_sessions.surface_bucket),

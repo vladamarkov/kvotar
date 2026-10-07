@@ -3,7 +3,7 @@ import Foundation
 /// Builds a `DailyLocalReport` from one bounded store read (STEP_177 — REV-92 / Baseline §15.2).
 /// Pure over its inputs: the clock and calendar are injected, the population is
 /// `LocalDayPolicy.population`, and every rule it applies already exists elsewhere —
-/// `ProjectGrouping.canonical` (STEP_157's longest-root rule), `DisplayedTokens`, `CacheHit`
+/// `ProjectGrouping.canonical` (one row per stored folder), `DisplayedTokens`, `CacheHit`
 /// and the engine's own per-model pricing. **Throws** on a store failure: unlike
 /// `HistoryReportReader`, which collapses a failed query to an empty section, this report must
 /// never let a failed read masquerade as "no local activity observed today".
@@ -20,20 +20,19 @@ public struct DailyLocalReportReader: Sendable {
         let population = LocalDayPolicy.population(now: now, calendar: calendar)
         let read = try await store.dailyLocalRead(tool: tool, since: population.start,
                                                   until: population.end)
-        let allPaths = try await store.distinctProjectPaths(tool: tool)
-        return await Self.fold(tool: tool, read: read, allPaths: allPaths,
+        return await Self.fold(tool: tool, read: read,
                                population: population, valueEngine: valueEngine)
     }
 
     /// The grouping and arithmetic, separated from the I/O so a fixture can drive it directly.
-    static func fold(tool: Tool, read: SQLiteStore.DailyLocalRead, allPaths: [String?],
+    static func fold(tool: Tool, read: SQLiteStore.DailyLocalRead,
                      population: DateInterval, valueEngine: EstimatedValueEngine) async
         -> DailyLocalReport {
-        // Group cells by canonical project, then by model, merging every token column so a
-        // repo's two subfolders sharing a model fold into one model row.
+        // Group cells by canonical project, then by model, merging every token column so the
+        // non-project folders sharing a model fold into one model row.
         var cells: [String?: [String?: (totals: SQLiteStore.ModelTokenTotals, latest: Date)]] = [:]
         for row in read.rows where DisplayedTokens.sum(row.totals, tool: tool) > 0 {
-            let key = ProjectGrouping.canonical(row.project, among: allPaths)
+            let key = ProjectGrouping.canonical(row.project)
             let model = row.totals.model
             if let prior = cells[key]?[model] {
                 cells[key, default: [:]][model] = (

@@ -141,6 +141,39 @@ final class SQLiteStoreTokenEventsTests: XCTestCase {
         }
     }
 
+    func testSessionProjectIsTheFolderOfItsEarliestRequest() async throws {
+        // Requests arrive newest first — the live watcher reads a file from its end at launch,
+        // the backfill reads the beginning later — so the folder the session ended in lands
+        // first. The project must still be the folder of the earliest request.
+        let store = try SQLiteStore(path: dbPath)
+        try await store.writeTokenEvents([makeEvent(
+            dedupKey: "late", project: "/home/u/kvotar/dist", model: "claude-sonnet-4-6",
+            startedAt: Date(timeIntervalSince1970: 3_000),
+            recordedAt: Date(timeIntervalSince1970: 3_000))])
+        _ = try await store.backfillTokenEvents([makeEvent(
+            dedupKey: "early", project: "/home/u/kvotar", model: "claude-opus-4-8",
+            startedAt: Date(timeIntervalSince1970: 1_000),
+            recordedAt: Date(timeIntervalSince1970: 1_000))])
+        // A later request with no folder changes nothing.
+        try await store.writeTokenEvents([makeEvent(
+            dedupKey: "later", project: nil, model: nil,
+            startedAt: Date(timeIntervalSince1970: 4_000),
+            recordedAt: Date(timeIntervalSince1970: 4_000))])
+
+        try await store.withPool { pool in
+            try pool.read { db in
+                let row = try Row.fetchOne(
+                    db, sql: "SELECT project, model, started_at FROM local_sessions WHERE session_id = ?",
+                    arguments: ["s1"])
+                XCTAssertEqual(row?["project"] as String?, "/home/u/kvotar",
+                               "the earliest request's folder, whatever order it arrived in")
+                XCTAssertEqual(row?["model"] as String?, "claude-opus-4-8",
+                               "model still takes the newest non-null value written")
+                XCTAssertEqual(row?["started_at"] as Int?, 1_000)
+            }
+        }
+    }
+
     func testOriginatorPersistsForCodexEvent() async throws {
         let store = try SQLiteStore(path: dbPath)
         try await store.writeTokenEvents([makeEvent(

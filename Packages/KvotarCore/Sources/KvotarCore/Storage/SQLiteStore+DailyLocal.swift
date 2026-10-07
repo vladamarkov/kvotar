@@ -154,19 +154,4 @@ extension SQLiteStore {
             }
         }
     }
-
-    /// Every distinct working directory ever stored for `tool` — the **stable** path set
-    /// `ProjectGrouping.canonical` groups today's rows against (Baseline §15.2: "a stable set of
-    /// known stored paths for the provider"). Grouping against only the day's own paths would let
-    /// a repo's identity flip depending on which subfolder happened to be used that day.
-    public func distinctProjectPaths(tool: Tool) throws -> [String?] {
-        try withPool { pool in
-            try pool.read { db in
-                try Row.fetchAll(db, sql: """
-                    SELECT DISTINCT project FROM local_sessions WHERE tool = ?
-                    """, arguments: [tool.rawValue])
-                .map { $0["project"] as String? }
-            }
-        }
-    }
 }

@@ -219,15 +219,14 @@ final class DailyLocalReportReaderTests: XCTestCase {
 
     // MARK: - Grouping
 
-    func testGroupsAgainstTheProviderWideStoredPathSetNotJustToday() async throws {
-        // The repo root was only ever used yesterday; today's work sits in a subfolder. The
-        // subfolder still rolls into the root, because the path set is the provider's whole
-        // stored history (Baseline §15.2), not the day's.
+    func testASubfolderUsedTodayIsItsOwnRow() async throws {
+        // The repo root was used yesterday; today's work sits in a subfolder. The subfolder is
+        // its own row: a session stored elsewhere never changes a folder's identity.
         let (r, _) = try await report([
             event(session: "root", key: "r", project: "/u/repo", at: -3 * 3600),
             event(session: "sub", key: "s", project: "/u/repo/Packages/Core", at: 3600),
         ])
-        XCTAssertEqual(r.projects.map(\.name), ["/u/repo"])
+        XCTAssertEqual(r.projects.map(\.name), ["/u/repo/Packages/Core"])
         XCTAssertEqual(r.projects[0].tokens, 1_100, "yesterday's root event is not in today's total")
     }
 
@@ -235,11 +234,11 @@ final class DailyLocalReportReaderTests: XCTestCase {
         let (r, _) = try await report([
             event(session: "a", key: "a", project: "/a/kvotar", at: 3600),
             event(session: "b", key: "b", project: "/b/kvotar", at: 3700),
-            event(session: "c", key: "c", project: "/a/kvotar/dist", at: 3800),   // rolls into /a/kvotar
+            event(session: "c", key: "c", project: "/a/kvotar", at: 3800),
         ])
         XCTAssertEqual(r.projects.map(\.name), ["/a/kvotar", "/b/kvotar"])
         XCTAssertEqual(r.projects[0].tokens, 2_200)
-        XCTAssertEqual(r.projects[0].models.count, 1, "two subfolders, one model ⇒ one model row")
+        XCTAssertEqual(r.projects[0].models.count, 1, "two sessions, one model ⇒ one model row")
         XCTAssertEqual(r.projects[0].latestEventAt, dayStart.addingTimeInterval(3800))
     }
 

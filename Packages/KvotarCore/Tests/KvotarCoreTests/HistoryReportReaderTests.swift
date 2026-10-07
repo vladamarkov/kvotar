@@ -169,86 +169,72 @@ final class HistoryReportReaderTests: XCTestCase {
         }
     }
 
-    func testSubfoldersRollIntoTheirRepoRoot() {
+    func testEveryStoredFolderIsItsOwnProjectRow() {
         let repo = "/Users/v/Documents/programming/kvotar"
-        let paths: [String?] = [repo, repo + "/Packages/KvotarCore", repo + "/dist",
-                                "/Users/v/Documents/programming/kvotar-sentinel",
-                                "/Users/v/Documents/programming/kvotar copy",
-                                "/private/tmp", nil]
-        XCTAssertEqual(ProjectGrouping.canonical(repo + "/Packages/KvotarCore", among: paths), repo)
-        XCTAssertEqual(ProjectGrouping.canonical(repo + "/dist", among: paths), repo)
-        XCTAssertEqual(ProjectGrouping.canonical(repo, among: paths), repo)
-        // Siblings that merely share a name prefix are *not* children — string prefix must be a
-        // path-component boundary.
-        XCTAssertEqual(ProjectGrouping.canonical("/Users/v/Documents/programming/kvotar-sentinel", among: paths),
+        // A sub-folder is its own row, never rolled into the repo above it.
+        XCTAssertEqual(ProjectGrouping.canonical(repo + "/dist"), repo + "/dist")
+        XCTAssertEqual(ProjectGrouping.canonical(repo + "/Packages/KvotarCore"), repo + "/Packages/KvotarCore")
+        XCTAssertEqual(ProjectGrouping.canonical(repo), repo)
+        // Siblings that merely share a name prefix stay separate.
+        XCTAssertEqual(ProjectGrouping.canonical("/Users/v/Documents/programming/kvotar-sentinel"),
                        "/Users/v/Documents/programming/kvotar-sentinel")
-        XCTAssertEqual(ProjectGrouping.canonical("/Users/v/Documents/programming/kvotar copy", among: paths),
+        XCTAssertEqual(ProjectGrouping.canonical("/Users/v/Documents/programming/kvotar copy"),
                        "/Users/v/Documents/programming/kvotar copy")
-        // A sub-folder used on its own, with no stored ancestor, stays itself.
-        XCTAssertEqual(ProjectGrouping.canonical(repo + "/dist", among: [repo + "/dist"]), repo + "/dist")
-        // Non-projects → nil regardless of the set.
-        XCTAssertNil(ProjectGrouping.canonical("/private/tmp", among: paths))
-        XCTAssertNil(ProjectGrouping.canonical(nil, among: paths))
+        // The path is standardised, so one folder spelt two ways is one row.
+        XCTAssertEqual(ProjectGrouping.canonical(repo + "/dist/../dist/"), repo + "/dist")
+        // Non-projects → nil.
+        XCTAssertNil(ProjectGrouping.canonical("/private/tmp"))
+        XCTAssertNil(ProjectGrouping.canonical("/Users/v"))
+        XCTAssertNil(ProjectGrouping.canonical(nil))
     }
 
-    func testAParentFolderSessionDoesNotSwallowTheProjectList() {
-        // STEP_157, dogfood 2026-08-31: one 25-minute session launched from ~/Documents made the
-        // container a stored path, and the shortest-stored-ancestor rule collapsed both repos
-        // (131 sessions) into `Documents · 133 sessions`. Repos with stored subfolder sessions
-        // are roots: they absorb their subfolders and stop rolling into the container, which
-        // keeps its own honest one-session row.
+    func testAContainerFolderSessionNeverAbsorbsTheReposBeneathIt() async throws {
+        // The reported case: one session launched from ~/Documents, eight from a repo beneath it
+        // with no sub-folder sessions of its own. The old longest-stored-root rule showed all
+        // nine as `Documents`; now the container keeps its one-session row and the repo its own.
         let docs = "/Users/v/Documents"
-        let agentpilot = docs + "/programming/agentpilot"
-        let kvotar = docs + "/programming/kvotar"
-        let paths: [String?] = [docs, agentpilot, agentpilot + "/docs", kvotar, kvotar + "/dist"]
-        XCTAssertEqual(ProjectGrouping.canonical(agentpilot + "/docs", among: paths), agentpilot)
-        XCTAssertEqual(ProjectGrouping.canonical(kvotar + "/dist", among: paths), kvotar)
-        XCTAssertEqual(ProjectGrouping.canonical(agentpilot, among: paths), agentpilot)
-        XCTAssertEqual(ProjectGrouping.canonical(kvotar, among: paths), kvotar)
-        XCTAssertEqual(ProjectGrouping.canonical(docs, among: paths), docs)
+        let repo = docs + "/programming/kvotar-public"
+        var events: [TokenEvent] = []
+        events.append(event(session: "docs", key: "d", project: docs, daysAgo: 20, input: 100))
+        for i in 0..<8 {
+            events.append(event(session: "repo-\(i)", key: "r\(i)", project: repo, daysAgo: 1, input: 1_000))
+        }
+        let (reader, _) = try await makeReader(events)
+        let report = await reader.report(now: now)
+        let claude = try XCTUnwrap(report.tools.first { $0.tool == .claude })
 
-        // Residuals pinned as *chosen* behaviour (contract TASKS/STEP_157_container_grouping.md):
-        // a container whose only stored content is a single project with no stored subfolders
-        // still absorbs it — no string evidence separates it from a repo root plus a subfolder…
-        XCTAssertEqual(ProjectGrouping.canonical(docs + "/x/proj", among: [docs, docs + "/x/proj"]),
-                       docs)
-        // …and three nested stored levels split: a mid-level folder with its own stored
-        // descendant is itself a root, so one repo can render as two rows.
-        let nested: [String?] = [kvotar, kvotar + "/Packages", kvotar + "/Packages/KvotarCore"]
-        XCTAssertEqual(ProjectGrouping.canonical(kvotar + "/Packages/KvotarCore", among: nested),
-                       kvotar + "/Packages")
-        XCTAssertEqual(ProjectGrouping.canonical(kvotar + "/Packages", among: nested),
-                       kvotar + "/Packages")
-        XCTAssertEqual(ProjectGrouping.canonical(kvotar, among: nested), kvotar)
+        XCTAssertEqual(claude.projects.map(\.name), [repo, docs])
+        XCTAssertEqual(claude.projects[0].sessions, 8, "kvotar-public: the rest")
+        XCTAssertEqual(claude.projects[0].tokens, 8 * 1_100)
+        XCTAssertEqual(claude.projects[1].sessions, 1, "Documents: the one container session")
+        XCTAssertEqual(claude.projects[1].tokens, 200)
     }
 
     func testReaderGroupsProjectRowsBeforeTruncationAndLabelsSessionsTheSameWay() async throws {
         let repo = "/Users/v/Documents/programming/kvotar"
         var events: [TokenEvent] = []
-        // Six distinct sub-folders + the repo root: without pre-truncation grouping the top-5 cut
-        // would drop some children before they could roll up.
-        events.append(event(session: "root", key: "r", project: repo, daysAgo: 1, input: 100))
-        for (i, sub) in ["Packages/KvotarCore", "Packages/KvotarUI", "dist", "docs", "scripts", "App"].enumerated() {
-            events.append(event(session: "sub-\(i)", key: "s\(i)", project: repo + "/" + sub, daysAgo: 1, input: 1_000))
+        events.append(event(session: "root", key: "r", project: repo, daysAgo: 1, input: 1_000))
+        events.append(event(session: "dist", key: "d", project: repo + "/dist", daysAgo: 1, input: 1_000))
+        // Six distinct non-project folders: without pre-truncation grouping the top-5 cut would
+        // drop some of them before they could fold into the one "(no project)" row.
+        for (i, path) in ["/private/tmp", "/tmp/kvotar-cli", "/Users/v", "/home/v",
+                          "/var/folders/ab/T/x", "/private/tmp/claude-501/scratchpad"].enumerated() {
+            events.append(event(session: "np-\(i)", key: "n\(i)", project: path, daysAgo: 1, input: 50))
         }
-        events.append(event(session: "tmp1", key: "t1", project: "/private/tmp", daysAgo: 1, input: 50))
-        events.append(event(session: "tmp2", key: "t2", project: "/tmp/kvotar-cli", daysAgo: 1, input: 50))
-        events.append(event(session: "home", key: "h", project: "/Users/v", daysAgo: 1, input: 50))
         events.append(event(session: "other", key: "o", project: "/Users/v/other-repo", daysAgo: 1, input: 10))
         let (reader, _) = try await makeReader(events)
         let report = await reader.report(now: now)
         let claude = try XCTUnwrap(report.tools.first { $0.tool == .claude })
 
-        XCTAssertEqual(claude.projects.count, 3)
-        XCTAssertEqual(claude.projects[0].name, repo)
-        XCTAssertEqual(claude.projects[0].sessions, 7, "root + six sub-folders")
-        XCTAssertEqual(claude.projects[0].tokens, 6 * 1_100 + 200)
+        XCTAssertEqual(claude.projects.count, 4)
         let noProject = try XCTUnwrap(claude.projects.first { $0.name == nil })
-        XCTAssertEqual(noProject.sessions, 3, "two temp trees + home fold into one row")
-        XCTAssertEqual(noProject.tokens, 3 * 150)
+        XCTAssertEqual(noProject.sessions, 6, "temp trees + home folders fold into one row")
+        XCTAssertEqual(noProject.tokens, 6 * 150)
+        // A sub-folder is its own row beside the repo root.
+        XCTAssertEqual(claude.projects.filter { $0.name == repo || $0.name == repo + "/dist" }.count, 2)
         // Session labels use the same canonical project.
-        let core = try XCTUnwrap(claude.topSessions.first { $0.sessionId == "sub-0" })
-        XCTAssertEqual(core.project, repo)
+        let dist = try XCTUnwrap(claude.topSessions.first { $0.sessionId == "dist" })
+        XCTAssertEqual(dist.project, repo + "/dist")
         // Nothing lost: grouped project tokens still sum to the period total.
         XCTAssertEqual(claude.projects.reduce(0) { $0 + $1.tokens }, claude.totalTokens)
     }
@@ -306,12 +292,11 @@ final class HistoryReportReaderTests: XCTestCase {
                        "another day's work never leaks into this one")
     }
 
-    /// The day rows group on the **provider-wide** stored path set, the same basis the popover's
-    /// own daily report uses (Baseline §15.2) — so a subfolder used only today still rolls up to
-    /// the repo the popover named, even though the period-scoped set would elect it a root.
-    func testDayProjectRowsGroupOnTheProviderWidePathSet() async throws {
+    /// The day rows are one per stored folder, the same basis the popover's own daily report
+    /// uses (Baseline §15.2) — a sub-folder used today is its own row, whatever else is stored.
+    func testDayProjectRowsAreOnePerStoredFolder() async throws {
         let (reader, _) = try await makeReader([
-            // The repo root's own work is outside the 30-day period.
+            // The repo root has its own stored session, outside the 30-day period.
             event(session: "old", key: "o", project: "/u/repo", daysAgo: 200),
             // Today, only a subfolder was used.
             event(session: "new", key: "n", project: "/u/repo/Packages/Core", daysAgo: 1),
@@ -321,8 +306,8 @@ final class HistoryReportReaderTests: XCTestCase {
         let calendar = Calendar.current
         let target = calendar.startOfDay(for: now.addingTimeInterval(-86_400))
         let day = try XCTUnwrap(claude.days.first { calendar.isDate($0.start, inSameDayAs: target) })
-        XCTAssertEqual(day.projects.map(\.project), ["/u/repo"],
-                       "the stable path set keeps the repo's identity from flipping day to day")
+        XCTAssertEqual(day.projects.map(\.project), ["/u/repo/Packages/Core"],
+                       "a stored session elsewhere never changes a folder's row")
     }
 
     /// Session value is priced **per event model**, not at the session-level model (STEP_93):

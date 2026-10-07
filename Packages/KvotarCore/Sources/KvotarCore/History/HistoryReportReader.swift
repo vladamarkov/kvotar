@@ -46,14 +46,13 @@ public struct HistoryReportReader: Sendable {
         let sessions = (try? await store.sessionCount(tool: tool, since: start)) ?? 0
         let value = (try? await valueEngine.value(for: tool, from: start, until: end)) ?? 0
 
-        // Project rows are grouped by `ProjectGrouping` **before** truncation: sub-folders of a
-        // stored path roll into it, temp/home directories fold into one nil ("no project") row.
-        // Grouping after the top-N cut could drop a child whose parent survived.
+        // Project rows are grouped by `ProjectGrouping` **before** truncation: every stored folder
+        // is its own row, and temp/home directories fold into one nil ("no project") row.
+        // Grouping after the top-N cut could drop a non-project row whose fold survived.
         let rawProjects = (try? await store.projectTotals(tool: tool, since: start, until: end)) ?? []
-        let allPaths = rawProjects.map(\.project)
         var grouped: [String?: (sessions: Int, tokens: Int)] = [:]
         for row in rawProjects {
-            let key = ProjectGrouping.canonical(row.project, among: allPaths)
+            let key = ProjectGrouping.canonical(row.project)
             let tokens = DisplayedTokens.sum(row.totals, tool: tool)
             let prior = grouped[key] ?? (0, 0)
             grouped[key] = (prior.sessions + row.sessionCount, prior.tokens + tokens)
@@ -81,7 +80,7 @@ public struct HistoryReportReader: Sendable {
             // tokens were counted under.
             topSessions.append(HistoryReport.Session(
                 sessionId: row.sessionId,
-                project: ProjectGrouping.canonical(row.project, among: allPaths),
+                project: ProjectGrouping.canonical(row.project),
                 model: row.model,
                 lastSeenAt: row.lastSeenAt, tokens: tokens, value: sessionValue))
         }
@@ -114,14 +113,13 @@ public struct HistoryReportReader: Sendable {
         let hourly = (try? await store.hourlyTokenTotalsByModel(tool: tool, since: start,
                                                                 until: end)) ?? []
         // The day's project rows (STEP_178) — a second bounded hourly read, folded on the same
-        // calendar, and grouped against the **provider-wide** stored path set rather than this
-        // period's, so a day here and the popover's own daily report name a repo the same way
-        // (Baseline §15.2: the destination payload is what reconciles the two lists).
+        // calendar and grouped by the same `ProjectGrouping` rule as the popover's own daily
+        // report, so a day here and the popover name a repo the same way (Baseline §15.2: the
+        // destination payload is what reconciles the two lists).
         let hourlyProjects = (try? await store.hourlyProjectTotals(tool: tool, since: start,
                                                                    until: end)) ?? []
-        let allProjectPaths = (try? await store.distinctProjectPaths(tool: tool)) ?? []
         let days = await dayBuckets(tool: tool, hourly: hourly, hourlyProjects: hourlyProjects,
-                                    allProjectPaths: allProjectPaths, from: start, until: end,
+                                    from: start, until: end,
                                     limitHits: hits.map(\.firedAt), calendar: calendar)
         let workByHour = Self.hourProfile(hourly: hourly, tool: tool, calendar: calendar)
         // Provider-observed quota windows (STEP_181/186 — REV-93 §4). One bounded series read plus
@@ -376,28 +374,15 @@ public struct HistoryReportReader: Sendable {
     /// token.
     private func dayBuckets(tool: Tool, hourly: [SQLiteStore.HourlyModelTokenTotals],
                             hourlyProjects: [SQLiteStore.HourlyProjectTokenTotals] = [],
-                            allProjectPaths: [String?] = [],
                             from start: Date, until end: Date,
                             limitHits: [Date], calendar: Calendar) async -> [HistoryReport.Day] {
         guard start < end else { return [] }
         var tokens: [Date: Int] = [:]
-        // Project rows, folded on the same calendar and grouped once per raw path.
+        // Project rows, folded on the same calendar and grouped by `ProjectGrouping`.
         var projectTokens: [Date: [String?: Int]] = [:]
-        var canonicalCache: [String: String?] = [:]
         for row in hourlyProjects {
             let day = calendar.startOfDay(for: row.hourStart)
-            let key: String?
-            if let raw = row.project {
-                if let cached = canonicalCache[raw] {
-                    key = cached
-                } else {
-                    let resolved = ProjectGrouping.canonical(raw, among: allProjectPaths)
-                    canonicalCache[raw] = resolved
-                    key = resolved
-                }
-            } else {
-                key = nil
-            }
+            let key = ProjectGrouping.canonical(row.project)
             projectTokens[day, default: [:]][key, default: 0] +=
                 DisplayedTokens.sum(row.totals, tool: tool)
         }
