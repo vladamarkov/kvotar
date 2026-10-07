@@ -1,6 +1,6 @@
 ---
 summary: The map of Kvotar's spec pages — which page owns which feature and code area, how the pages depend on each other, and which topics have no page yet.
-read_when: Starting any change, choosing which spec pages to read for a contract or bug fix, adding a spec page, or moving a rule from one page to another.
+read_when: Starting any change, choosing which spec pages to read for an agreed issue or bug fix, adding a spec page, or moving a rule from one page to another.
 ---
 
 # Spec index
@@ -8,21 +8,21 @@ read_when: Starting any change, choosing which spec pages to read for a contract
 Each page in `docs/spec/` is the current specification for one topic: the rule, its reason, the
 code that implements it and the gaps still open. A page wins over a code comment that disagrees
 with it. How the pages fit into a change is in
-[CONTRIBUTING.md — Working on a contract](../../CONTRIBUTING.md#working-on-a-contract).
+[CONTRIBUTING.md — What a pull request contains](../../CONTRIBUTING.md#what-a-pull-request-contains).
 
 ## What on a page is a rule
 
 - **The description of today's behavior is the current rule.** A change that departs from it
-  needs an agreed contract, and its pull request changes the page.
+  needs an agreed issue, and its pull request changes the page.
 - **Decided** entries are the maintainer's rulings that the code does not follow yet. The ruling is
-  the target; its Known-gaps row names the change, and a contract makes it.
+  the target; its Known-gaps row names the change, and an agreed issue makes it.
 - **Questions for owner**, and Known-gaps rows that do not cite a Decided entry, are proposals, not
   approved changes. A recommendation there is not permission to change the code. Each needs the
-  maintainer's decision and its own contract.
+  maintainer's decision and its own agreed issue.
 
 ## How to find the right page
 
-1. If you are working on a contract, read the pages it names first.
+1. If you are working on an agreed issue, read the pages it names first.
 2. Otherwise find the feature words or the code you will touch in the tables below. Each page's
    `read_when` line, at its top, names the code and behavior it governs.
 3. Follow the links a page makes to the shared pages. A topic page links to a shared rule; it

@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later contract closes.
+has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **A stale *Limit nearly spent* keeps its red while its limit's reset is still ahead,** like a
    block. The reading keeps its "as of" time on screen

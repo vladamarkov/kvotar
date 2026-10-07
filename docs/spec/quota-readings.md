@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_247). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later contract closes.
+has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **Rule W applies to Codex too.** A Codex "not started" claim is retracted by the same two
    triggers as Claude's ([rule W](#retracting-a-falsified-not-started-claim-rule-w)). Reason: local

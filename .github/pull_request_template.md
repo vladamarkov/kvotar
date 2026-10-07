@@ -1,21 +1,12 @@
-<!-- Changelog: if users can see this change, add one line to CHANGELOG.md under "Unreleased" in
-     this pull request. Otherwise add none. -->
-
 ## Summary
-
 What changes and why, in a few lines.
 
-## Commands run
+## Checks
+`make test` and `make check` results. A docs-only change runs `make check` alone.
+Proven: ...
+Not proven: ...
+(Synthetic data only; see .github/pr-proof/README.md.)
 
-- [ ] `make test` — result:
-- [ ] `make check` — result:
+Closes #   <!-- only when the change needed an agreed issue -->
 
-## Proof
-
-Synthetic data only (see `.github/pr-proof/README.md`). What was proven, and what was not?
-
-## Contract
-
-Closes #
-
-<!-- Delete the Contract section if the change did not need a contract. -->
+<!-- Users can see this change? Add one line to CHANGELOG.md under "Unreleased". -->

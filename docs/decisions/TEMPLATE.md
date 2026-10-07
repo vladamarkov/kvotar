@@ -1,14 +1,14 @@
 ---
-summary: The shape of a decision record — the lasting explanation of a rule that is hard to reverse. Not a proposal form; a change is proposed as a contract issue.
-read_when: An agreed contract creates or changes a rule that is hard to reverse and that a future reader would question, and the maintainer is writing its record.
+summary: The shape of a decision record — the lasting explanation of a rule that is hard to reverse. Not a proposal form; a change is proposed in an issue the maintainer agrees.
+read_when: An agreed issue creates or changes a rule that is hard to reverse and that a future reader would question, and the maintainer is writing its record.
 ---
 
 # NNNN — Short title of the decision
 
 A decision record is the lasting explanation of a rule. The maintainer writes one only when an
-agreed contract creates or changes a rule that is hard to reverse and that a future reader would
-question. It is not how a change is proposed: that is a contract issue
-([CONTRIBUTING.md](../../CONTRIBUTING.md#proposing-work)). Keep it to one page.
+agreed issue creates or changes a rule that is hard to reverse and that a future reader would
+question. It is not how a change is proposed: that is an issue the maintainer agrees
+([CONTRIBUTING.md](../../CONTRIBUTING.md)). Keep it to one page.
 
 ## Decision
 
@@ -39,4 +39,4 @@ touches, and why it does not break them.
 
 ## Status
 
-Accepted, with the date and the number of the contract issue that agreed it.
+Accepted, with the date and the number of the agreed issue.

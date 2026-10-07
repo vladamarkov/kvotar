@@ -12,7 +12,7 @@ None.
 ## Decided
 
 The maintainer ruled on these on 2026-10-04 (STEP_252). The code does not follow them yet; each
-has a row in *Known gaps* below, which a later contract closes.
+has a row in *Known gaps* below, which a later agreed issue closes.
 
 1. **The plan follows `account/read`.** Once `account/read` names a plan, the app-server's
    `rateLimits.planType` and the web `plan_type` only fill an empty one. The cached identity (plan
