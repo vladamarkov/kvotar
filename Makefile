@@ -1,7 +1,7 @@
-# Four targets (STEP_237, STEP_239). Build output lives outside the source tree, under
+# Five targets (STEP_237, STEP_239). Build output lives outside the source tree, under
 # $KVOTAR_BUILD_DIR (default ${TMPDIR:-/tmp}/kvotar-build). Nothing here signs or notarizes.
 
-.PHONY: check test build run
+.PHONY: check test build run prepare-release
 
 # The absolute rules' static tripwires and the agent-doc path check (STEP_239).
 check:
@@ -23,3 +23,7 @@ build:
 # sign-ins and the real database (CONTRIBUTING.md, "Running a development build").
 run:
 	@scripts/run.sh
+
+# Maintainer only: writes and pushes the release-bump commit on main (docs/releasing.md, step 1).
+prepare-release:
+	@scripts/prepare_release.sh

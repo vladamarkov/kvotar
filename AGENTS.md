@@ -21,11 +21,13 @@ make build   # xcodegen + unsigned Release build; prints the .app path
 make test    # every package's tests + the app tests, with live variables unset
 make check   # static rule checks and the doc-path check
 make run     # Debug build; quits the running Kvotar, launches the build, prints its path
+make prepare-release  # maintainer only: writes and pushes the release-bump commit on main
 ```
 
 `make run` is the only way an agent launches the app. The build uses the real sign-ins and the real
 database ([CONTRIBUTING.md](CONTRIBUTING.md#running-a-development-build)), so run it only when the
-person you work for asks.
+person you work for asks. When the maintainer says to prepare a release, run `make prepare-release`
+on `main` and report the commit it prints.
 
 `make test` fails on any skipped test that is not on the expected-skips list. Do not add to that list
 to make a run pass.
