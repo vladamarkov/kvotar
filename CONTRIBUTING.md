@@ -25,12 +25,15 @@ The safety rules in [AGENTS.md](AGENTS.md) bind every change.
 
 The pull request follows [.github/pull_request_template.md](.github/pull_request_template.md):
 
-1. **Summary**: what changes and why.
+1. **Summary**: what changes and why. A short diff sketch or tree is fine when it says it better
+   than prose.
 2. **Checks**: `make test` and `make check` and their results. A docs-only change runs `make check`
    alone.
 3. **Proof using synthetic data only**, saying what was and was not proven
    ([.github/pr-proof/README.md](.github/pr-proof/README.md)).
-4. **`Closes #n`** when the change needed an agreed issue.
+4. **Risk**: whether a revert restores the old behaviour cleanly, and what a user would notice.
+   "None" is fine.
+5. **`Closes #n`** when the change needed an agreed issue.
 
 The spec page changes in the same pull request as the code. A mismatch you find between a spec page
 and the code goes into that page's *Known gaps* table, with a proposed fix.
