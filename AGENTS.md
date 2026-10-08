@@ -88,4 +88,6 @@ A new feature or a change to what Kvotar is meant to do needs an issue labelled 
 code, unless the maintainer asked for it themselves; [CONTRIBUTING.md](CONTRIBUTING.md) says which.
 Build what was agreed, in the issue or with the person you work for, and nothing beside it. If the
 code and a spec page disagree in a way the agreement does not cover, stop and ask. A pull request is
-one change, and follows `.github/pull_request_template.md`.
+one change, and follows `.github/pull_request_template.md`. Every change goes through a pull request
+unless the person you work for says, for that change, to push it to `main`; that is allowed only for
+a release bump, a changelog line or a docs repair. Never push to `main` on your own judgement.

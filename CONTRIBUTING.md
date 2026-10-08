@@ -48,6 +48,10 @@ One branch and one pull request per change, squash-merged, so each pull request 
 `main`. The title says what is now true, in plain words, with no prefix. Before the merge, the
 `checks` run (`.github/workflows/checks.yml`) must be green and the branch up to date with `main`.
 
+The maintainer may push a release bump, a changelog line or a docs repair straight to `main`; the
+`checks` run still runs on the push. Anything that changes code, a test or a spec page goes through
+a pull request.
+
 ## How a merged change reaches a release
 
 Kvotar is developed in this repository. When your pull request is accepted:
