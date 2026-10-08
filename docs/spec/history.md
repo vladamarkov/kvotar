@@ -288,12 +288,13 @@ table stamp. (`History/HistoryReportReader.swift`; `History/HistoryReport.swift`
   partial. The busiest-week comparison skips the partial one. (`weekBuckets`; tests
   `testWeekBucketsAreFourFullWeeksPlusOnePartialNewestFirst`,
   `testBusiestCompleteWeekIgnoresThePartialBucket`)
-- **Projects and sessions.** Project rows are grouped with `ProjectGrouping` before the top-5 cut;
-  a day's project rows group against the provider-wide path set, the same basis the popover's
-  daily report uses, so the two lists agree row for row
-  ([local usage](local-usage.md#todays-local-report)). Top sessions are priced per event model.
+- **Projects and sessions.** Project rows are one per stored working directory
+  (`ProjectGrouping`), the same basis the popover's daily report uses, so the two lists agree row
+  for row ([local usage](local-usage.md#todays-local-report)). Rows are grouped before the top-5
+  cut. Top sessions are priced per event model.
   (tests `testReaderGroupsProjectRowsBeforeTruncationAndLabelsSessionsTheSameWay`,
-  `testDayProjectRowsGroupOnTheProviderWidePathSet`,
+  `testAContainerFolderSessionNeverAbsorbsTheReposBeneathIt`,
+  `testDayProjectRowsAreOnePerStoredFolder`,
   `testTopSessionsPricePerEventModelAndTruncateToLimit`)
 - **Per-model values.** Each model row is priced on its own; a day's value is the sum of its
   rows, and a day row priced at the fallback rate is flagged for the recap's `≈`. Repricing runs

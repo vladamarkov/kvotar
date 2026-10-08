@@ -399,7 +399,8 @@ How they are opened:
 One flush, one transaction (`SQLiteStore.writeTokenEvents`):
 
 - **`local_sessions`, upserted per request:** earliest start time kept, last-seen time advanced,
-  each metadata column takes the newest non-null value.
+  `project` is the folder of the earliest request, each other metadata column takes the newest
+  non-null value. (test `testSessionProjectIsTheFolderOfItsEarliestRequest`)
 - **`local_usage_events`, one row per request,** with its own model and bucket. Readers use the
   request's values and fall back to the session's where a row has none (older rows).
 - **A request with no tokens at all asserts no model.** Claude Code writes a zero-token placeholder
@@ -522,10 +523,10 @@ The data behind the popover's `LOCAL ACTIVITY · TODAY` section (`DailyLocalRepo
   carried tokens today. A session begun yesterday counts once. (tests
   `testSessionBegunYesterdayWithUsageTodayCountsOnce`,
   `testZeroUsagePlaceholderEarnsNoSessionNoRowNoModel`)
-- **Projects** are grouped against every working directory ever stored for the tool, not only
-  today's, so a repository keeps one identity. The rule is `ProjectGrouping.canonical`: the longest
-  stored root that contains the path. A temporary folder, the root or a home folder is
-  `(no project)`. (test `testGroupsAgainstTheProviderWideStoredPathSetNotJustToday`)
+- **Projects** are one row per stored working directory. The rule is `ProjectGrouping.canonical`:
+  the standardised path itself. A temporary folder, the root or a home folder is `(no project)`.
+  No folder rolls into another; a stored session elsewhere never changes a project's identity.
+  (tests `testASubfolderUsedTodayIsItsOwnRow`, `testEveryStoredFolderIsItsOwnProjectRow`)
 - **Models** come from each request, falling back to its session; none is `Unknown model`. Tokens
   are never dropped for want of a name. (test `testUnknownProjectAndUnknownModelRetainTheirTokens`)
 - **Apps:** a helper's tokens go to the app that spawned it (Codex: through its session's
@@ -605,6 +606,19 @@ From the private records; reopening any needs the maintainer's approval.
   never correct itself and blended web work into local.
 - **A local token rate as the idle test.** Claude Code writes a line when a turn completes, so a
   long turn read as idle.
+- **Rolling sub-folders into the longest stored root (the STEP_157 rule).** A folder became a
+  root only when another session had been stored under one of its sub-folders, which happens by
+  accident, so one old session launched from a container like `~/Documents` absorbed every repo
+  beneath it. Replaced by earliest-request labelling and one row per folder.
+- **Finding the checkout on disk**, to fold a sub-folder or a git worktree into its repository
+  (walking up to the nearest `.git` entry, reading a worktree's `.git` file, or running `git`).
+  Tried on 2026-10-07 and dropped: projects live in Documents or Desktop, and the first access
+  to a path there from Kvotar, even a check that the path exists, makes macOS ask the user for
+  that folder, and the call waits for the answer (on the maintainer's Mac it held the backfill
+  for seven minutes). Kvotar shows no system dialog for this. Matching a worktree to a stored
+  checkout by name was rejected on the way: two repositories can each have a worktree of that
+  name, so one match proves nothing. Worktrees and sub-folders stay their own rows; a mapping the
+  user defines, or a project the provider itself records, would be separate work.
 
 ## Known gaps
 
