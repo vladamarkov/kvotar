@@ -1,5 +1,5 @@
 ---
-summary: The maintainer's checklist for cutting a Kvotar release — the bump pull request, the build, the update feed, the tag and GitHub Release, the Homebrew cask — and the rulings that hold for every release.
+summary: The maintainer's checklist for cutting a Kvotar release — the bump commit, the build, the update feed, the tag and GitHub Release, the Homebrew cask — and the rulings that hold for every release.
 read_when: Cutting a release, or checking what a published release must carry. Maintainer only.
 ---
 
@@ -8,12 +8,13 @@ read_when: Cutting a release, or checking what a published release must carry. M
 Only the maintainer cuts a release. What a version, a build number and a beta label mean is in
 [updates and releases](spec/updates-and-releases.md#version-and-build-numbers).
 
-1. **Open the bump pull request.** In `project.yml`, raise `CURRENT_PROJECT_VERSION` by one and
-   `KVOTAR_PRERELEASE_LABEL` to the next beta label. In [CHANGELOG.md](../CHANGELOG.md), move the
-   "Unreleased" lines under a new heading, `<version> <label> (<build>) — <date>`, linked to the
-   tag's GitHub Release. Update the same numbers on the updates and releases page. It is one plain
-   pull request, with no agreed issue.
-2. **Build from the merged commit.** Build, sign and notarize it with the private tooling. If
+1. **Run `make prepare-release` on `main`.** It raises `CURRENT_PROJECT_VERSION` and
+   `KVOTAR_PRERELEASE_LABEL` by one in `project.yml`, repeats the new values on the updates and
+   releases page, moves the "Unreleased" lines of [CHANGELOG.md](../CHANGELOG.md) under a new
+   heading, `<version> <label> (<build>) — <date>`, linked to the tag's GitHub Release, and pushes
+   the commit `Bump to <version> <label> (<build>)`. It refuses when the tree is dirty, `main` is
+   behind `origin/main` or "Unreleased" is empty.
+2. **Build from the bump commit.** Build, sign and notarize it with the private tooling. If
    something else merges first, still build the bump's commit, never a later one.
 3. **Publish the update feed.** Publish to the staging feed, check it, then promote it to
    `https://updates.kvotar.com/appcast.xml`.
