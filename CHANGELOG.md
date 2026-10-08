@@ -5,6 +5,8 @@ the line of their change.
 
 ## Unreleased
 
+## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
+
 - Kvotar can be installed with Homebrew: `brew install --cask vladamarkov/tap/kvotar`.
 - A session is listed under the folder it started in, and every folder is its own project row.
   Before, one old session launched from a parent folder such as `~/Documents` could absorb every

@@ -157,8 +157,8 @@ In `project.yml` (target `Kvotar`, `settings.base`):
 | Setting | Today | What it is |
 |---|---|---|
 | `MARKETING_VERSION` | `0.3.0` | The version |
-| `CURRENT_PROJECT_VERSION` | `19` | The build number |
-| `KVOTAR_PRERELEASE_LABEL` | `beta.10` | The beta label, for release file names only; it never reaches `Info.plist` |
+| `CURRENT_PROJECT_VERSION` | `20` | The build number |
+| `KVOTAR_PRERELEASE_LABEL` | `beta.11` | The beta label, for release file names only; it never reaches `Info.plist` |
 | `KVOTAR_CHANNEL` | `release` | The build channel |
 | `ENABLE_HARDENED_RUNTIME`, `CODE_SIGN_ENTITLEMENTS`, `ARCHS` | | See [Distribution](#distribution) |
 
@@ -210,7 +210,7 @@ setting's value and error codes, nothing else.
 - **The labels it changes:** the internal version string gets ` beta` appended (below), and the
   diagnostics bundle carries the channel in its name and manifest
   ([diagnostics](diagnostics.md#save-diagnostics)).
-- **It is not the beta label.** The `beta.10` in a release's name is `KVOTAR_PRERELEASE_LABEL`,
+- **It is not the beta label.** The `beta.11` in a release's name is `KVOTAR_PRERELEASE_LABEL`,
   which only names release files. A build with that label is still a `release`-channel build unless
   `KVOTAR_CHANNEL` says otherwise.
 
@@ -222,7 +222,7 @@ setting's value and error codes, nothing else.
   a reused or lower number is invisible to every installed copy. A withdrawn build is fixed by a new
   build with a higher number, never by going back.
 - **The version** (`MARKETING_VERSION`) changes with who the build is for, not with features. Every
-  public beta build so far is `0.3.0`, from `0.3.0 beta.2 (11)` to `0.3.0 beta.10 (19)`.
+  public beta build so far is `0.3.0`, from `0.3.0 beta.2 (11)` to `0.3.0 beta.11 (20)`.
 - **The beta label** (`KVOTAR_PRERELEASE_LABEL`, `beta.N`) goes up by one with each beta cut. A cut
   that was not released still used its number: beta.1 was build 10.
 - **A release bump** in `project.yml` changes the build number and the label, and the version only
