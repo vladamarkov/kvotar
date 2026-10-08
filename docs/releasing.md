@@ -14,7 +14,7 @@ Only the maintainer cuts a release. What a version, a build number and a beta la
    heading, `<version> <label> (<build>) — <date>`, linked to the tag's GitHub Release, and pushes
    the commit `Bump to <version> <label> (<build>)`. It refuses when the tree is dirty, `main` is
    behind `origin/main` or "Unreleased" is empty.
-2. **Build from the merged commit.** Build, sign and notarize it with the private tooling. If
+2. **Build from the bump commit.** Build, sign and notarize it with the private tooling. If
    something else merges first, still build the bump's commit, never a later one.
 3. **Publish the update feed.** Publish to the staging feed, check it, then promote it to
    `https://updates.kvotar.com/appcast.xml`.
