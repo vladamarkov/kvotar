@@ -30,13 +30,18 @@ final class HistoryExperienceQuotaTests: XCTestCase {
     // MARK: - Sections and provider safety
 
     func testAllStacksOneSectionPerProvider() {
+        // The reader lists a week-wide main window among the weekly limits as well.
+        let codexWeek = HXFix.quotaWindow(.codex, daysBack: 4, width: 604_800, used: 40)
         let page = quota([claude(contiguousFiveHour(count: 3)),
-                          HXFix.tool(.codex, quotaWindows: [
-                              HXFix.quotaWindow(.codex, daysBack: 4, width: 604_800, used: 40)])])
+                          HXFix.tool(.codex, quotaWindows: [codexWeek],
+                                     weeklyLimits: [.init(limit: .overall, outcome: codexWeek)])])
         XCTAssertEqual(page.sections.map(\.provider), [.claude, .codex])
-        XCTAssertEqual(page.sections[0].title, "Claude · 5-hour windows")
-        XCTAssertEqual(page.sections[1].title, "Codex · Weekly windows",
-                       "widths are named in the app's own grain vocabulary, never `7-day`")
+        XCTAssertEqual(page.sections.map(\.title), ["Claude", "Codex"])
+        XCTAssertEqual(page.sections[0].stripTitle, "5-hour windows · % used")
+        XCTAssertNil(page.sections[0].weeklyTitle, "no weekly limit reported")
+        XCTAssertNil(page.sections[1].stripTitle,
+                     "a main window a week wide is a curve, never a dot on a strip")
+        XCTAssertEqual(page.sections[1].weeklyTitle, "Weekly window · % used")
         XCTAssertEqual(page.eyebrow, "All providers · quota windows")
         XCTAssertNil(page.emptyMessage)
     }
@@ -299,7 +304,7 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(section.segments.map(\.connects), [true, true, false])
         XCTAssertEqual(section.segments[1].boundaryNote, "Window width changed")
         XCTAssertEqual(section.segments[2].boundaryNote, "Window width changed")
-        XCTAssertEqual(section.title, "Claude · main account window",
+        XCTAssertEqual(section.stripTitle, "Main account window · % used",
                        "mixed widths cannot be named by one of them")
     }
 
@@ -456,6 +461,129 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(labels.map(\.label), ["100", "50", "0"])
         XCTAssertEqual(labels.map(\.fraction), [1, 0.5, 0])
         XCTAssertEqual(labels.map(\.prominent), [true, false, true])
+    }
+
+    // MARK: - Weekly curves
+
+    private let weekEnd = HXFix.now.addingTimeInterval(-5 * 86_400)
+
+    private func weeklySection(_ limits: [WeeklyLimitOutcome],
+                               windows: [QuotaWindowOutcome]? = nil) -> HistoryExperience.QuotaSection {
+        quota([HXFix.tool(.claude, quotaWindows: windows ?? contiguousFiveHour(count: 3),
+                          weeklyLimits: limits)], .tool(.claude)).sections[0]
+    }
+
+    /// A week is drawn from its own readings, each placed by its time and value, oldest first;
+    /// readings before the period are not drawn; the mark sits on the last reading and the
+    /// ending figure is written there. Nothing joins one week to the next: one curve per week.
+    func testAWeekIsACurveThroughItsOwnReadingsInsidePeriod() throws {
+        let early = HXFix.readings(endingAt: weekEnd, pcts: [5, 20, 48, 74])
+        let before = QuotaWindowOutcome.Reading(at: HXFix.now.addingTimeInterval(-40 * 86_400),
+                                                usedPct: 1)
+        let limits = [
+            HXFix.weeklyLimit(endedAt: weekEnd.addingTimeInterval(-7 * 86_400), used: 30,
+                              readings: HXFix.readings(endingAt: weekEnd.addingTimeInterval(-7 * 86_400),
+                                                       pcts: [10, 30])),
+            HXFix.weeklyLimit(endedAt: weekEnd, used: 74, readings: [before] + early),
+        ]
+        let section = weeklySection(limits)
+        XCTAssertEqual(section.curves.count, 2)
+        let curve = try XCTUnwrap(section.curves.last)
+        XCTAssertEqual(curve.samples.map(\.x), early.map { x($0.at) }, "the reading before the period is gone")
+        XCTAssertEqual(curve.samples.map(\.fraction), [0.05, 0.2, 0.48, 0.74])
+        XCTAssertEqual(curve.markIndex, 3)
+        XCTAssertEqual(curve.endLabel, "74%")
+        XCTAssertFalse(curve.faded)
+        XCTAssertNil(curve.boundaryX)
+        XCTAssertEqual(curve.samples[2].hoverBody,
+                       "**Tue Aug 11, 6:00 am**\n48% used · week ending Tue Aug 11, 12:00 pm")
+        let point = try XCTUnwrap(section.weeklyPoints.last)
+        XCTAssertEqual(point.id, curve.pointID)
+        XCTAssertEqual(point.x, curve.samples[3].x, "the point stands on the mark")
+        XCTAssertEqual(point.fraction, 0.74)
+        XCTAssertNil(point.inPlaceLabel, "the curve writes its own end label")
+        XCTAssertEqual(point.label, "Ended at 74% used")
+    }
+
+    /// A week that hit the limit marks the first reading at 100 and says so; a partly seen week
+    /// fades and ends `Last seen`; the open week ends `So far`; an early ending draws its boundary
+    /// at the event, after the last reading the curve stops at.
+    func testTheEndOfEachKindOfWeekIsNamed() throws {
+        let hitEnd = weekEnd.addingTimeInterval(-14 * 86_400)
+        let partialEnd = weekEnd.addingTimeInterval(-7 * 86_400)
+        let earlyEnd = weekEnd.addingTimeInterval(2 * 86_400)
+        let openEnd = HXFix.now.addingTimeInterval(3 * 86_400)
+        let limits = [
+            HXFix.weeklyLimit(endedAt: hitEnd, used: 100, hitLimit: true,
+                              readings: HXFix.readings(endingAt: hitEnd, pcts: [40, 100, 100])),
+            HXFix.weeklyLimit(endedAt: partialEnd, used: 60, gap: 2 * 86_400,
+                              readings: HXFix.readings(endingAt: partialEnd.addingTimeInterval(-2 * 86_400),
+                                                       pcts: [20, 60])),
+            HXFix.weeklyLimit(endedAt: earlyEnd, used: 79, ending: .earlyReset,
+                              scheduled: weekEnd.addingTimeInterval(7 * 86_400),
+                              readings: HXFix.readings(endingAt: earlyEnd.addingTimeInterval(-60),
+                                                       pcts: [50, 79])),
+            HXFix.weeklyLimit(endedAt: openEnd, used: 54,
+                              readings: HXFix.readings(endingAt: HXFix.now.addingTimeInterval(-3600),
+                                                       pcts: [10, 54])),
+        ]
+        let curves = weeklySection(limits).curves
+        XCTAssertEqual(curves.map(\.endLabel), ["Hit the limit", "Last seen · 60%",
+                                                  "Reset early · 79%", "So far · 54%"])
+        XCTAssertEqual(curves[0].markIndex, 1, "the first reading at the limit")
+        XCTAssertEqual(curves.map(\.faded), [false, true, false, false])
+        XCTAssertEqual(curves[2].boundaryX, x(earlyEnd))
+        XCTAssertLessThan(try XCTUnwrap(curves[2].mark).x, x(earlyEnd), "the curve ends at its last reading")
+        XCTAssertEqual(curves[3].mark?.x, x(HXFix.now.addingTimeInterval(-3600)),
+                       "the open week ends at its latest reading, never at now")
+        XCTAssertTrue(curves[2].samples[1].hoverBody.hasSuffix("· Reset early"))
+    }
+
+    /// A model allowance's weekly is not the provider's weekly and draws no curve; a week whose
+    /// fixture carries no readings stands as one mark at its last reading.
+    func testOnlyTheOverallWeeklyIsDrawnAndABareWeekIsOneMark() throws {
+        let section = weeklySection([
+            HXFix.weeklyLimit(endedAt: weekEnd, used: 40),
+            HXFix.weeklyLimit(.claude, .model(key: "m", name: "Opus"), endedAt: weekEnd, used: 90),
+        ])
+        XCTAssertEqual(section.curves.count, 1)
+        XCTAssertEqual(section.curves[0].samples.count, 1)
+        XCTAssertEqual(section.curves[0].samples[0].fraction, 0.4)
+        XCTAssertEqual(section.curves[0].endLabel, "40%")
+    }
+
+    /// A Codex plan whose only window is weekly: the main windows are the weekly limits, drawn
+    /// as curves once, so the strip is empty and absent.
+    func testAWeeklyOnlyPlanHasCurvesAndNoStrip() {
+        let window = HXFix.quotaWindow(.codex, daysBack: 4, width: 604_800, used: 40)
+        let tool = HXFix.tool(.codex, quotaWindows: [window],
+                              weeklyLimits: [WeeklyLimitOutcome(limit: .overall, outcome: window)])
+        let section = quota([tool], .tool(.codex)).sections[0]
+        XCTAssertTrue(section.points.isEmpty)
+        XCTAssertNil(section.stripTitle)
+        XCTAssertEqual(section.curves.map(\.pointID), [window.id])
+        XCTAssertEqual(section.weeklyPoints.map(\.id), [window.id])
+        XCTAssertEqual(section.summary, "The one window seen to the end did not hit the limit.")
+    }
+
+    /// Over the weekly chart the pointer rests on the nearest recorded reading, ringed where it
+    /// was read, and a click there selects that reading's week.
+    func testAWeeklyHoverRestsOnTheNearestReadingAndSelectsItsWeek() throws {
+        let readings = HXFix.readings(endingAt: weekEnd, pcts: [5, 20, 48, 74])
+        let section = weeklySection([HXFix.weeklyLimit(endedAt: weekEnd, used: 74, readings: readings)])
+        let hover = try XCTUnwrap(
+            HistoryDisplay.quotaHover(section, atX: x(readings[1].at) + 0.001, chart: .weekly))
+        XCTAssertEqual(hover.chart, .weekly)
+        XCTAssertEqual(hover.pointID, section.weeklyPoints[0].id)
+        XCTAssertEqual(hover.cursorX, x(readings[1].at))
+        XCTAssertEqual(hover.ringFraction, 0.2)
+        XCTAssertEqual(hover.body, section.curves[0].samples[1].hoverBody)
+        XCTAssertEqual(hover.id, "\(section.weeklyPoints[0].id)@1")
+        XCTAssertEqual(HistoryDisplay.quotaNearestPoint(section, atX: 0.99, chart: .weekly)?.id,
+                       section.weeklyPoints[0].id)
+        let strip = try XCTUnwrap(HistoryDisplay.quotaHover(section, atX: 0.5))
+        XCTAssertEqual(strip.chart, .strip)
+        XCTAssertEqual(strip.id, strip.pointID)
     }
 
     // MARK: - Hover

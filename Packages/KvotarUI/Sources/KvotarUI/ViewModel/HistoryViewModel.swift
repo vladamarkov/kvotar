@@ -224,7 +224,7 @@ public final class HistoryViewModel: ObservableObject {
     /// the first point of a scoped week, else nothing pinned.
     public func resolvedQuotaPoint(in page: HistoryExperience.QuotaPage)
         -> HistoryExperience.QuotaPoint? {
-        let points = page.sections.flatMap(\.points)
+        let points = page.sections.flatMap { $0.points + $0.weeklyPoints }
         if let selectedQuotaPoint,
            let match = points.first(where: { $0.id == selectedQuotaPoint }) {
             return match
@@ -286,7 +286,7 @@ public final class HistoryViewModel: ObservableObject {
     public enum HoverColumn: Sendable, Hashable {
         case day(Int)
         case hour(Int)
-        /// A quota chart's hover: the window id the card is keyed by.
+        /// A quota chart's hover: the window, or the window and reading, the card is keyed by.
         case quota(String)
     }
 
@@ -396,13 +396,14 @@ public final class HistoryViewModel: ObservableObject {
     /// that failed. Same overlay, same card, same Esc.
     @Published public private(set) var quotaHover: HistoryExperience.QuotaHover?
 
-    /// The pointer moved to fraction `x` of a section's plot.
-    public func quotaHover(_ section: HistoryExperience.QuotaSection, atX x: Double) {
-        let hover = HistoryDisplay.quotaHover(section, atX: x)
+    /// The pointer moved to fraction `x` of one of a section's charts.
+    public func quotaHover(_ section: HistoryExperience.QuotaSection, atX x: Double,
+                           chart: HistoryExperience.QuotaChart = .strip) {
+        let hover = HistoryDisplay.quotaHover(section, atX: x, chart: chart)
         if hover != quotaHover { quotaHover = hover }
         dayTimer?.cancel()
         dayTimer = nil
-        let column = hover.map { HoverColumn.quota($0.pointID) }
+        let column = hover.map { HoverColumn.quota($0.id) }
         if hoveredDay != column { hoveredDay = column }
         if peekedDay != column { peekedDay = column }
     }
@@ -414,11 +415,15 @@ public final class HistoryViewModel: ObservableObject {
         if case .quota = peekedDay { peekedDay = nil }
     }
 
-    /// A click anywhere over the plot selects the window nearest on x — the same window the
-    /// hover rings — as ← and → already select by stepping.
+    /// A click anywhere over a plot selects the window nearest on x — the same window the
+    /// hover rings, or on the weekly chart the week of the reading it rings — as ← and →
+    /// already select by stepping.
     public func selectQuotaPoint(nearestTo section: HistoryExperience.QuotaSection,
-                                 atX x: Double) {
-        guard let point = HistoryDisplay.quotaNearestPoint(section, atX: x) else { return }
+                                 atX x: Double,
+                                 chart: HistoryExperience.QuotaChart = .strip) {
+        guard let point = HistoryDisplay.quotaNearestPoint(section, atX: x, chart: chart) else {
+            return
+        }
         selectQuotaPoint(point.id)
     }
 }

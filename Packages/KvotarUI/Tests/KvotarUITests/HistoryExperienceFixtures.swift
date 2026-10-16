@@ -180,9 +180,10 @@ enum HXFix {
                             endedAt: Date, used: Double, gap: TimeInterval = 0,
                             ending: QuotaWindowOutcome.Ending = .reachedReset,
                             scheduled: Date? = nil, hitLimit: Bool = false,
-                            now: Date = HXFix.now) -> WeeklyLimitOutcome {
+                            now: Date = HXFix.now,
+                            readings: [QuotaWindowOutcome.Reading] = []) -> WeeklyLimitOutcome {
         let resetsAt = scheduled ?? endedAt
-        let last = endedAt.addingTimeInterval(-gap)
+        let last = readings.last?.at ?? endedAt.addingTimeInterval(-gap)
         let outcome = QuotaWindowOutcome(
             id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))",
             tool: tool, resetsAt: resetsAt, windowSeconds: 604_800, widthEvidence: .recorded,
@@ -192,8 +193,17 @@ enum HXFix {
             completion: now < endedAt ? .current
                 : (gap <= QuotaWindowOutcomes.fullObservationTolerance || hitLimit
                     ? .completedFull : .completedPartial),
-            ending: ending, endedAt: endedAt)
+            ending: ending, endedAt: endedAt, readings: readings)
         return WeeklyLimitOutcome(limit: limit, outcome: outcome)
+    }
+
+    /// Readings every `every` seconds ending `endingAt`, one per value in `pcts`, oldest first.
+    static func readings(endingAt: Date, pcts: [Double],
+                         every: TimeInterval = 6 * 3600) -> [QuotaWindowOutcome.Reading] {
+        pcts.enumerated().map { index, pct in
+            .init(at: endingAt.addingTimeInterval(-Double(pcts.count - 1 - index) * every),
+                  usedPct: pct)
+        }
     }
 
     // MARK: - Quota windows (STEP_181 outcomes, STEP_182 display)

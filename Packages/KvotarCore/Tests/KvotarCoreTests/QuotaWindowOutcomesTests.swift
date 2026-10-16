@@ -223,6 +223,19 @@ final class QuotaWindowOutcomesTests: XCTestCase {
         XCTAssertNil(out[0].hitLimitAt)
     }
 
+    /// The outcome keeps the readings it was folded from, oldest first, whatever order they
+    /// arrived in — the climb a chart draws is the recorded one, never a line between windows.
+    func testAnOutcomeCarriesItsReadingsOldestFirst() {
+        let points = [point(240, 26, resetsAt: resetsAt),
+                      point(0, 10, resetsAt: resetsAt),
+                      point(120, 18, resetsAt: resetsAt)]
+        let out = QuotaWindowOutcomes.compute(tool: .claude, points: points, now: resetsAt)
+        XCTAssertEqual(out.count, 1)
+        XCTAssertEqual(out[0].readings.map(\.usedPct), [10, 18, 26])
+        XCTAssertEqual(out[0].readings.map(\.at), [0, 120, 240].map { base.addingTimeInterval($0) })
+        XCTAssertEqual(out[0].observationCount, out[0].readings.count)
+    }
+
     /// The tolerance is two base poll ticks, and it is the freshness constant rather than a
     /// number chosen for this chart (STEP_181).
     func testToleranceIsTwoBasePollTicks() {

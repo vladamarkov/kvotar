@@ -123,4 +123,19 @@ final class HistoryDayHoverTests: XCTestCase {
         vm.selectQuotaPoint(nearestTo: section, atX: section.points[2].x + 0.001)
         XCTAssertEqual(vm.selectedQuotaPoint, section.points[2].id)
     }
+
+    /// A click on the weekly chart selects a week, and the page resolves it like any point.
+    func testAClickOnTheWeeklyChartSelectsTheWeek() {
+        let vm = model()
+        let end = HXFix.now.addingTimeInterval(-5 * 86_400)
+        let page = HXFix.pages([HXFix.tool(.claude, quotaWindows: [HXFix.quotaWindow(daysBack: 2)],
+                                           weeklyLimits: [HXFix.weeklyLimit(endedAt: end, used: 40)])],
+                               .tool(.claude)).quota
+        let section = page.sections[0]
+        vm.selectQuotaPoint(nearestTo: section, atX: 0.3, chart: .weekly)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.weeklyPoints[0].id)
+        XCTAssertEqual(vm.resolvedQuotaPoint(in: page)?.id, section.weeklyPoints[0].id)
+        vm.quotaHover(section, atX: 0.3, chart: .weekly)
+        XCTAssertEqual(vm.peekedDay, .quota("\(section.weeklyPoints[0].id)@0"))
+    }
 }

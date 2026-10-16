@@ -9,7 +9,9 @@ the line of their change.
   as the pointer moves over the chart. Every
   ended window is the same dot, the open window sits at its last reading with `So far` beside
   it, the legend is gone, the sentence counts only windows seen to the end, and a window's
-  detail opens under its own chart.
+  detail opens under its own chart. The weekly limit gets its own chart above the strip: each
+  week is drawn as its own climb from the readings Kvotar recorded, ending at its last reading
+  with its result written there.
 
 ## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
 

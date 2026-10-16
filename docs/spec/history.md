@@ -376,6 +376,9 @@ they learn from ([forecast](forecast.md#shadow-outputs); `ShadowTablesReader`).
   `testOpenWindowIsCurrentAndKeepsItsRunningReading`)
 - **Hit the limit** is the first reading at or above 100 %, from the provider's readings, not from
   any notification. `lastReadingGap` is how long before `endedAt` the last reading came.
+- **The readings stay on the outcome** (`readings`, oldest first, time and utilization only), so
+  Explore quota's weekly chart draws a week's climb from what was recorded rather than from a
+  line between windows. (test `testAnOutcomeCarriesItsReadingsOldestFirst`)
 - **Weekly limits** (`WeeklyLimitOutcome`, `HistoryReportReader.weeklyLimits`): the overall
   weekly is the secondary window folded with the seven-day contract and only the `weekly` breaks,
   plus any main window that is itself seven days wide (a Codex plan whose only window is weekly),
@@ -475,18 +478,25 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
 Answers: *how did the provider-reported quota windows end?* Provider readings, not local work.
 (`Model/HistoryDisplay+Quota.swift`; `Views/History/HistoryQuotaChart.swift`)
 
-- **Main account window only.** The page says `Main account window history. Secondary, monthly and
-  model allowances are shown live in the popover and have no recorded history here.` The chart
-  plots the primary window's outcomes (`quotaWindows`) whatever their width, so a monthly
-  primary appears here; the secondary weekly and model allowances reach only the recap.
+- **Main window and weekly limit.** The page says `Main account window and weekly limit history.
+  Monthly and model allowances are shown live in the popover and have no recorded history here.`
+  The weekly chart plots the report's **overall** weekly limits (`weeklyLimits`: the secondary
+  weekly, or a main window a week wide); the strip plots the other primary window outcomes
+  (`quotaWindows`), whatever their width, so a monthly primary appears there. A main window that
+  is one of the weekly limits is drawn once, as a curve. Model allowances reach only the recap.
 - **`% used`, 100 % at the top.** The one retrospective exception to "the number says what is
   left" is defined on [display semantics](display-semantics.md#by-surface); every value is labelled.
-- **One section per provider.** On `All` they stack, Claude then Codex, full width, never side by
-  side and never on one axis or one sentence. The title names the width (`Claude · 5-hour
-  windows`) or, when widths differ or are unknown, `Claude · main account window`. A provider
-  that reported no window has no section. With none at all: `Quota history starts as Kvotar
-  observes provider windows on this Mac. Earlier windows cannot be recovered.` (tests
-  `testAllStacksOneSectionPerProvider`, `testAFreshInstallSaysEarlierWindowsCannotBeRecovered`)
+- **One section per provider, two charts.** On `All` the sections stack, Claude then Codex,
+  full width, never side by side and never on one axis or one sentence. The section is titled
+  by the provider (`Claude`); under it, the weekly chart (`Weekly window · % used`, 190 pt)
+  where the provider reported a weekly limit in the period, then the strip (`5-hour windows ·
+  % used`, or `Main account window · % used` when widths differ or are unknown, 130 pt) where it
+  has main windows shorter than a week. Either chart is absent when there is nothing for it; a
+  Codex plan with only a weekly has curves and no strip. The two share the date axis and one
+  hover cursor. A provider that reported no window has no section. With none at all: `Quota
+  history starts as Kvotar observes provider windows on this Mac. Earlier windows cannot be
+  recovered.` (tests `testAllStacksOneSectionPerProvider`, `testAWeeklyOnlyPlanHasCurvesAndNoStrip`,
+  `testAFreshInstallSaysEarlierWindowsCannotBeRecovered`)
 - **One factual sentence per section**, counting ended windows only, with the windows seen to
   the end as the denominator: `2 of 7 windows seen to the end hit the limit.` or `None of the 7
   windows seen to the end hit the limit.`, plus `One more ended at or above 80% used.` when it
@@ -513,6 +523,20 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   tests `testPointCopyDistinguishesEndedLowerBoundAndSoFar`, `testHitLimitIsItsOwnFlagNotAColour`,
   `testTheOpenWindowStandsAtItsLastReadingAndNamesItself`,
   `testInPlaceLabelsGoWhereTheModelFindsRoom`)
+- **The weekly chart: one curve per week.** Each overall weekly limit is drawn from the readings
+  it was folded from (`QuotaWindowOutcome.readings`), those inside the period only: a line
+  through them from the first to the last with a light area under it, placed by each reading's
+  own time and value (`QuotaSection.curves`, `QuotaCurve.samples`). Nothing joins one week to
+  the next, and a curve is never extended past its last reading — not to now and not to the
+  scheduled reset. The week's mark (`QuotaSection.weeklyPoints`, the same point type the strip
+  uses) stands on the first reading at the limit where it hit, else on the last reading, and the
+  curve writes its result there: `74%`, `Hit the limit`, `Last seen · 60%` on a partly seen week
+  (drawn faded), `So far · 54%` on the open week, `Reset early · 79%` or `Withdrawn · 79%` where
+  the provider ended it, with a red dashed boundary at the event's time. A week that hit the
+  limit runs flat at 100 only across readings recorded there. A week with no reading inside the
+  period but a last reading in it stands as one mark. (`quotaCurve`; tests
+  `testAWeekIsACurveThroughItsOwnReadingsInsidePeriod`, `testTheEndOfEachKindOfWeekIsNamed`,
+  `testOnlyTheOverallWeeklyIsDrawnAndABareWeekIsOneMark`)
 - **Date axis.** The model gives each section its ticks (`QuotaSection.ticks`): a labelled tick
   at each weekly reset of the provider inside the period, from the report's **overall** weekly
   limits (an early ending at its actual time; twins within the anchor jitter are one tick; a
@@ -540,21 +564,25 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   `testShortIdlePauseDoesNotBecomeAMissingHistoryGap`,
   `testWindowsWithNoRecordedWidthAreGroupedButNeverJoined`,
   `testRecoveredLegacyWidthsJoinAndCarryOneEvidenceNote`)
-- **Hover, anywhere, at once.** The pointer anywhere over the plot rests on the window nearest on
-  x: that mark is ringed, a faint cursor line stands at it, and the day strip's own card
+- **Hover, anywhere, at once.** The pointer anywhere over the strip rests on the window nearest on
+  x: that mark is ringed, a faint cursor line stands at it in both of the provider's charts, and
+  the day strip's own card
   (`DayHoverOverlay`, never the macOS `.help` tooltip) shows the window's weekday, date, span and
   result (`QuotaPoint.hoverBody`: `**Fri Sep 18, 9:00 am – 2:00 pm**` over `Ended at 87% used`,
   with `Hit the limit` where it did; the open window's head is `**Last reading Sun Aug 16, 11:00
   am**`, the instant its ring stands at) with no delay — the day strip's peek timer does not apply.
-  What the pointer rests on is the model's answer to the pointer's fraction of the plot
-  (`quotaHover`); the view
+  Over the weekly chart the pointer rests on the recorded reading nearest on x, ringed where it
+  was read, and the card names the reading and its week (`**Tue Aug 11, 6:00 am**` over `48% used
+  · week ending Tue Aug 11, 12:00 pm`, with `Reset early` where so). What the pointer rests on is
+  the model's answer to the pointer's fraction of the plot (`quotaHover`); the view
   positions the overlay. Esc drops the card (see *Keys*). (`HistoryViewModel.quotaHover`; tests
   `testTheHoverCardNamesTheSpanAndTheResultForEachKindOfWindow`,
-  `testHoverResolvesToTheNearestWindow`,
+  `testHoverResolvesToTheNearestWindow`, `testAWeeklyHoverRestsOnTheNearestReadingAndSelectsItsWeek`,
   `HistoryDayHoverTests.testAQuotaHoverShowsItsCardAtOnce`, `testEscDropsAQuotaCardToo`)
-- **Selecting a point** (a click anywhere over the plot selects the window nearest on x, the one
-  the hover rings; or ← / → on the chart, which is one keyboard stop) pins a detail
-  under the chart it belongs to, never under another provider's: title `<provider> · <span>`
+- **Selecting a point** (a click anywhere over the strip selects the window nearest on x, the one
+  the hover rings; a click on the weekly chart selects the week of the nearest reading; or ← / →
+  on either chart, each one keyboard stop) pins a detail under the section it belongs to, never
+  under another provider's: title `<provider> · <span>`
   (the reset alone when the start is unknown);
   rows `Width`, `Used`, `Coverage` (`Seen to the reset`, `Seen at the limit`, `Last seen <span>
   before the reset`, `Partly observed`, `Open now`, with the reading count), `Reset` (with `reset early` or
@@ -564,7 +592,8 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   link to Hard blocks. Before a selection: `Select a window to see how it ended.` (`quotaDetail`,
   `quotaBlockLink`; tests `testTheDetailCarriesWidthUsedCoverageAndReset`,
   `testLocalWorkIsLabelledAsContextNotCause`, `testARecordedBlockInsideTheWindowBecomesATypedLink`,
-  `HistoryDayHoverTests.testAClickSelectsTheWindowNearestThePointer`)
+  `HistoryDayHoverTests.testAClickSelectsTheWindowNearestThePointer`,
+  `testAClickOnTheWeeklyChartSelectsTheWeek`)
 - **Spoken values** name provider, width, span, outcome, a hit limit and an early ending, as plain
   text. (`quotaAccessibility`)
 

@@ -524,32 +524,111 @@ public struct HistoryExperience: Sendable {
         }
     }
 
-    /// What the pointer over a quota chart is resting on: the window nearest on x, ringed.
-    /// Resolved by the model from the pointer's fraction; the view draws the cursor line at
-    /// `cursorX`, rings `pointID` and shows `body` in the day strip's card.
-    public struct QuotaHover: Sendable, Equatable {
-        public let provider: Tool
-        /// The ringed window — what the hover card is keyed by.
+    /// Which of a section's two charts something belongs to: the weekly burn-up above, or the
+    /// short-window strip below it.
+    public enum QuotaChart: Sendable, Equatable {
+        case weekly, strip
+    }
+
+    /// One recorded reading on a weekly curve, placed: where it sits across the period, how high
+    /// it reads, and the card for the pointer resting on it.
+    public struct QuotaSample: Sendable, Equatable {
+        public let x: Double
+        public let fraction: Double
+        /// `**Wed Sep 16, 3:00 pm**` over `42% used · week ending Fri Sep 18, 9:00 am`.
+        public let hoverBody: String
+
+        public init(x: Double, fraction: Double, hoverBody: String) {
+            self.x = min(max(x, 0), 1)
+            self.fraction = min(max(fraction, 0), 1)
+            self.hoverBody = hoverBody
+        }
+    }
+
+    /// One weekly window drawn as its own climb: a curve through that week's recorded readings
+    /// only, from the first to the last inside the period, with a light area under it. Nothing
+    /// joins one week to the next, and a curve is never extended past its last reading — not to
+    /// now and not to the scheduled reset. The window's own mark (`QuotaSection.weeklyPoints`,
+    /// by `pointID`) sits on the sample at `markIndex`: the first reading at the limit where it
+    /// hit, else the last one.
+    public struct QuotaCurve: Sendable, Equatable, Identifiable {
+        public let id: String
+        /// The weekly window this curve draws — its point in `QuotaSection.weeklyPoints`.
         public let pointID: String
-        /// The ringed mark's x. Clamped 0…1.
+        /// Oldest first; never empty.
+        public let samples: [QuotaSample]
+        /// A partly seen week: drawn at lower opacity, with the fact written at its end.
+        public let faded: Bool
+        /// Written at the mark: `74%`, `Hit the limit`, `Last seen · 60%`, `So far · 54%`,
+        /// `Reset early · 79%`. Nil only where there is nothing to say.
+        public let endLabel: String?
+        /// An early ending or a withdrawal: a dashed boundary at the event's time, which may be
+        /// later than the last reading the curve ends at. Nil for a week that reached its reset.
+        public let boundaryX: Double?
+        public let markIndex: Int
+
+        public init(id: String, pointID: String, samples: [QuotaSample], faded: Bool,
+                    endLabel: String?, boundaryX: Double?, markIndex: Int) {
+            self.id = id
+            self.pointID = pointID
+            self.samples = samples
+            self.faded = faded
+            self.endLabel = endLabel
+            self.boundaryX = boundaryX.map { min(max($0, 0), 1) }
+            self.markIndex = min(max(markIndex, 0), max(samples.count - 1, 0))
+        }
+
+        /// The sample the window's mark sits on.
+        public var mark: QuotaSample? { samples.indices.contains(markIndex) ? samples[markIndex] : nil }
+    }
+
+    /// What the pointer over one of a section's charts is resting on: on the strip the window
+    /// nearest on x, on the weekly chart the recorded reading nearest on x. Resolved by the
+    /// model from the pointer's fraction; the view draws one cursor line at `cursorX` through
+    /// both of the provider's charts, rings `ringX`/`ringFraction` on the chart the pointer is
+    /// over, and shows `body` in the day strip's card.
+    public struct QuotaHover: Sendable, Equatable {
+        /// What the card is keyed by: the window id on the strip, the window id and the sample's
+        /// place on the weekly chart.
+        public let id: String
+        public let provider: Tool
+        public let chart: QuotaChart
+        /// The window the pointer rests on — what a click selects.
+        public let pointID: String
+        /// The cursor's x, snapped to the ringed mark or reading. Clamped 0…1.
         public let cursorX: Double
+        public let ringX: Double
+        public let ringFraction: Double
         public let body: String
 
-        public init(provider: Tool, pointID: String, cursorX: Double, body: String) {
+        public init(provider: Tool, chart: QuotaChart, pointID: String, cursorX: Double,
+                    ringFraction: Double, body: String, sampleIndex: Int? = nil) {
+            self.id = sampleIndex.map { "\(pointID)@\($0)" } ?? pointID
             self.provider = provider
+            self.chart = chart
             self.pointID = pointID
             self.cursorX = min(max(cursorX, 0), 1)
+            self.ringX = self.cursorX
+            self.ringFraction = min(max(ringFraction, 0), 1)
             self.body = body
         }
     }
 
-    /// One provider's full-width quota chart. On `All` these stack, Claude then Codex; they
-    /// never sit side by side and never share an axis or a summary (§6.3).
+    /// One provider's quota charts, full width: the weekly window's burn-up first where the
+    /// provider has one, then the short-window strip, sharing one date axis and one hover
+    /// cursor. On `All` the sections stack, Claude then Codex; they never sit side by side and
+    /// never share an axis or a summary (§6.3).
     public struct QuotaSection: Sendable, Equatable, Identifiable {
         public let provider: Tool
-        /// `Claude · 5-hour windows`, or `Claude · main account window` where widths vary or
-        /// were never recorded.
+        /// `Claude` — the charts under it name their own windows.
         public let title: String
+        /// The weekly chart's eyebrow, `Weekly window · % used`; nil where the provider reported
+        /// no weekly limit in the period and the chart is absent.
+        public let weeklyTitle: String?
+        /// The strip's eyebrow: `5-hour windows · % used`, or `Main account window · % used`
+        /// where widths vary or were never recorded; nil where every main window is a week wide
+        /// (a plan with only a weekly) and the strip is absent.
+        public let stripTitle: String?
         /// The one factual sentence above the chart — counts only, no advice and no pattern
         /// language. Weekly recap owns interpretation.
         public let summary: String
@@ -557,8 +636,14 @@ public struct HistoryExperience: Sendable {
         /// points are still drawn.
         public let sparseNote: String?
         public let segments: [QuotaSegment]
-        /// Every point of this section in time order, oldest first.
+        /// Every point on the strip in time order, oldest first: the main windows that are not
+        /// a week wide.
         public let points: [QuotaPoint]
+        /// The weekly windows, oldest first — one per curve, standing on the curve's mark. A
+        /// selection or a hover on the weekly chart is one of these.
+        public let weeklyPoints: [QuotaPoint]
+        /// The weekly chart's curves, oldest first.
+        public let curves: [QuotaCurve]
         /// The date axis, by x. Labelled ticks at the provider's weekly resets (or Mondays),
         /// unlabelled ones at every other local midnight.
         public let ticks: [QuotaAxisTick]
@@ -642,15 +727,21 @@ public struct HistoryExperience: Sendable {
             return shown
         }
 
-        public init(provider: Tool, title: String, summary: String, sparseNote: String? = nil,
+        public init(provider: Tool, title: String, weeklyTitle: String? = nil,
+                    stripTitle: String? = nil, summary: String, sparseNote: String? = nil,
                     segments: [QuotaSegment] = [], points: [QuotaPoint] = [],
+                    weeklyPoints: [QuotaPoint] = [], curves: [QuotaCurve] = [],
                     ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = []) {
             self.provider = provider
             self.title = title
+            self.weeklyTitle = weeklyTitle
+            self.stripTitle = stripTitle
             self.summary = summary
             self.sparseNote = sparseNote
             self.segments = segments
             self.points = points
+            self.weeklyPoints = weeklyPoints
+            self.curves = curves
             self.ticks = ticks
             self.valueLabels = valueLabels
         }

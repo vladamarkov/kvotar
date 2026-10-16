@@ -81,12 +81,27 @@ public struct QuotaWindowOutcome: Sendable, Equatable, Identifiable {
     /// against it — a weekly the provider took back on Sep 12 ended on Sep 12, not on the Sep 17
     /// it was scheduled for.
     public let endedAt: Date
+    /// One reading the window was folded from: when it was taken and the utilization it showed.
+    public struct Reading: Sendable, Equatable {
+        public let at: Date
+        public let usedPct: Double
+
+        public init(at: Date, usedPct: Double) {
+            self.at = at
+            self.usedPct = usedPct
+        }
+    }
+    /// The readings this window was folded from, oldest first — the group behind `highWaterPct`,
+    /// `observationCount` and the two observation instants, kept so a chart can draw the window's
+    /// climb from what was actually recorded rather than a line between two windows. Time and
+    /// utilization only; the anchor and width live on the outcome.
+    public let readings: [Reading]
 
     public init(id: String, tool: Tool, resetsAt: Date, windowSeconds: Int?,
                 widthEvidence: WidthEvidence, start: Date?,
                 firstObservedAt: Date, lastObservedAt: Date, observationCount: Int,
                 highWaterPct: Double, hitLimitAt: Date?, completion: Completion, ending: Ending,
-                endedAt: Date? = nil) {
+                endedAt: Date? = nil, readings: [Reading] = []) {
         self.id = id
         self.tool = tool
         self.resetsAt = resetsAt
@@ -101,6 +116,7 @@ public struct QuotaWindowOutcome: Sendable, Equatable, Identifiable {
         self.completion = completion
         self.ending = ending
         self.endedAt = endedAt ?? resetsAt
+        self.readings = readings
     }
 
     /// How long before the window ended the last reading was taken (STEP_227; measured to
@@ -277,7 +293,8 @@ public enum QuotaWindowOutcomes {
             hitLimitAt: group.first { $0.usedPct >= 100 }?.polledAt,
             completion: completion,
             ending: ending(early),
-            endedAt: endedAt)
+            endedAt: endedAt,
+            readings: group.map { QuotaWindowOutcome.Reading(at: $0.polledAt, usedPct: $0.usedPct) })
     }
 
     // MARK: - Legacy width evidence

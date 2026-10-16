@@ -21,10 +21,13 @@ extension HistoryDisplay {
     /// The mode's own eyebrow subject.
     static let quotaEyebrowSuffix = "quota windows"
     /// The coverage label §6.3 requires, and the sentence that stops it reading as a claim about
-    /// secondary, monthly or model allowances — whose per-poll history is not stored at all.
+    /// monthly or model allowances — whose per-poll history is not drawn here.
     static let quotaScopeNote =
-        "Main account window history. Secondary, monthly and model allowances are shown live in "
-        + "the popover and have no recorded history here."
+        "Main account window and weekly limit history. Monthly and model allowances are shown "
+        + "live in the popover and have no recorded history here."
+    /// The weekly chart's eyebrow. The provider's seven-day limit, drawn week by week.
+    static let quotaWeeklyTitle = "Weekly window · % used"
+    static let quotaUsedEyebrow = "% used"
     /// The fresh-install state. Poll evidence cannot be backfilled, and saying so is the point.
     static let quotaFreshInstallMessage =
         "Quota history starts as Kvotar observes provider windows on this Mac. Earlier windows "
@@ -41,8 +44,11 @@ extension HistoryDisplay {
     /// The context disclaimer under a local-activity row: correlation is all this can be.
     static let quotaLocalContextNote =
         "Local work is shown for context. It does not prove what moved the window."
-    /// The title a section falls back to where its windows do not share one recorded width.
-    static let quotaMixedWidthTitle = "main account window"
+    /// The strip's eyebrow where its windows do not share one recorded width.
+    static let quotaMixedWidthTitle = "Main account window"
+    /// Written at a week's end on the weekly chart, before its figure.
+    static let quotaLastSeenLabel = "Last seen"
+    static let quotaWithdrawnShortLabel = "Withdrawn"
     /// Why a run of windows is drawn as separate points rather than a line. Rows written before
     /// migration `v23` carry no width, so they have no defensible start — and without a start
     /// nothing can establish that one window abuts the next. Drawing a line would assert exactly
@@ -90,28 +96,53 @@ extension HistoryDisplay {
     /// One provider's section, or nil where the provider reported no window at all in the period.
     /// **A quiet stretch is an absent section, never a section of zeroes** — nothing here invents
     /// a window the provider never named (REV-93 §2.3).
+    ///
+    /// Two charts share the section: the weekly window's burn-up, from the report's **overall**
+    /// weekly limits (the account's seven-day window, or a main window that is itself a week
+    /// wide, which the reader lists there), and the strip of the other main windows. A main
+    /// window that is one of the weekly limits is drawn once, as a curve, never twice. Either
+    /// chart is absent where the provider has nothing for it. The sentence counts the main
+    /// windows, as before.
     static func quotaSection(_ t: HistoryReport.ToolReport,
                              report: HistoryReport,
                              calendar: Calendar = .current) -> HistoryExperience.QuotaSection? {
         let windows = t.quotaWindows.sorted { $0.resetsAt < $1.resetsAt }
         guard !windows.isEmpty else { return nil }
 
-        let points = windows.map {
+        let weekly = t.weeklyLimits
+            .filter { $0.limit == .overall }
+            .map(\.outcome)
+            .sorted { $0.resetsAt < $1.resetsAt }
+        let weeklyIDs = Set(weekly.map(\.id))
+        let strip = windows.filter { !weeklyIDs.contains($0.id) }
+        let points = strip.map {
             quotaPoint($0, tool: t.tool, report: t, period: report, calendar: calendar)
         }
+        let drawn = weekly.compactMap { window in
+            quotaCurve(window, period: report, calendar: calendar).map { (window, $0.curve, $0.sample) }
+        }
+        let weeklyPoints = drawn.map { window, _, sample in
+            quotaPoint(window, tool: t.tool, report: t, period: report, calendar: calendar,
+                       placedAt: sample, labelled: false)
+        }
+        let curves = drawn.map(\.1)
         let completed = windows.filter { $0.completion != .current }
         return HistoryExperience.QuotaSection(
             provider: t.tool,
-            title: "\(t.tool.tabLabel) · \(quotaSectionWidth(windows))",
+            title: t.tool.tabLabel,
+            weeklyTitle: curves.isEmpty ? nil : quotaWeeklyTitle,
+            stripTitle: strip.isEmpty ? nil : "\(quotaSectionWidth(strip)) · \(quotaUsedEyebrow)",
             summary: quotaSummary(completed),
             sparseNote: completed.count < quotaPatternFloor ? quotaSparseNote : nil,
-            segments: quotaSegments(windows, tool: t.tool),
+            segments: quotaSegments(strip, tool: t.tool),
             points: points,
+            weeklyPoints: weeklyPoints,
+            curves: curves,
             ticks: quotaTicks(t, period: report, calendar: calendar),
             valueLabels: quotaValueLabels)
     }
 
-    /// `5-hour windows` where every window in the section reported the same width, else the
+    /// `5-hour windows` where every window on the strip reported the same width, else the
     /// neutral fallback. The width vocabulary is `DisplayFormatter.windowGrain`'s — the same words
     /// the popover's rows and the block history use, so one width is never called by two names
     /// (the UI Spec's illustrative `7-day windows` would be a second name for `Weekly`).
@@ -165,10 +196,14 @@ extension HistoryDisplay {
 
     // MARK: - Points
 
+    /// `placedAt` moves the point off its own rule onto a curve's mark (the weekly chart);
+    /// `labelled: false` keeps the words off it, because the curve writes its own end label.
     static func quotaPoint(_ window: QuotaWindowOutcome, tool: Tool,
                            report t: HistoryReport.ToolReport,
                            period: HistoryReport,
-                           calendar: Calendar = .current) -> HistoryExperience.QuotaPoint {
+                           calendar: Calendar = .current,
+                           placedAt: HistoryExperience.QuotaSample? = nil,
+                           labelled: Bool = true) -> HistoryExperience.QuotaPoint {
         let kind: HistoryExperience.QuotaPoint.Kind
         switch window.completion {
         case .current: kind = .current
@@ -186,8 +221,8 @@ extension HistoryDisplay {
         // The open window stands at its last recorded reading, never at now or at a reset that
         // has not come: a reading is the last thing Kvotar knows about it (the fold's rule,
         // applied to geometry). An ended window stands at its reset.
-        let placedAt = kind == .current ? window.lastObservedAt : window.resetsAt
-        let inPlaceLabel: String? = kind == .current
+        let ownPlace = kind == .current ? window.lastObservedAt : window.resetsAt
+        let inPlaceLabel: String? = !labelled ? nil : kind == .current
             ? quotaSoFarLabel
             : (hitLimit ? limitHitLegendLabel : nil)
         return HistoryExperience.QuotaPoint(
@@ -196,8 +231,8 @@ extension HistoryDisplay {
             at: window.resetsAt,
             kind: kind,
             hitLimit: hitLimit,
-            fraction: window.highWaterPct / 100,
-            x: quotaX(placedAt, period: period),
+            fraction: placedAt?.fraction ?? window.highWaterPct / 100,
+            x: placedAt?.x ?? quotaX(ownPlace, period: period),
             label: label,
             accessibilityValue: quotaAccessibility(window, tool: tool, label: label),
             detail: quotaDetail(window, tool: tool, report: t, period: period),
@@ -486,25 +521,114 @@ extension HistoryDisplay {
         return f
     }
 
-    // MARK: - Hover
+    // MARK: - Weekly curves
 
-    /// What the pointer at fraction `x` of the plot rests on: the window nearest on x, ringed,
-    /// with the cursor snapped to its mark. Nil for a section with no points.
-    static func quotaHover(_ section: HistoryExperience.QuotaSection,
-                           atX x: Double) -> HistoryExperience.QuotaHover? {
-        guard let point = quotaNearestPoint(section, atX: x) else { return nil }
-        return HistoryExperience.QuotaHover(
-            provider: section.provider, pointID: point.id, cursorX: point.x,
-            body: point.hoverBody)
+    /// One weekly window as its curve: the readings taken inside the period, oldest first, each
+    /// placed by its own time and value; the mark on the first reading at the limit where the
+    /// week hit it, else on the last reading; the words for its end; and the boundary where the
+    /// provider ended the week early. A window with no reading inside the period (the fold
+    /// always has at least one, but a fixture may not) stands as one sample at its last reading.
+    /// Nil only where even that falls outside the period.
+    static func quotaCurve(_ window: QuotaWindowOutcome, period: HistoryReport,
+                           calendar: Calendar)
+        -> (curve: HistoryExperience.QuotaCurve, sample: HistoryExperience.QuotaSample)? {
+        var readings = window.readings
+            .filter { $0.at >= period.periodStart && $0.at <= period.periodEnd }
+            .sorted { $0.at < $1.at }
+        if readings.isEmpty,
+           window.lastObservedAt >= period.periodStart, window.lastObservedAt <= period.periodEnd {
+            readings = [.init(at: window.lastObservedAt, usedPct: window.highWaterPct)]
+        }
+        guard !readings.isEmpty else { return nil }
+
+        let ending = quotaStamp(window.endedAt, calendar: calendar)
+        let weekTail: String
+        switch window.ending {
+        case .reachedReset: weekTail = "week ending \(ending)"
+        case .earlyReset: weekTail = "week ending \(ending) · \(quotaEndingLabel(.earlyReset))"
+        case .withdrawn: weekTail = "week ending \(ending) · \(quotaEndingLabel(.withdrawn))"
+        }
+        let samples = readings.map { reading in
+            HistoryExperience.QuotaSample(
+                x: quotaX(reading.at, period: period),
+                fraction: reading.usedPct / 100,
+                hoverBody: "**\(quotaStamp(reading.at, calendar: calendar))**\n"
+                    + "\(Fmt.percentNumber(reading.usedPct))% used · \(weekTail)")
+        }
+        let hit = window.hitLimitAt != nil
+        let markIndex = (hit ? readings.firstIndex { $0.usedPct >= 100 } : nil) ?? readings.count - 1
+        let figure = "\(Fmt.percentNumber(readings[markIndex].usedPct))%"
+        let endLabel: String
+        switch (window.completion, window.ending) {
+        case (.current, _): endLabel = "\(quotaSoFarLabel) · \(figure)"
+        case (_, .earlyReset): endLabel = "\(quotaEndingLabel(.earlyReset)) · \(figure)"
+        case (_, .withdrawn): endLabel = "\(quotaWithdrawnShortLabel) · \(figure)"
+        case (.completedPartial, .reachedReset): endLabel = "\(quotaLastSeenLabel) · \(figure)"
+        case (.completedFull, .reachedReset): endLabel = hit ? limitHitLegendLabel : figure
+        }
+        let curve = HistoryExperience.QuotaCurve(
+            id: window.id, pointID: window.id, samples: samples,
+            faded: window.completion == .completedPartial,
+            endLabel: endLabel,
+            boundaryX: window.ending == .reachedReset ? nil : quotaX(window.endedAt, period: period),
+            markIndex: markIndex)
+        return (curve, samples[markIndex])
     }
 
-    /// The window nearest on x — what a hover rings and a click selects. A tie goes to the
-    /// later window.
-    static func quotaNearestPoint(_ section: HistoryExperience.QuotaSection,
-                                  atX x: Double) -> HistoryExperience.QuotaPoint? {
-        var best: HistoryExperience.QuotaPoint?
-        for point in section.points where best == nil || abs(point.x - x) <= abs(best!.x - x) {
-            best = point
+    // MARK: - Hover
+
+    /// What the pointer at fraction `x` of one of the section's charts rests on: on the strip the
+    /// window nearest on x, ringed at its mark; on the weekly chart the recorded reading nearest
+    /// on x, ringed where it was read, naming its week. The cursor snaps to the ring. Nil for a
+    /// chart with nothing on it.
+    static func quotaHover(_ section: HistoryExperience.QuotaSection, atX x: Double,
+                           chart: HistoryExperience.QuotaChart = .strip)
+        -> HistoryExperience.QuotaHover? {
+        switch chart {
+        case .strip:
+            guard let point = quotaNearestPoint(section, atX: x) else { return nil }
+            return HistoryExperience.QuotaHover(
+                provider: section.provider, chart: .strip, pointID: point.id, cursorX: point.x,
+                ringFraction: point.fraction, body: point.hoverBody)
+        case .weekly:
+            guard let (curve, index) = quotaNearestSample(section, atX: x) else { return nil }
+            let sample = curve.samples[index]
+            return HistoryExperience.QuotaHover(
+                provider: section.provider, chart: .weekly, pointID: curve.pointID,
+                cursorX: sample.x, ringFraction: sample.fraction, body: sample.hoverBody,
+                sampleIndex: index)
+        }
+    }
+
+    /// The window nearest on x — what a hover rings and a click selects. On the strip, the
+    /// nearest point; on the weekly chart, the week of the nearest reading. A tie goes to the
+    /// later one.
+    static func quotaNearestPoint(_ section: HistoryExperience.QuotaSection, atX x: Double,
+                                  chart: HistoryExperience.QuotaChart = .strip)
+        -> HistoryExperience.QuotaPoint? {
+        switch chart {
+        case .strip:
+            var best: HistoryExperience.QuotaPoint?
+            for point in section.points where best == nil || abs(point.x - x) <= abs(best!.x - x) {
+                best = point
+            }
+            return best
+        case .weekly:
+            guard let (curve, _) = quotaNearestSample(section, atX: x) else { return nil }
+            return section.weeklyPoints.first { $0.id == curve.pointID }
+        }
+    }
+
+    /// The recorded reading nearest on x across every curve, and its index on that curve. A tie
+    /// goes to the later reading.
+    static func quotaNearestSample(_ section: HistoryExperience.QuotaSection, atX x: Double)
+        -> (curve: HistoryExperience.QuotaCurve, index: Int)? {
+        var best: (curve: HistoryExperience.QuotaCurve, index: Int)?
+        for curve in section.curves {
+            for (index, sample) in curve.samples.enumerated()
+            where best == nil || abs(sample.x - x) <= abs(best!.curve.samples[best!.index].x - x) {
+                best = (curve, index)
+            }
         }
         return best
     }
