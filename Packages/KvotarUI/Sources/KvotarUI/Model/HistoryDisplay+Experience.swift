@@ -134,7 +134,7 @@ extension HistoryDisplay {
             quota: quotaPage(provider, scope: scope, report: report, calendar: calendar),
             explore: explorePage(provider, scope: scope, tagged: tagged, strip: strip,
                                  report: report),
-            hardBlocks: hardBlocksPage(provider, scope: scope, tagged: tagged,
+            hardBlocks: hardBlocksPage(provider, scope: scope, tagged: tagged, report: report,
                                        calendar: calendar))
     }
 
@@ -523,6 +523,7 @@ extension HistoryDisplay {
     static func hardBlocksPage(_ provider: HistoryExperience.Provider,
                                scope: [HistoryReport.ToolReport],
                                tagged: Bool,
+                               report: HistoryReport,
                                calendar: Calendar = .current) -> HistoryExperience.HardBlocksPage {
         let eyebrow = "\(providerDisplayName(provider)) · hard blocks"
         guard !scope.allSatisfy({ isBlank($0) }) else {
@@ -543,7 +544,9 @@ extension HistoryDisplay {
                                     at: $0.firedAt,
                                     // The way back to the window on Explore quota, where
                                     // that page draws it.
-                                    link: blockWindowLink($0, tool: t.tool, report: t))) }
+                                    link: blockWindowLink($0, tool: t.tool, report: t,
+                                                          period: report,
+                                                          calendar: calendar))) }
         }
         .sorted { $0.at > $1.at }
         .map(\.row)

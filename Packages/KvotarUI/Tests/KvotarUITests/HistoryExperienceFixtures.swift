@@ -219,6 +219,7 @@ enum HXFix {
                             readings: Int = 12,
                             completion: QuotaWindowOutcome.Completion = .completedFull,
                             ending: QuotaWindowOutcome.Ending = .reachedReset,
+                            endedAt: Date? = nil,
                             hitLimit: Bool = false) -> QuotaWindowOutcome {
         var components = utcCalendar.dateComponents(
             [.year, .month, .day], from: now.addingTimeInterval(-daysBack * 86_400))
@@ -234,7 +235,8 @@ enum HXFix {
             widthEvidence: widthEvidence ?? (width == nil ? .unknown : .recorded), start: start,
             firstObservedAt: start ?? last.addingTimeInterval(-3600), lastObservedAt: last,
             observationCount: readings, highWaterPct: used,
-            hitLimitAt: hitLimit ? last : nil, completion: completion, ending: ending)
+            hitLimitAt: hitLimit ? last : nil, completion: completion, ending: ending,
+            endedAt: endedAt)
     }
 
     /// A tool with no work at all — the empty-corpus shape.

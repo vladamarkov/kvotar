@@ -103,20 +103,8 @@ extension HistoryDisplay {
     static func quotaSection(_ t: HistoryReport.ToolReport,
                              report: HistoryReport,
                              calendar: Calendar = .current) -> HistoryExperience.QuotaSection? {
-        let windows = t.quotaWindows.sorted { $0.resetsAt < $1.resetsAt }
-        guard !windows.isEmpty else { return nil }
-
-        let weekly = t.weeklyLimits
-            .filter { $0.limit == .overall }
-            .map(\.outcome)
-            .sorted { $0.resetsAt < $1.resetsAt }
-        // A main window is a curve, not a dot, only when it is itself the weekly: a five-hour
-        // window that shares a reset with the weekly stays on the strip.
-        let weeklyIDs = Set(weekly.map(\.id))
-        let strip = windows.filter {
-            !(weeklyIDs.contains($0.id)
-                && $0.windowSeconds == QuotaWindowOutcomes.weeklyContractSeconds)
-        }
+        guard let strip = quotaStripWindows(t) else { return nil }
+        let weekly = quotaWeeklyWindows(t)
         let points = strip.map {
             quotaPoint($0, tool: t.tool, report: t, period: report, calendar: calendar)
         }
@@ -128,7 +116,8 @@ extension HistoryDisplay {
                        placedAt: sample, labelled: false)
         }
         let curves = drawn.map(\.1)
-        let completed = windows.filter { $0.completion != .current }
+        let completed = t.quotaWindows.sorted { $0.resetsAt < $1.resetsAt }
+            .filter { $0.completion != .current }
         return HistoryExperience.QuotaSection(
             provider: t.tool,
             title: t.tool.tabLabel,
@@ -145,6 +134,47 @@ extension HistoryDisplay {
             dayLenses: quotaDayLenses(strip, tool: t.tool, period: report, calendar: calendar),
             weeklyChartLabel: "\(t.tool.tabLabel) weekly chart",
             stripChartLabel: "\(t.tool.tabLabel) window chart")
+    }
+
+    /// The provider's overall weekly limits, oldest first — the windows the section draws as
+    /// curves. A model allowance is not among them.
+    static func quotaWeeklyWindows(_ t: HistoryReport.ToolReport) -> [QuotaWindowOutcome] {
+        t.weeklyLimits
+            .filter { $0.limit == .overall }
+            .map(\.outcome)
+            .sorted { $0.resetsAt < $1.resetsAt }
+    }
+
+    /// The windows the strip draws, oldest first, or nil where the provider reported no main
+    /// window at all — then there is no section. A main window is a curve, not a dot, only when
+    /// it is itself the weekly: a five-hour window that shares a reset with the weekly stays on
+    /// the strip.
+    static func quotaStripWindows(_ t: HistoryReport.ToolReport) -> [QuotaWindowOutcome]? {
+        let windows = t.quotaWindows.sorted { $0.resetsAt < $1.resetsAt }
+        guard !windows.isEmpty else { return nil }
+        let weeklyIDs = Set(quotaWeeklyWindows(t).map(\.id))
+        return windows.filter {
+            !(weeklyIDs.contains($0.id)
+                && $0.windowSeconds == QuotaWindowOutcomes.weeklyContractSeconds)
+        }
+    }
+
+    /// Every window the section draws — the strip's, then each overall weekly that has a
+    /// curve — so a link can only name a window the page can select.
+    static func quotaDrawnWindows(_ t: HistoryReport.ToolReport, period: HistoryReport,
+                                  calendar: Calendar) -> [QuotaWindowOutcome] {
+        guard let strip = quotaStripWindows(t) else { return [] }
+        return strip + quotaWeeklyWindows(t).filter {
+            quotaCurve($0, period: period, calendar: calendar) != nil
+        }
+    }
+
+    /// Whether an instant fell inside the window: from its start (its first reading where the
+    /// width is unknown) to its **actual** end, which is earlier than the reset where the window
+    /// was reset early or withdrawn — after that instant the replacement window holds the time.
+    static func quotaWindowHolds(_ window: QuotaWindowOutcome, _ instant: Date) -> Bool {
+        let from = window.start ?? window.firstObservedAt
+        return instant >= from && instant <= window.endedAt
     }
 
     /// `5-hour windows` where every window on the strip reported the same width, else the
@@ -418,10 +448,8 @@ extension HistoryDisplay {
     static func quotaBlockLink(_ window: QuotaWindowOutcome, tool: Tool,
                                report t: HistoryReport.ToolReport)
         -> HistoryExperience.RecapLink? {
-        let from = window.start ?? window.firstObservedAt
-        guard let block = t.limitBlocks.first(where: {
-            $0.firedAt >= from && $0.firedAt <= window.resetsAt
-        }) else { return nil }
+        guard let block = t.limitBlocks.first(where: { quotaWindowHolds(window, $0.firedAt) })
+        else { return nil }
         return HistoryExperience.RecapLink(
             label: "Recorded block · \(Fmt.monthDay(block.firedAt)), \(Fmt.clock(block.firedAt))",
             destination: HistoryDestination(
@@ -431,29 +459,33 @@ extension HistoryDisplay {
 
     /// The mirror of `quotaBlockLink`: a hard block row's link to the window it fell in, on
     /// Explore quota with that window pinned. The window is found among the ones that page
-    /// draws — the provider's main windows and its overall weekly limits — by the block's own
-    /// facts, never by a string: it holds the block's instant, and where the block's reset was
-    /// recovered it is that reset (within the fold's jitter). Among several — a five-hour
-    /// window and a weekly routinely share a reset — the block's own width wins, then the
-    /// narrowest. A block whose window is not on the page carries no link.
+    /// draws (`quotaDrawnWindows`) by the block's own facts, never by a string: it held the
+    /// block's instant (`quotaWindowHolds`, to the window's actual end); where the block's
+    /// reset was recovered, its reset is that reset; and where the block's width is known, its
+    /// width is that width — both within the fold's jitter, the width being rounded to the
+    /// minute — so a five-hour block never points at the weekly it shares a reset with. A block
+    /// of unknown width takes the narrowest window holding it. A block whose window is not on
+    /// the page carries no link.
     static func blockWindowLink(_ block: HistoryReport.LimitBlock, tool: Tool,
-                                report t: HistoryReport.ToolReport)
-        -> HistoryExperience.RecapLink? {
-        var seen = Set<String>()
-        let drawn = (t.quotaWindows + t.weeklyLimits.filter { $0.limit == .overall }.map(\.outcome))
-            .filter { seen.insert($0.id).inserted }
-        let holding = drawn.filter { window in
-            let from = window.start ?? window.firstObservedAt
-            return block.firedAt >= from && block.firedAt <= window.resetsAt
+                                report t: HistoryReport.ToolReport, period: HistoryReport,
+                                calendar: Calendar) -> HistoryExperience.RecapLink? {
+        let tolerance = Int(quotaAdjacencyTolerance)
+        let candidates = quotaDrawnWindows(t, period: period, calendar: calendar).filter { window in
+            guard quotaWindowHolds(window, block.firedAt) else { return false }
+            if let reset = block.resetAt,
+               abs(window.resetsAt.timeIntervalSince(reset)) > quotaAdjacencyTolerance {
+                return false
+            }
+            if let width = block.windowSeconds {
+                guard let own = window.windowSeconds, abs(own - width) <= tolerance else {
+                    return false
+                }
+            }
+            return true
         }
-        let candidates = block.resetAt.map { reset in
-            holding.filter { abs($0.resetsAt.timeIntervalSince(reset)) <= quotaAdjacencyTolerance }
-        } ?? holding
-        func rank(_ window: QuotaWindowOutcome) -> (Int, Int) {
-            let ownWidth = block.windowSeconds != nil && window.windowSeconds == block.windowSeconds
-            return (ownWidth ? 0 : 1, window.windowSeconds ?? Int.max)
-        }
-        guard let window = candidates.min(by: { rank($0) < rank($1) }) else { return nil }
+        guard let window = candidates.min(by: {
+            ($0.windowSeconds ?? Int.max) < ($1.windowSeconds ?? Int.max)
+        }) else { return nil }
         return HistoryExperience.RecapLink(
             label: "Quota window · \(quotaSpan(window))",
             destination: .quotaWindow(

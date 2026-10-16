@@ -704,17 +704,22 @@ Whether History should keep its own record: Questions for owner, item 1.)
 - **The way back to the window.** Under the row, `Quota window · <span>` opens Explore quota
   for that provider with the window selected and its detail pinned, under the banner `From
   hard block · <provider> · <date>, <time>` — the mirror of the quota detail's `Recorded block`
-  link, built beside it. The window is found among the ones Explore quota draws (the
-  provider's main windows and its overall weekly limits) by the block's own facts, never by a
-  string: it holds the block's instant and, where the reset was recovered, its reset is that
-  reset within the fold's jitter. When a five-hour window and the weekly share the reset, the
-  block's own width picks; a block of unknown width takes the narrowest window holding it. A
-  block whose window is not on the page carries no link, and the row stands without one. On
-  `All` the link names the row's own provider. The row carries the link as a typed destination
-  (`RankedRow.link`); the view only follows it. (`blockWindowLink`,
-  `HistoryDestination.quotaWindow`; tests `testABlockRowLinksToItsQuotaWindow`,
+  link, built beside it. The window is found among the ones Explore quota draws — the strip's
+  windows and the overall weekly limits with a curve; a provider with no main window has no
+  section and its blocks no link — by the block's own facts, never by a string: the window held
+  the block's instant, up to its **actual** end (earlier than the reset where it was reset early
+  or withdrawn; both links use this rule); where the block's reset was recovered, the window's
+  reset is that reset; where the block's width is known, the window's width is that width, so a
+  five-hour block never points at the weekly it shares a reset with; both within the fold's
+  jitter, the block's width being rounded to the minute. A block of unknown width takes the
+  narrowest window holding it. A block whose window is not on the page carries no link, and the
+  row stands without one. On `All` the link names the row's own provider. The row carries the
+  link as a typed destination (`RankedRow.link`); the view only follows it.
+  (`blockWindowLink`, `quotaDrawnWindows`, `quotaWindowHolds`, `HistoryDestination.quotaWindow`;
+  tests `testABlockRowLinksToItsQuotaWindow`,
   `testABlockPicksItsOwnWindowWhereTheWeeklySharesTheReset`,
-  `testABlockWhoseWindowIsNotOnThePageCarriesNoLink`)
+  `testABlockWhoseWindowIsNotOnThePageCarriesNoLink`,
+  `testAWithdrawnWindowHoldsNoBlockAfterItsActualEnd`, `testOnlyAWindowThePageDrawsCanBeNamed`)
 - **The reset is derived, never guessed.** The block row stores the instant and a window key; the
   reset comes from the primary window's last reset in the `history_rollups` hours. Rules
   (`HistoryReportReader.limitBlock`): candidates come from the fired hour and the hour before,
