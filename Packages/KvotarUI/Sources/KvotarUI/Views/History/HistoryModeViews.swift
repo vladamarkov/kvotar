@@ -265,7 +265,10 @@ struct WeeklyRecapModeView: View {
     }
 
     /// `This week`: a small table read top to bottom like the prose around it — not a tile grid
-    /// (REV-104 §2.1). Every string is the formatter's; the view only lays them out.
+    /// (REV-104 §2.1). Every string is the formatter's; the view only lays them out. The
+    /// provider columns share the reading column's width equally, so the table spans the
+    /// column like the blocks around it instead of bunching at its left edge; the label column
+    /// keeps its own width.
     private func tableBlock(_ table: HistoryExperience.RecapTable) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HistoryEyebrow(text: table.title)
@@ -275,6 +278,7 @@ struct WeeklyRecapModeView: View {
                     Color.clear.frame(width: 1, height: 1)
                     ForEach(table.columns, id: \.self) { tool in
                         HistoryProviderTag(tool: tool)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 ForEach(Array(table.rows.enumerated()), id: \.offset) { _, row in
@@ -284,6 +288,7 @@ struct WeeklyRecapModeView: View {
                             .foregroundStyle(HistoryTheme.secondary)
                         ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
                             tableCell(cell)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
@@ -664,7 +669,8 @@ struct ExploreModeView: View {
             DayStripView(
                 strip: HistoryScreen.DayStrip(points: page.days.map(\.point),
                                               legend: page.legend,
-                                              footer: page.stripFooter),
+                                              footer: page.stripFooter,
+                                              scaleHints: page.stripScaleHints),
                 vm: vm,
                 entries: page.days,
                 selectedID: vm.selectedEntry(in: page)?.id,

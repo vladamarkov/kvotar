@@ -5,26 +5,29 @@ the line of their change.
 
 ## Unreleased
 
-- Explore quota's chart has dates along its axis at the weekly resets and shows its card as soon
-  as the pointer moves over the chart. Every
-  ended window is the same dot, the open window sits at its last reading with `So far` beside
-  it, the legend is gone, the sentence counts only windows seen to the end, and a window's
-  detail opens under its own chart. The weekly limit gets its own chart above the strip: each
-  week is drawn as its own climb from the readings Kvotar recorded, ending at its last reading
-  with its result written there. Selecting a short window lays out its day by the hour under
-  the strip, with every window of that day and its figure, so a busy day's windows stop
-  stacking; a click on the strip's date axis opens that day.
-- On Hard blocks, each provider's block dots sit in their own band under that provider's bars,
-  with the lane named, and a provider blocked with no local work still gets its lane. Only
-  blocks on windows of six hours or less are drawn, a line under the chart says what the bars
-  and the dots are, and the caption names whose busiest hours it means. The coverage note says
-  that blocks are recorded only while Notify me ▸ Over quota is on, and no longer warns about
-  weekly-only exhaustion. With too few blocks to call a typical time, the note says so as plain
-  text instead of an amber warning card. Each recorded incident links to its quota window on
-  Explore quota, which opens with that window selected.
-- On Explore usage, a day with no work draws nothing in the day strip instead of a faint stub,
-  and the 30-day breakdown on All lists each provider's projects and largest work as its own
-  group, Claude then Codex, up to three rows each, instead of one list ordered across both.
+- The History window's charts were redrawn. Explore quota's chart has dates along its axis at
+  the weekly resets and shows its card as soon as the pointer moves over the chart; every ended
+  window is the same dot, the open window sits at its last reading with `So far` beside it, the
+  legend is gone, the sentence counts only windows seen to the end, and a window's detail opens
+  under its own chart. The weekly limit gets its own chart above the strip: each week is drawn
+  as its own climb from the readings Kvotar recorded, ending at its last reading with its result
+  written there. Selecting a short window lays out its day by the hour under the strip, with
+  every window of that day and its figure, so a busy day's windows stop stacking; a click on
+  the strip's date axis opens that day. On Hard blocks, each provider's block dots sit in their
+  own band under that provider's bars, with the lane named, and a provider blocked with no local
+  work still gets its lane; only blocks on windows of six hours or less are drawn, a line under
+  the chart says what the bars and the dots are, and the caption names whose busiest hours it
+  means. The coverage note says that blocks are recorded only while Notify me ▸ Over quota is
+  on, and no longer warns about weekly-only exhaustion; with too few blocks to call a typical
+  time, the note says so as plain text instead of an amber warning card; each recorded incident
+  links to its quota window on Explore quota, which opens with that window selected. On Explore
+  usage, a day with no work draws nothing in the day strip instead of a faint stub, each
+  provider's lane prints its busiest day's figure at the top, where its tallest bar reaches, and
+  the 30-day breakdown on All lists each provider's projects and largest work as its own group,
+  Claude then Codex, up to three rows each, instead of one list ordered across both. On Weekly
+  recap, the `This week` table spans the reading column instead of bunching at its left, and the
+  oldest, partly covered week says which of its days are inside the last 30 days instead of
+  `Nothing was recorded this week.` beside its own work.
 
 ## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
 

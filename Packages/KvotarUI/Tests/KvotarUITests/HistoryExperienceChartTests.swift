@@ -100,6 +100,20 @@ final class HistoryExperienceChartTests: XCTestCase {
                        + "Codex \(Fmt.monthDay(codexDays[0].start)) · 3.1M")
     }
 
+    /// Each lane prints its own scale — the busiest-day figure the footer names, formatted the
+    /// same way — and a provider with no bar in the period has no lane and no hint.
+    func testEachLaneCarriesItsOwnBusiestDayFigureAsItsScale() {
+        let claude = HXFix.tool(.claude, days: HXFix.days([0, 88_800_000, 1_000]))
+        let codex = HXFix.tool(.codex, days: HXFix.days([3_100_000, 0, 0]))
+        let idle = HXFix.tool(.codex, days: HXFix.days([0, 0, 0]))
+        XCTAssertEqual(strip([claude])?.scaleHints, [.claude: "88.8M"])
+        XCTAssertEqual(strip([claude, codex])?.scaleHints, [.claude: "88.8M", .codex: "3.1M"])
+        XCTAssertEqual(strip([claude, idle])?.scaleHints, [.claude: "88.8M"])
+        let page = HXFix.pages([claude, codex], .all).explore
+        XCTAssertEqual(page.stripScaleHints, [.claude: "88.8M", .codex: "3.1M"],
+                       "the page carries the hints the view draws")
+    }
+
     func testLegendAppearsOnlyWhenItSaysSomething() {
         let claude = HXFix.tool(.claude, days: HXFix.days([0, 5_000_000]))
         XCTAssertEqual(strip([claude])?.legend.count, 0,

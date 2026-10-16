@@ -288,6 +288,7 @@ extension HistoryDisplay {
             initialSelection: initial,
             legend: strip?.legend ?? [],
             stripFooter: strip?.footer ?? "",
+            stripScaleHints: strip?.scaleHints ?? [:],
             totals: providerTotals(scope),
             combinedValue: tagged && active.count >= 2
                 ? Fmt.dollarValue(active.reduce(0) { $0 + $1.value }) : nil,
@@ -660,8 +661,9 @@ extension HistoryDisplay {
     /// The day strip with **per-provider normalisation**: each bar's fraction is against that
     /// provider's own busiest day, so on `All` the two lanes never share a scale and no drawn
     /// height implies a token comparison. Markers, ticks, hover grammar and footer are the
-    /// legacy strip's, unchanged. (The legacy `dayStrip` keeps its stacked shared axis for the
-    /// old view until STEP_160 deletes it.)
+    /// legacy strip's, unchanged; each lane also carries its scale, the busiest-day figure the
+    /// footer names, so the figure sits beside the bar it measures. (The legacy `dayStrip`
+    /// keeps its stacked shared axis for the old view until STEP_160 deletes it.)
     static func experienceDayStrip(_ tools: [HistoryReport.ToolReport],
                                    weeks: [HistoryReport.Week]) -> HistoryScreen.DayStrip? {
         let active = tools.filter { t in t.days.contains { $0.tokens > 0 } }
@@ -747,8 +749,13 @@ extension HistoryDisplay {
             legend.append(HistoryScreen.DayLegendEntry(label: accountChangeLegendLabel, tool: nil,
                                                        marker: .accountChange))
         }
+        var scaleHints: [Tool: String] = [:]
+        for t in active {
+            if let day = busiestDay(t) { scaleHints[t.tool] = Fmt.tokens(day.tokens) }
+        }
         return HistoryScreen.DayStrip(points: points, legend: legend,
-                                      footer: busiestDayFooter(active, named: named))
+                                      footer: busiestDayFooter(active, named: named),
+                                      scaleHints: scaleHints)
     }
 
     /// The hour-of-day chart with per-provider normalisation — same gates, marks, hover and

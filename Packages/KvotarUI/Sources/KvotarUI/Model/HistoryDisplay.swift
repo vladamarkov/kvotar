@@ -102,11 +102,17 @@ public struct HistoryScreen: Sendable {
         public let points: [DayPoint]
         public let legend: [DayLegendEntry]
         public let footer: String
+        /// Each lane's scale, printed at its top: the provider's busiest-day figure, which is
+        /// what its tallest bar reaches. The same tokens formatting as `footer`, so one number
+        /// never reads two ways; the footer still names the day. Empty for a lane with no bar.
+        public let scaleHints: [Tool: String]
 
-        public init(points: [DayPoint], legend: [DayLegendEntry], footer: String) {
+        public init(points: [DayPoint], legend: [DayLegendEntry], footer: String,
+                    scaleHints: [Tool: String] = [:]) {
             self.points = points
             self.legend = legend
             self.footer = footer
+            self.scaleHints = scaleHints
         }
     }
 

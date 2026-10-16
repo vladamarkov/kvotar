@@ -46,7 +46,7 @@ final class HistoryExperienceRecapTests: XCTestCase {
         XCTAssertTrue(section.weeks[0].isLatest)
         XCTAssertFalse(section.weeks[1].isLatest)
         XCTAssertTrue(section.weeks[1].title.hasPrefix("Week of "))
-        XCTAssertEqual(section.weeks.last?.coverageNote, HistoryDisplay.recapClippedCoverage,
+        XCTAssertEqual(section.weeks.last?.lead.kind, .partialWeek,
                        "the oldest week is only partly inside the fixed 30-day horizon")
     }
 
@@ -257,10 +257,40 @@ final class HistoryExperienceRecapTests: XCTestCase {
     /// withheld, because a fraction of a week compared against a whole one manufactures a trend.
     func testAClippedWeekWithholdsWholeWeekConclusions() {
         let oldest = recap([HXFix.tool(.claude, days: HXFix.days(Array(repeating: 400_000, count: 31)))]).weeks.last
-        XCTAssertEqual(oldest?.coverageNote, HistoryDisplay.recapClippedCoverage)
-        XCTAssertNotEqual(oldest?.lead.kind, .usagePattern)
+        XCTAssertEqual(oldest?.lead.kind, .partialWeek)
         XCTAssertNil(oldest?.table, "a clipped week never prints a week total")
         XCTAssertTrue(oldest?.observations.isEmpty == true, "nor a share of a partial week")
+    }
+
+    /// The clipped week leads with its coverage limit — the covered span, from the period's
+    /// first (partial) day to the week's last — in place of `Nothing was recorded` beside its
+    /// own work, and the coverage note is folded into that lead rather than repeated under it.
+    func testAClippedWeekLeadsWithItsCoverageLimitAndSaysItOnce() throws {
+        let oldest = try XCTUnwrap(recap([HXFix.tool(
+            .claude, days: HXFix.days(Array(repeating: 400_000, count: 31)))]).weeks.last)
+        let first = Fmt.monthDay(HXFix.now.addingTimeInterval(-30 * day))
+        let last = Fmt.monthDay(oldest.end.addingTimeInterval(-day))
+        XCTAssertEqual(oldest.lead.kind, .partialWeek)
+        XCTAssertEqual(oldest.lead.eyebrow, HistoryDisplay.recapPartialEyebrow)
+        XCTAssertEqual(oldest.lead.sentence,
+                       "Only \(first) – \(last) of this week is inside the last 30 days.")
+        XCTAssertEqual(oldest.lead.grounding, HistoryDisplay.recapPartialGrounding)
+        XCTAssertNil(oldest.coverageNote, "the lead already names the limit")
+        XCTAssertFalse(oldest.lead.sentence.contains("Nothing was recorded"))
+    }
+
+    /// A recorded fact still outranks the coverage lead on a clipped week, and the coverage
+    /// note then stands beside it as before.
+    func testABlockOnAClippedWeekStillLeadsWithTheCoverageNoteBesideIt() throws {
+        let section = recap([HXFix.tool(
+            .claude, days: HXFix.days(Array(repeating: 400_000, count: 31)))])
+        let clipped = try XCTUnwrap(section.weeks.last)
+        let blocked = try XCTUnwrap(recap([HXFix.tool(
+            .claude,
+            limitBlocks: [HXFix.block(at: clipped.end.addingTimeInterval(-day * 1.5))],
+            days: HXFix.days(Array(repeating: 400_000, count: 31)))]).weeks.last)
+        XCTAssertEqual(blocked.lead.kind, .blockConsequence)
+        XCTAssertEqual(blocked.coverageNote, HistoryDisplay.recapClippedCoverage)
     }
 
     /// The comparison guard runs both ways: a whole week is never compared against a clipped one.

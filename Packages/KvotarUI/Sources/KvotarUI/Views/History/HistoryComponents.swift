@@ -227,6 +227,8 @@ struct DayStripView: View {
     private var barHeight: CGFloat { selectable ? 94 : 70 }
     private let labelWidth: CGFloat = 58
     private let markerSize: CGFloat = 6
+    /// The row over each lane's bars that carries its scale figure.
+    private let scaleHintHeight: CGFloat = 16
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -279,21 +281,33 @@ struct DayStripView: View {
     }
 
     /// One provider's strip (the prototype's `.kh-lane`): bold label at left when both
-    /// providers draw, then the 31 columns over one continuous baseline hairline.
+    /// providers draw, the lane's scale figure over the bars, then the 31 columns over one
+    /// continuous baseline hairline. The figure sits in its own row above the bar area rather
+    /// than over it, so a tall first column never runs into it.
     private func lane(_ tool: Tool, showsAxis: Bool) -> some View {
         HStack(alignment: .top, spacing: 9) {
             if laneTools.count > 1 {
-                LaneLabel(tool: tool, width: labelWidth, height: barHeight)
+                LaneLabel(tool: tool, width: labelWidth, height: barHeight + scaleHintHeight)
             }
-            HStack(alignment: .top, spacing: 3) {
-                ForEach(Array(strip.points.enumerated()), id: \.offset) { index, point in
-                    column(index: index, point: point, tool: tool, showsAxis: showsAxis)
+            VStack(alignment: .leading, spacing: 0) {
+                // The figure is the footer's, redrawn where the tallest bar peaks; VoiceOver
+                // hears it once, from the footer.
+                Text(strip.scaleHints[tool] ?? "")
+                    .font(HistoryTheme.note)
+                    .monospacedDigit()
+                    .foregroundStyle(HistoryTheme.tertiary)
+                    .frame(height: scaleHintHeight, alignment: .bottomLeading)
+                    .accessibilityHidden(true)
+                HStack(alignment: .top, spacing: 3) {
+                    ForEach(Array(strip.points.enumerated()), id: \.offset) { index, point in
+                        column(index: index, point: point, tool: tool, showsAxis: showsAxis)
+                    }
                 }
-            }
-            .overlay(alignment: .top) {
-                Rectangle().fill(HistoryTheme.line)
-                    .frame(height: 1)
-                    .offset(y: barHeight)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(HistoryTheme.line)
+                        .frame(height: 1)
+                        .offset(y: barHeight)
+                }
             }
         }
     }

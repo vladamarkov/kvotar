@@ -158,10 +158,13 @@ public struct HistoryExperience: Sendable {
             /// reset is deliberately **not** here (it would lead every recap on an account whose
             /// weekly window resets early every other day); it supports a recap as an insight.
             case allowanceChange
-            /// Rung 3 — the week moved outside the ±5 % band against the preceding complete week.
+            /// Rung 4 — the week moved outside the ±5 % band against the preceding complete week.
             case usagePattern
-            /// Rung 4 — the calm factual summary.
+            /// Rung 5 — the calm factual summary.
             case calm
+            /// Rung 3 — a clipped week nothing stronger leads: the lead names the coverage limit,
+            /// since rungs 4 and 5 are whole-week claims the horizon cannot support.
+            case partialWeek
         }
 
         public let eyebrow: String
@@ -1077,6 +1080,8 @@ public struct HistoryExperience: Sendable {
         public let legend: [HistoryScreen.DayLegendEntry]
         /// The strip's footer (busiest-day line), same grammar as Summary's strip.
         public let stripFooter: String
+        /// Each lane's scale — the provider's busiest-day figure — printed at the lane's top.
+        public let stripScaleHints: [Tool: String]
         /// Visible 30-day totals, one per active provider.
         public let totals: [ProviderTotal]
         /// Combined 30-day Est. token value — `All` only, both providers active, once,
@@ -1088,6 +1093,7 @@ public struct HistoryExperience: Sendable {
 
         public init(days: [DayEntry] = [], initialSelection: Date? = nil,
                     legend: [HistoryScreen.DayLegendEntry] = [], stripFooter: String = "",
+                    stripScaleHints: [Tool: String] = [:],
                     totals: [ProviderTotal] = [], combinedValue: String? = nil,
                     weekly: [ProviderWeekly] = [],
                     breakdown: Breakdown, emptyMessage: String? = nil) {
@@ -1095,6 +1101,7 @@ public struct HistoryExperience: Sendable {
             self.initialSelection = initialSelection
             self.legend = legend
             self.stripFooter = stripFooter
+            self.stripScaleHints = stripScaleHints
             self.totals = totals
             self.combinedValue = combinedValue
             self.weekly = weekly

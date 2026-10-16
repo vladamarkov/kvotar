@@ -420,9 +420,10 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
   `testNoCompletedWeekYieldsTheEmptyState`)
 - **Coverage note.** A clipped week says `Only part of this week is inside the 30-day horizon, so
   week totals are not shown.` and withholds every whole-week conclusion (the table, the pattern
-  and calm leads, the day and project observations, and comparisons against it). A week that
-  began before `watchingSince` says `Kvotar began watching <date>, so part of this week has no
-  poll evidence.` (`recapCoverage`; tests `testAClippedWeekWithholdsWholeWeekConclusions`,
+  and calm leads, the day and project observations, and comparisons against it). The note is
+  omitted when the clipped week's own lead (rung 3 below) already names the limit, so it is said
+  once. A week that began before `watchingSince` says `Kvotar began watching <date>, so part of
+  this week has no poll evidence.` (`recapCoverage`; tests `testAClippedWeekWithholdsWholeWeekConclusions`,
   `testAWeekAfterAClippedWeekCarriesNoComparison`,
   `testAWatchingDateInsideTheWeekIsNamedBesideTheConclusion`)
 - **Five blocks, in order, each omitted when empty** (no empty heading):
@@ -432,13 +433,16 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
      |---|---|---|---|
      | 1 | `Capacity outcome` | A recorded hard block in the week | `Claude ran out of its window once.` / `Work stopped 3 times — Claude 2 times, Codex 1 time.`, then the known lockout or `…the lockout is unknown.` |
      | 2 | `Allowance change` | A plan change, or a window added, removed or re-widened | `Codex recorded plan changed · plus → pro.` + `One recorded change this week.` |
-     | 3 | `Work pattern` | A provider's tokens moved 5 % or more against its own previous complete week | `Local token use fell 40% on Claude and 20% on Codex.`; a move of 50 % or more adds a line naming the previous week's figure |
-     | 4 | `Week in review` | Otherwise | Per-provider tokens and active days; `Nothing was blocked and no allowance change was recorded.` on a quiet week; `Nothing was recorded this week.` (plus ` Kvotar has been watching since <date>.` once watching began) when no other rung applies — which includes a clipped week with work but no block or change (see Known gaps) |
+     | 3 | `Partly covered` | A clipped week nothing above leads | `Only Sep 17 – Sep 20 of this week is inside the last 30 days.` + `Week totals are not shown for a partly covered week.` — the covered span runs from the period's first (partial) day to the week's last; this lead replaces the coverage note, which would say the same thing twice |
+     | 4 | `Work pattern` | A provider's tokens moved 5 % or more against its own previous complete week | `Local token use fell 40% on Claude and 20% on Codex.`; a move of 50 % or more adds a line naming the previous week's figure |
+     | 5 | `Week in review` | Otherwise | Per-provider tokens and active days; `Nothing was blocked and no allowance change was recorded.` on a quiet week; `Nothing was recorded this week.` (plus ` Kvotar has been watching since <date>.` once watching began) when a whole week holds nothing at all |
 
      An early reset never leads: on an account whose weekly resets early often it would lead
      every recap; it is said on its weekly line instead. (`recapLeadOrder`, `recapBlockRung`,
-     `recapAllowanceRung`, `recapPatternRung`, `recapCalmRung`; tests
+     `recapAllowanceRung`, `recapPartialRung`, `recapPatternRung`, `recapCalmRung`; tests
      `testRungOneAHardBlockLeadsWithItsKnownConsequence`,
+     `testAClippedWeekLeadsWithItsCoverageLimitAndSaysItOnce`,
+     `testABlockOnAClippedWeekStillLeadsWithTheCoverageNoteBesideIt`,
      `testABlockWithNoRecoveredResetStillLeadsAndSaysTheLockoutIsUnknown`,
      `testRungTwoAStructuralAllowanceChangeLeadsWhenNothingBlocked`,
      `testAnEarlyResetNeverLeadsAndIsNoLongerAnObservation`,
@@ -449,7 +453,10 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
      $40 · Priced at published API rates for each model. Not a bill.` (the note alone with one
      column). A value cell carries `≈` when any of that week's work was priced at the fallback
      rate, with `<Provider> includes models priced at a fallback rate.` beneath. Values of $10 or
-     more are whole dollars (Questions for owner, item 2). (`recapTable`, `recapDollars`; tests
+     more are whole dollars (Questions for owner, item 2). The recap is a reading column, capped
+     at 690 pt and centred in the window; the provider columns share that width equally, so the
+     table spans the column like the blocks around it rather than bunching at its left edge.
+     (`recapTable`, `recapDollars`; tests
      `testTheTableCarriesTokensValueAndActiveDaysPerProvider`,
      `testOneProviderGetsOneColumnAndNoCombinedLine`)
   3. **Weekly limits that reset `<span>`.** One line per weekly limit instance that ended in the
@@ -647,13 +654,17 @@ time: `By day` (the default), `By week`, `30-day breakdown`.
 
 - **By day.** A 31-column strip, oldest first, with a dot under a day a quota window was blocked
   and a diamond on a day the account or its windows changed; ticks on the report's own week
-  starts; a footer `Busiest day <date> · <tokens>` per provider. A day with no work for a
+  starts; a footer `Busiest day <date> · <tokens>` per provider, and the same `<tokens>` figure
+  printed at the top of that provider's lane as its scale, where its tallest bar peaks (one
+  number, formatted once, beside the bar it measures; the footer keeps the date; VoiceOver hears
+  the figure from the footer only). A day with no work for a
   provider has no bar in that lane, so nothing is drawn there and a selected empty day shows
   the selection outline alone. The newest day with work is selected first, else today.
   Hovering a column peeks a card; a click or arrow key selects it.
   (`experienceDayStrip`; tests in `HistoryExperienceChartTests`, `HistoryDayHoverTests`,
   `HistoryExperienceExploreTests.testInitialSelectionIsTheNewestDayWithActivity`,
-  `testAnEmptyDayHasNoBarForTheStripToDraw`)
+  `testAnEmptyDayHasNoBarForTheStripToDraw`,
+  `HistoryExperienceChartTests.testEachLaneCarriesItsOwnBusiestDayFigureAsItsScale`)
 - **The selected day** shows, per provider with work: displayed tokens, Est. token value,
   sessions or threads, model rows (tokens only) and project rows; on `All` with both providers,
   one combined value. Then the day's blocks, critical observations (`At risk · 3:34 pm` → `8%
@@ -868,7 +879,6 @@ recorded account changes. It is context near an event, never a claimed cause.
 | The quota point and detail copy format in the system zone | The report's local days, Explore quota's date axis and hover card, the hour chart and the pattern band use the injected calendar; `Fmt.monthDay` and `Fmt.clock` still format in the system zone | Pass the injected calendar through |
 | "Last 30 days" wording oversells the poll-side half | The popover link reads `History · last 30 days` and the menu-item comment says "the last 30 days of the local corpus"; quota windows, blocks and changes start at the watching date | The label is [popover](popover.md)'s to decide; fix the comment with the next change to `MenuBarController` |
 | Live diagnostics can read the live database | With `KVOTAR_LIVE=1`, several env-gated tests reach the real database file. `HistoryExperienceLiveDiagnostics` falls back to `SQLiteStore.defaultPath()` when `KVOTAR_LIVE_DB` is unset (`HistoryExperienceLiveDiagnostics.swift:18`) and opens it writable with migrations on, though its type comment says read-only. `ExplanationLiveDiagnostics` falls back the same way (`ExplanationLiveDiagnostics.swift:145`), then copies the file before opening it. Core `LiveDiagnostics` opens `SQLiteStore.defaultPath()` directly in four tests (`LiveDiagnostics.swift:31`, `:52`, `:129`, `:160`) and falls back to it in two more (`:201`, `:254`); only `testLiveQuotaWindowOutcomes` demands a copy (`:313`). `HistoryExperienceSnapshots` opens whatever `KVOTAR_LIVE_DB` names writable | Require an explicit database copy in every live test: skip unless `KVOTAR_LIVE_DB` is set and is not the live path, and open it with `readOnly: true, runMigrations: false` (`SQLiteStore.openReadOnly`) |
-| The oldest, clipped recap week usually says nothing happened | On a clipped week the pattern and calm leads are withheld, so without a block or change the lead falls to `Nothing was recorded this week.` beside the week's own work. No test pins this lead | Give a clipped week its own lead (for example, name the coverage limit as the lead) and pin it with a test |
 | `HistoryDestination.focus == .projects` is carried but never read | The projects hand-off sets `focus: .projects`; nothing reads it (the `.quotaWindow` focus is read). The day's project rows show because the day is selected | Read it (scroll to the project rows) or drop the case |
 | A comment names a release stage | `HistoryViewModel`'s selection comment ties "nothing persisted" to a release stage | Drop the stage from the comment |
 
