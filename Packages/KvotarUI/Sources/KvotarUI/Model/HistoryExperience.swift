@@ -612,6 +612,24 @@ public struct HistoryExperience: Sendable {
 
         public var id: Tool { provider }
 
+        /// The room one tick label needs on the chart. Two resets closer than this (an early
+        /// ending beside a scheduled one) would print over each other.
+        public static let tickLabelWidth: CGFloat = 72
+
+        /// Which labelled ticks print their label at the chart's own scale: walking left to
+        /// right, a label is shown only when the last shown one is at least `tickLabelWidth`
+        /// away. The tick and its gridline are drawn either way; only the words give way.
+        public func labelledTickIDs(plotWidth: CGFloat) -> Set<String> {
+            var shown: Set<String> = []
+            var lastX: Double?
+            for tick in ticks where tick.label != nil {
+                if let lastX, (tick.x - lastX) * plotWidth < Self.tickLabelWidth { continue }
+                shown.insert(tick.id)
+                lastX = tick.x
+            }
+            return shown
+        }
+
         public init(provider: Tool, title: String, summary: String, sparseNote: String? = nil,
                     segments: [QuotaSegment] = [], points: [QuotaPoint] = [],
                     ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = [],

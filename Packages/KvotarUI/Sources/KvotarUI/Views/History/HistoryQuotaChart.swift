@@ -33,7 +33,7 @@ struct QuotaChartView: View {
     /// Room for a mark sitting exactly at the end of the period (the open window usually does).
     private let rightPad: CGFloat = 8
     private let markSize: CGFloat = 9
-    private let tickLabelWidth: CGFloat = 72
+    private var tickLabelWidth: CGFloat { HistoryExperience.QuotaSection.tickLabelWidth }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -137,6 +137,7 @@ struct QuotaChartView: View {
             }
             .offset(y: y - 5)
         }
+        let labelled = section.labelledTickIDs(plotWidth: width)
         ForEach(section.ticks) { tick in
             let x = gutter + width * tick.x
             if let label = tick.label {
@@ -148,15 +149,17 @@ struct QuotaChartView: View {
                     .fill(HistoryTheme.secondary)
                     .frame(width: 1, height: 7)
                     .offset(x: x, y: plotHeight)
-                Text(label)
-                    .font(HistoryTheme.note)
-                    .monospacedDigit()
-                    .foregroundStyle(HistoryTheme.secondary)
-                    .fixedSize()
-                    .frame(width: tickLabelWidth)
-                    .offset(x: min(max(x - tickLabelWidth / 2, 0),
-                                   gutter + width + rightPad - tickLabelWidth),
-                            y: plotHeight + 10)
+                if labelled.contains(tick.id) {
+                    Text(label)
+                        .font(HistoryTheme.note)
+                        .monospacedDigit()
+                        .foregroundStyle(HistoryTheme.secondary)
+                        .fixedSize()
+                        .frame(width: tickLabelWidth)
+                        .offset(x: min(max(x - tickLabelWidth / 2, 0),
+                                       gutter + width + rightPad - tickLabelWidth),
+                                y: plotHeight + 10)
+                }
             } else {
                 Rectangle()
                     .fill(HistoryTheme.line)
@@ -243,13 +246,15 @@ struct QuotaChartView: View {
 
     /// The hover: a faint cursor line through the plot and the axis, a ring on the nearest mark,
     /// and the card — the day strip's own overlay, anchored to the line so it sits just under the
-    /// axis and flips above or slides in from the window's edge when there is no room.
+    /// axis and flips above or slides in from the window's edge when there is no room. The line
+    /// is placed with `position`, not `offset`: the overlay reads the anchor's layout frame, and
+    /// an offset is not part of it.
     @ViewBuilder
     private func cursor(_ hover: HistoryExperience.QuotaHover, width: CGFloat) -> some View {
         Rectangle()
             .fill(HistoryTheme.text.opacity(0.2))
             .frame(width: 1, height: plotHeight + axisHeight)
-            .offset(x: gutter + width * hover.cursorX)
+            .position(x: gutter + width * hover.cursorX, y: (plotHeight + axisHeight) / 2)
             .allowsHitTesting(false)
             .anchorPreference(key: DayHoverAnchorKey.self, value: .bounds) {
                 [.quota(hover.id): DayHoverAnchor(bounds: $0, body: hover.body)]

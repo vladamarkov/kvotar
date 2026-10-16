@@ -366,15 +366,19 @@ extension HistoryDisplay {
     ]
 
     /// The date axis of one provider's chart, by x. A labelled tick at each weekly reset of the
-    /// provider inside the period — the report's weekly limits, an early ending at its actual
-    /// time, the overall and a model weekly sharing one instant collapsed to one tick — and an
-    /// unlabelled tick at every other local midnight. A provider with no weekly reset in the
-    /// period is labelled at local Mondays instead, in the same form. Midnights come from the
-    /// report's calendar, the one its local days were cut on, so the axis and the day strip
-    /// cannot disagree about where a day begins.
+    /// provider inside the period — the report's **overall** weekly limits (the account's
+    /// seven-day window, or a main window that is itself a week wide), an early ending at its
+    /// actual time, twins within the anchor jitter collapsed to one tick; a model allowance's
+    /// weekly resets at its own first use and is not the provider's reset — and an unlabelled
+    /// tick at every other local midnight. A provider with no weekly reset in the period is
+    /// labelled at local Mondays instead, in the same form. Midnights come from the report's
+    /// calendar, the one its local days were cut on, so the axis and the day strip cannot
+    /// disagree about where a day begins.
     static func quotaTicks(_ t: HistoryReport.ToolReport, period: HistoryReport,
                            calendar: Calendar) -> [HistoryExperience.QuotaAxisTick] {
-        let resets = t.weeklyLimits.map(\.outcome.endedAt)
+        let resets = t.weeklyLimits
+            .filter { $0.limit == .overall }
+            .map(\.outcome.endedAt)
             .filter { $0 >= period.periodStart && $0 <= period.periodEnd }
             .sorted()
         var labelled: [Date] = []

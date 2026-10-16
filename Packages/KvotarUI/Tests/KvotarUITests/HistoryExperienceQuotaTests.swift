@@ -309,22 +309,24 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         HistoryDisplay.quotaX(date, period: HXFix.report([]))
     }
 
-    /// The axis is labelled at the provider's weekly resets — weekday and date in the report's
-    /// calendar — and every other local midnight is a small unlabelled tick.
+    /// The axis is labelled at the provider's own weekly resets — weekday and date in the
+    /// report's calendar — and every other local midnight is a small unlabelled tick. A model
+    /// allowance's weekly resets at its own first use and is not the provider's reset.
     func testTicksLabelTheWeeklyResetsAndMarkEveryOtherMidnight() throws {
         let early = HXFix.quotaWindow(.claude, daysBack: 12, hour: 14).resetsAt
         let late = HXFix.quotaWindow(.claude, daysBack: 5, hour: 14).resetsAt
+        let model = HXFix.quotaWindow(.claude, daysBack: 8, hour: 9).resetsAt
         let tool = HXFix.tool(.claude, quotaWindows: contiguousFiveHour(count: 3),
                               weeklyLimits: [
                                   HXFix.weeklyLimit(endedAt: early, used: 40),
                                   HXFix.weeklyLimit(.claude, .model(key: "m", name: "Opus"),
-                                                    endedAt: early, used: 10),
+                                                    endedAt: model, used: 10),
                                   HXFix.weeklyLimit(endedAt: late, used: 55),
                               ])
         let ticks = quota([tool], .tool(.claude)).sections[0].ticks
         let labelled = ticks.filter { $0.label != nil }
         XCTAssertEqual(labelled.map(\.label), ["Tue Aug 4", "Tue Aug 11"],
-                       "one tick per reset; a model weekly sharing the instant is not a second tick")
+                       "one tick per overall reset; the model weekly is not a tick")
         XCTAssertEqual(labelled.map(\.x), [x(early), x(late)])
         XCTAssertEqual(ticks.filter { $0.label == nil }.count, 30,
                        "every local midnight strictly inside the 30 days, unlabelled")
@@ -351,6 +353,22 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         let dayStarts = Set(days.filter { !$0.isPartial }.map { x($0.start) })
         XCTAssertEqual(Set(ticks.map(\.x)), dayStarts)
         XCTAssertEqual(ticks.count, dayStarts.count)
+    }
+
+    /// Two labelled ticks closer than a label's width at the chart's scale print one label; the
+    /// later one gives way. Both ticks still stand.
+    func testACrowdedTickKeepsItsMarkAndDropsItsLabel() {
+        let first = HXFix.quotaWindow(.claude, daysBack: 6, hour: 14).resetsAt
+        let second = HXFix.quotaWindow(.claude, daysBack: 5, hour: 14).resetsAt
+        let tool = HXFix.tool(.claude, quotaWindows: contiguousFiveHour(count: 3),
+                              weeklyLimits: [HXFix.weeklyLimit(endedAt: first, used: 40),
+                                             HXFix.weeklyLimit(endedAt: second, used: 55)])
+        let section = quota([tool], .tool(.claude)).sections[0]
+        let ids = section.ticks.filter { $0.label != nil }.map(\.id)
+        XCTAssertEqual(ids.count, 2)
+        // One day apart is 1/30 of the plot: 20 pt on a 600 pt plot, 80 pt on a 2400 pt one.
+        XCTAssertEqual(section.labelledTickIDs(plotWidth: 600), [ids[0]])
+        XCTAssertEqual(section.labelledTickIDs(plotWidth: 2400), Set(ids))
     }
 
     func testTheValueLabelsComeFromTheModel() {
