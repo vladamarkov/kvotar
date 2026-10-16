@@ -526,16 +526,19 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
 - **The weekly chart: one curve per week.** Each overall weekly limit is drawn from the readings
   it was folded from (`QuotaWindowOutcome.readings`), those inside the period only: a line
   through them from the first to the last with a light area under it, placed by each reading's
-  own time and value (`QuotaSection.curves`, `QuotaCurve.samples`). Nothing joins one week to
-  the next, and a curve is never extended past its last reading — not to now and not to the
-  scheduled reset. The week's mark (`QuotaSection.weeklyPoints`, the same point type the strip
-  uses) stands on the first reading at the limit where it hit, else on the last reading, and the
-  curve writes its result there: `74%`, `Hit the limit`, `Last seen · 60%` on a partly seen week
-  (drawn faded), `So far · 54%` on the open week, `Reset early · 79%` or `Withdrawn · 79%` where
-  the provider ended it, with a red dashed boundary at the event's time. A week that hit the
-  limit runs flat at 100 only across readings recorded there. A week with no reading inside the
-  period but a last reading in it stands as one mark. (`quotaCurve`; tests
-  `testAWeekIsACurveThroughItsOwnReadingsInsidePeriod`, `testTheEndOfEachKindOfWeekIsNamed`,
+  own time and value (`QuotaSection.curves`, `QuotaCurve.samples`). Readings that repeat the one
+  before are thinned out: the first, the last and every change of value are kept, so the step
+  line is the same and a week carries hundreds of samples, not tens of thousands. Nothing joins
+  one week to the next, and a curve is never extended past its last reading — not to now and
+  not to the scheduled reset. The week's mark (`QuotaSection.weeklyPoints`, the same point type
+  the strip uses) stands on the first reading at the limit where it hit, else on the last
+  reading, and the curve writes its figure there, `74%`, or `So far · 54%` on the open week; the
+  figure alone, because the ring, the fading of a partly seen week, the diamond and the red
+  dashed boundary at an early ending already say what kind of week it was, and the hover and the
+  detail say it in words. A week that hit the limit runs flat at 100 only across readings
+  recorded there. A week with no reading inside the period but a last reading in it stands as
+  one mark. (`quotaCurve`; tests `testAWeekIsACurveThroughItsOwnReadingsInsidePeriod`,
+  `testTheEndOfEachKindOfWeekIsNamed`, `testRepeatedReadingsAreThinnedToTheOnesThatMoved`,
   `testOnlyTheOverallWeeklyIsDrawnAndABareWeekIsOneMark`)
 - **Date axis.** The model gives each section its ticks (`QuotaSection.ticks`): a labelled tick
   at each weekly reset of the provider inside the period, from the report's **overall** weekly

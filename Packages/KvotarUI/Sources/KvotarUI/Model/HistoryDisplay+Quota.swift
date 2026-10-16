@@ -46,9 +46,6 @@ extension HistoryDisplay {
         "Local work is shown for context. It does not prove what moved the window."
     /// The strip's eyebrow where its windows do not share one recorded width.
     static let quotaMixedWidthTitle = "Main account window"
-    /// Written at a week's end on the weekly chart, before its figure.
-    static let quotaLastSeenLabel = "Last seen"
-    static let quotaWithdrawnShortLabel = "Withdrawn"
     /// Why a run of windows is drawn as separate points rather than a line. Rows written before
     /// migration `v23` carry no width, so they have no defensible start — and without a start
     /// nothing can establish that one window abuts the next. Drawing a line would assert exactly
@@ -525,47 +522,59 @@ extension HistoryDisplay {
 
     /// One weekly window as its curve: the readings taken inside the period, oldest first, each
     /// placed by its own time and value; the mark on the first reading at the limit where the
-    /// week hit it, else on the last reading; the words for its end; and the boundary where the
+    /// week hit it, else on the last reading; its figure at the end; and the boundary where the
     /// provider ended the week early. A window with no reading inside the period (the fold
     /// always has at least one, but a fixture may not) stands as one sample at its last reading.
     /// Nil only where even that falls outside the period.
+    ///
+    /// **Thinned to the readings that moved.** Kvotar polls every few minutes and the weekly
+    /// figure changes slowly, so most of a week's thousands of readings repeat the one before.
+    /// A reading is kept when it is the first, the last, or reads differently from the last one
+    /// kept — the step line is the same, the mark lands on the same reading, and the chart
+    /// carries hundreds of samples instead of tens of thousands. The formatters are built once
+    /// per curve for the same reason.
     static func quotaCurve(_ window: QuotaWindowOutcome, period: HistoryReport,
                            calendar: Calendar)
         -> (curve: HistoryExperience.QuotaCurve, sample: HistoryExperience.QuotaSample)? {
-        var readings = window.readings
+        let inPeriod = window.readings
             .filter { $0.at >= period.periodStart && $0.at <= period.periodEnd }
             .sorted { $0.at < $1.at }
+        var readings: [QuotaWindowOutcome.Reading] = []
+        for (index, reading) in inPeriod.enumerated()
+        where index == 0 || index == inPeriod.count - 1 || reading.usedPct != readings.last?.usedPct {
+            readings.append(reading)
+        }
         if readings.isEmpty,
            window.lastObservedAt >= period.periodStart, window.lastObservedAt <= period.periodEnd {
             readings = [.init(at: window.lastObservedAt, usedPct: window.highWaterPct)]
         }
         guard !readings.isEmpty else { return nil }
 
-        let ending = quotaStamp(window.endedAt, calendar: calendar)
+        let day = quotaFormatter("EEE MMM d", calendar: calendar)
+        let clock = quotaFormatter("h:mm a", calendar: calendar)
+        func stamp(_ date: Date) -> String {
+            "\(day.string(from: date)), \(clock.string(from: date).lowercased())"
+        }
         let weekTail: String
         switch window.ending {
-        case .reachedReset: weekTail = "week ending \(ending)"
-        case .earlyReset: weekTail = "week ending \(ending) · \(quotaEndingLabel(.earlyReset))"
-        case .withdrawn: weekTail = "week ending \(ending) · \(quotaEndingLabel(.withdrawn))"
+        case .reachedReset: weekTail = "week ending \(stamp(window.endedAt))"
+        case .earlyReset, .withdrawn:
+            weekTail = "week ending \(stamp(window.endedAt)) · \(quotaEndingLabel(window.ending))"
         }
         let samples = readings.map { reading in
             HistoryExperience.QuotaSample(
                 x: quotaX(reading.at, period: period),
                 fraction: reading.usedPct / 100,
-                hoverBody: "**\(quotaStamp(reading.at, calendar: calendar))**\n"
+                hoverBody: "**\(stamp(reading.at))**\n"
                     + "\(Fmt.percentNumber(reading.usedPct))% used · \(weekTail)")
         }
         let hit = window.hitLimitAt != nil
         let markIndex = (hit ? readings.firstIndex { $0.usedPct >= 100 } : nil) ?? readings.count - 1
+        // The figure alone: the ring, the fading, the diamond and the boundary already say what
+        // kind of week it was, and the hover and the detail say it in words. Only the open week
+        // adds `So far`, because its figure is still moving.
         let figure = "\(Fmt.percentNumber(readings[markIndex].usedPct))%"
-        let endLabel: String
-        switch (window.completion, window.ending) {
-        case (.current, _): endLabel = "\(quotaSoFarLabel) · \(figure)"
-        case (_, .earlyReset): endLabel = "\(quotaEndingLabel(.earlyReset)) · \(figure)"
-        case (_, .withdrawn): endLabel = "\(quotaWithdrawnShortLabel) · \(figure)"
-        case (.completedPartial, .reachedReset): endLabel = "\(quotaLastSeenLabel) · \(figure)"
-        case (.completedFull, .reachedReset): endLabel = hit ? limitHitLegendLabel : figure
-        }
+        let endLabel = window.completion == .current ? "\(quotaSoFarLabel) · \(figure)" : figure
         let curve = HistoryExperience.QuotaCurve(
             id: window.id, pointID: window.id, samples: samples,
             faded: window.completion == .completedPartial,

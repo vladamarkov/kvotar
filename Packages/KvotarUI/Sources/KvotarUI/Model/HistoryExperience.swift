@@ -559,8 +559,8 @@ public struct HistoryExperience: Sendable {
         public let samples: [QuotaSample]
         /// A partly seen week: drawn at lower opacity, with the fact written at its end.
         public let faded: Bool
-        /// Written at the mark: `74%`, `Hit the limit`, `Last seen · 60%`, `So far · 54%`,
-        /// `Reset early · 79%`. Nil only where there is nothing to say.
+        /// Written at the mark: the week's figure, `74%`, or `So far · 54%` on the open week.
+        /// Nil only where there is nothing to say.
         public let endLabel: String?
         /// An early ending or a withdrawal: a dashed boundary at the event's time, which may be
         /// later than the last reading the curve ends at. Nil for a week that reached its reset.

@@ -505,9 +505,9 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(point.label, "Ended at 74% used")
     }
 
-    /// A week that hit the limit marks the first reading at 100 and says so; a partly seen week
-    /// fades and ends `Last seen`; the open week ends `So far`; an early ending draws its boundary
-    /// at the event, after the last reading the curve stops at.
+    /// A week that hit the limit marks the first reading at 100; a partly seen week fades; the
+    /// open week ends `So far`; an early ending draws its boundary at the event, after the last
+    /// reading the curve stops at.
     func testTheEndOfEachKindOfWeekIsNamed() throws {
         let hitEnd = weekEnd.addingTimeInterval(-14 * 86_400)
         let partialEnd = weekEnd.addingTimeInterval(-7 * 86_400)
@@ -528,8 +528,8 @@ final class HistoryExperienceQuotaTests: XCTestCase {
                                                        pcts: [10, 54])),
         ]
         let curves = weeklySection(limits).curves
-        XCTAssertEqual(curves.map(\.endLabel), ["Hit the limit", "Last seen · 60%",
-                                                  "Reset early · 79%", "So far · 54%"])
+        XCTAssertEqual(curves.map(\.endLabel), ["100%", "60%", "79%", "So far · 54%"],
+                       "the figure alone; the shape, the fading and the boundary say the rest")
         XCTAssertEqual(curves[0].markIndex, 1, "the first reading at the limit")
         XCTAssertEqual(curves.map(\.faded), [false, true, false, false])
         XCTAssertEqual(curves[2].boundaryX, x(earlyEnd))
@@ -537,6 +537,19 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(curves[3].mark?.x, x(HXFix.now.addingTimeInterval(-3600)),
                        "the open week ends at its latest reading, never at now")
         XCTAssertTrue(curves[2].samples[1].hoverBody.hasSuffix("· Reset early"))
+    }
+
+    /// Readings that repeat the one before are not drawn: the first, the last and every change
+    /// of value are, so the step line and the mark are unchanged and the chart stays light.
+    func testRepeatedReadingsAreThinnedToTheOnesThatMoved() throws {
+        let readings = HXFix.readings(endingAt: weekEnd, pcts: [10, 10, 10, 20, 20, 30, 30],
+                                      every: 600)
+        let curve = try XCTUnwrap(
+            weeklySection([HXFix.weeklyLimit(endedAt: weekEnd, used: 30, readings: readings)])
+                .curves.first)
+        XCTAssertEqual(curve.samples.map(\.fraction), [0.1, 0.2, 0.3, 0.3])
+        XCTAssertEqual(curve.samples.map(\.x), [0, 3, 5, 6].map { x(readings[$0].at) })
+        XCTAssertEqual(curve.markIndex, 3, "the mark is still the last reading")
     }
 
     /// A model allowance's weekly is not the provider's weekly and draws no curve; a week whose
