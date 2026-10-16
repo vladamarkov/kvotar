@@ -136,7 +136,8 @@ extension HistoryDisplay {
             weeklyPoints: weeklyPoints,
             curves: curves,
             ticks: quotaTicks(t, period: report, calendar: calendar),
-            valueLabels: quotaValueLabels)
+            valueLabels: quotaValueLabels,
+            dayLenses: quotaDayLenses(strip, period: report, calendar: calendar))
     }
 
     /// `5-hour windows` where every window on the strip reported the same width, else the
@@ -215,10 +216,7 @@ extension HistoryDisplay {
         case .current: label = "\(quotaSoFarLabel) \(used)% used"
         }
         let hitLimit = window.hitLimitAt != nil
-        // The open window stands at its last recorded reading, never at now or at a reset that
-        // has not come: a reading is the last thing Kvotar knows about it (the fold's rule,
-        // applied to geometry). An ended window stands at its reset.
-        let ownPlace = kind == .current ? window.lastObservedAt : window.resetsAt
+        let ownPlace = quotaPlace(window)
         let inPlaceLabel: String? = !labelled ? nil : kind == .current
             ? quotaSoFarLabel
             : (hitLimit ? limitHitLegendLabel : nil)
@@ -235,6 +233,14 @@ extension HistoryDisplay {
             detail: quotaDetail(window, tool: tool, report: t, period: period),
             hoverBody: quotaHoverBody(window, label: label, calendar: calendar),
             inPlaceLabel: inPlaceLabel)
+    }
+
+    /// The instant a window stands at, on the strip and in the day lens alike. The open window
+    /// stands at its last recorded reading, never at now or at a reset that has not come: a
+    /// reading is the last thing Kvotar knows about it (the fold's rule, applied to geometry).
+    /// An ended window stands at its reset.
+    static func quotaPlace(_ window: QuotaWindowOutcome) -> Date {
+        window.completion == .current ? window.lastObservedAt : window.resetsAt
     }
 
     /// The hover card: the window's weekday, date and span in bold, then its result — `**Fri Sep
@@ -582,6 +588,66 @@ extension HistoryDisplay {
             boundaryX: window.ending == .reachedReset ? nil : quotaX(window.endedAt, period: period),
             markIndex: markIndex)
         return (curve, samples[markIndex])
+    }
+
+    // MARK: - Day lens
+
+    /// A window shorter than this belongs to a local day; a day-wide or wider one does not.
+    static let quotaDayLensMaxWidth = 86_400
+
+    /// One lens per local day that has a short window on the strip, oldest first. Each window
+    /// stands where it does on the strip — its reset, or the open window's last reading — placed
+    /// across its own local day in the report's calendar, the one the axis midnights were cut on,
+    /// so the lens and the strip agree on which day a window belongs to. A window of unknown
+    /// width is left out: nothing shows it is not a week.
+    ///
+    /// The figure above a mark is the simplified style the weekly chart uses: the number alone,
+    /// `So far` only on the open window, because the dot, its fading, the ring and the diamond
+    /// already say what kind of window it was and the detail says it in words.
+    static func quotaDayLenses(_ windows: [QuotaWindowOutcome], period: HistoryReport,
+                               calendar: Calendar) -> [HistoryExperience.QuotaDayLens] {
+        let short = windows.filter { ($0.windowSeconds ?? quotaDayLensMaxWidth) < quotaDayLensMaxWidth }
+        var days: [Date: [QuotaWindowOutcome]] = [:]
+        for window in short {
+            days[calendar.startOfDay(for: quotaPlace(window)), default: []].append(window)
+        }
+        let dayID = quotaFormatter("yyyy-MM-dd", calendar: calendar)
+        let dayLabel = quotaFormatter("MMM d", calendar: calendar)
+        let hourLabel = quotaFormatter("h a", calendar: calendar)
+        return days.keys.sorted().compactMap { dayStart in
+            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart),
+                  dayEnd > dayStart else { return nil }
+            let span = dayEnd.timeIntervalSince(dayStart)
+            let members = days[dayStart, default: []].sorted {
+                quotaPlace($0) < quotaPlace($1)
+            }
+            let marks = members.map { window in
+                let used = Fmt.percentNumber(window.highWaterPct)
+                return HistoryExperience.QuotaDayLens.Mark(
+                    id: window.id,
+                    x: quotaPlace(window).timeIntervalSince(dayStart) / span,
+                    label: window.completion == .current
+                        ? "\(quotaSoFarLabel) \(used)%" : "\(used)%")
+            }
+            var ticks: [HistoryExperience.QuotaAxisTick] = []
+            for hour in stride(from: 0, to: 24, by: 3) {
+                guard let at = calendar.date(byAdding: .hour, value: hour, to: dayStart),
+                      at < dayEnd else { continue }
+                ticks.append(.init(
+                    id: "\(Int(at.timeIntervalSince1970))",
+                    x: at.timeIntervalSince(dayStart) / span,
+                    label: hour % 6 == 0 ? hourLabel.string(from: at).lowercased() : nil))
+            }
+            ticks.append(.init(id: "\(Int(dayEnd.timeIntervalSince1970))", x: 1,
+                               label: hourLabel.string(from: dayEnd).lowercased()))
+            let noun = members.count == 1 ? "window" : "windows"
+            return HistoryExperience.QuotaDayLens(
+                id: dayID.string(from: dayStart),
+                title: "\(dayLabel.string(from: dayStart)) · \(members.count) \(noun)",
+                marks: marks,
+                ticks: ticks,
+                periodRange: quotaX(dayStart, period: period)...quotaX(dayEnd, period: period))
+        }
     }
 
     // MARK: - Hover

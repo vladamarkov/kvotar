@@ -599,6 +599,90 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(strip.id, strip.pointID)
     }
 
+    // MARK: - Day lens
+
+    /// The selected window's local day, by the hour: every short window of that day at its
+    /// reset with its figure above it, the selected one named, and the hour axis — all the
+    /// model's, in the report's calendar.
+    func testTheDayLensLaysOutTheSelectedWindowsLocalDayByResetTime() throws {
+        let day = contiguousFiveHour(count: 4) // Aug 13, resets at 5, 10, 15 and 20
+        let next = HXFix.quotaWindow(.claude, daysBack: 2, hour: 2, used: 30)
+        let section = quota([claude(day + [next])], .tool(.claude)).sections[0]
+        XCTAssertEqual(section.dayLenses.map(\.id), ["2026-08-13", "2026-08-14"])
+
+        let lens = try XCTUnwrap(section.dayLens(selecting: day[1].id))
+        XCTAssertEqual(lens.title, "Aug 13 · 4 windows")
+        XCTAssertEqual(lens.selectedID, day[1].id)
+        XCTAssertEqual(lens.marks.map(\.id), day.map(\.id))
+        XCTAssertEqual(lens.marks.map(\.label), ["62%", "62%", "62%", "62%"])
+        for (mark, hour) in zip(lens.marks, [5.0, 10, 15, 20]) {
+            XCTAssertEqual(mark.x, hour / 24, accuracy: 1e-9)
+        }
+        XCTAssertEqual(lens.ticks.compactMap(\.label), ["12 am", "6 am", "12 pm", "6 pm", "12 am"])
+        XCTAssertEqual(lens.ticks.count, 9, "a tick every three hours, both midnights included")
+        for (tick, hour) in zip(lens.ticks, stride(from: 0.0, through: 24, by: 3)) {
+            XCTAssertEqual(tick.x, hour / 24, accuracy: 1e-9)
+        }
+        let dayStart = day[0].resetsAt.addingTimeInterval(-5 * 3600)
+        XCTAssertEqual(lens.periodRange.lowerBound, x(dayStart), accuracy: 1e-9)
+        XCTAssertEqual(lens.periodRange.upperBound, x(dayStart.addingTimeInterval(86_400)),
+                       accuracy: 1e-9)
+        XCTAssertEqual(section.dayLens(selecting: next.id)?.title, "Aug 14 · 1 window")
+    }
+
+    /// The figure alone over every ended window, `So far` only on the open one, which stands at
+    /// its last reading as it does on the strip. The dot, its fading and the diamond say the rest.
+    func testTheLensWritesTheFigureAloneAndSoFarOnTheOpenWindow() throws {
+        let ended = HXFix.quotaWindow(.claude, daysBack: 0, hour: 1, used: 87)
+        let partial = HXFix.quotaWindow(.claude, daysBack: 0, hour: 6, used: 62,
+                                        lastSeenBefore: 3 * 3600, completion: .completedPartial)
+        let hit = HXFix.quotaWindow(.claude, daysBack: 0, hour: 11, used: 100, hitLimit: true)
+        let open = HXFix.quotaWindow(.claude, daysBack: 0, hour: 16, used: 41,
+                                     lastSeenBefore: 4 * 3600, completion: .current)
+        let section = quota([claude([ended, partial, hit, open])], .tool(.claude)).sections[0]
+        let lens = try XCTUnwrap(section.dayLens(selecting: open.id))
+        XCTAssertEqual(lens.title, "Aug 16 · 4 windows")
+        XCTAssertEqual(lens.marks.map(\.label), ["87%", "62%", "100%", "So far 41%"])
+        XCTAssertEqual(lens.marks[3].x, 0.5, accuracy: 1e-9,
+                       "the open window stands at its last reading, noon, not at its 4 pm reset")
+    }
+
+    /// A weekly window belongs to no day, and a window of unknown width might be one; neither
+    /// has a lens, and neither is counted in a day's lens.
+    func testTheLensIsAbsentForAWeekAndForAnUnknownWidth() {
+        let week = HXFix.quotaWindow(.claude, daysBack: 4, width: 604_800, used: 40)
+        let wideOnStrip = HXFix.quotaWindow(.claude, daysBack: 12, width: 604_800, used: 30)
+        let unknown = HXFix.quotaWindow(.claude, daysBack: 6, hour: 5, width: nil)
+        let short = HXFix.quotaWindow(.claude, daysBack: 6, hour: 10)
+        let tool = HXFix.tool(.claude, quotaWindows: [wideOnStrip, unknown, short, week],
+                              weeklyLimits: [.init(limit: .overall, outcome: week)])
+        let section = quota([tool], .tool(.claude)).sections[0]
+        XCTAssertNil(section.dayLens(selecting: week.id))
+        XCTAssertNil(section.dayLens(selecting: wideOnStrip.id))
+        XCTAssertNil(section.dayLens(selecting: unknown.id))
+        XCTAssertEqual(section.dayLens(selecting: short.id)?.title, "Aug 10 · 1 window")
+        XCTAssertEqual(section.dayLenses.count, 1)
+    }
+
+    /// A click on the strip's axis band finds the day under the pointer and opens it on its
+    /// first window; a quiet day opens the nearest day that has one. On the lens itself a click
+    /// selects the mark nearest on x.
+    func testAClickOnTheAxisBandOpensThatDayOnItsFirstWindow() throws {
+        let day = contiguousFiveHour(count: 4) // Aug 13
+        let next = HXFix.quotaWindow(.claude, daysBack: 2, hour: 2, used: 30) // Aug 14
+        let section = quota([claude(day + [next])], .tool(.claude)).sections[0]
+        let noon = HXFix.quotaWindow(.claude, daysBack: 3, hour: 12).resetsAt
+        XCTAssertEqual(section.dayLens(atX: x(noon))?.id, "2026-08-13")
+        XCTAssertEqual(section.dayLens(atX: x(noon))?.marks.first?.id, day[0].id)
+        XCTAssertEqual(section.dayLens(atX: 0)?.id, "2026-08-13", "a quiet day opens the nearest")
+        XCTAssertEqual(section.dayLens(atX: 1)?.id, "2026-08-14")
+
+        let lens = try XCTUnwrap(section.dayLens(selecting: day[0].id))
+        XCTAssertEqual(lens.nearestMark(atX: 0.4)?.id, day[1].id, "9:36 am is nearest the 10 am reset")
+        XCTAssertEqual(lens.nearestMark(atX: 0)?.id, day[0].id)
+        XCTAssertEqual(lens.nearestMark(atX: 1)?.id, day[3].id)
+    }
+
     // MARK: - Hover
 
     func testTheHoverCardNamesTheSpanAndTheResultForEachKindOfWindow() {

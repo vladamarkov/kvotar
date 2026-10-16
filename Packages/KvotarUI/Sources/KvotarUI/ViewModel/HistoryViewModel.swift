@@ -426,4 +426,19 @@ public final class HistoryViewModel: ObservableObject {
         }
         selectQuotaPoint(point.id)
     }
+
+    /// A click on the day lens selects the window nearest on x across the day, as a click on
+    /// the strip does across the period.
+    public func selectQuotaPoint(nearestTo lens: HistoryExperience.QuotaDayLens, atX x: Double) {
+        guard let mark = lens.nearestMark(atX: x) else { return }
+        selectQuotaPoint(mark.id)
+    }
+
+    /// A click on the strip's axis band opens the day under the pointer on its first window —
+    /// the lens then lays that day out. A day with no short window opens the nearest one that
+    /// has; a section with no lens at all does nothing.
+    public func selectQuotaDay(in section: HistoryExperience.QuotaSection, atX x: Double) {
+        guard let first = section.dayLens(atX: x)?.marks.first else { return }
+        selectQuotaPoint(first.id)
+    }
 }

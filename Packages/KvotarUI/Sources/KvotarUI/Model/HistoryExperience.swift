@@ -614,6 +614,78 @@ public struct HistoryExperience: Sendable {
         }
     }
 
+    /// The selected window's local day, laid out by reset time on a 0–24 h baseline, so the
+    /// three to five short windows a busy day stacks inside a few points of the strip's axis
+    /// stand apart. One mark per window of that day with its figure above it, the selected one
+    /// ringed; a click on a mark selects that window. Built for every local day that has a
+    /// short window on the strip; a window a day wide or wider, or of unknown width, belongs to
+    /// no lens. The model lays the day out and the view multiplies by a width.
+    public struct QuotaDayLens: Sendable, Equatable, Identifiable {
+        /// One window of the day — its point is in `QuotaSection.points` by `id`.
+        public struct Mark: Sendable, Equatable, Identifiable {
+            public let id: String
+            /// Where the window stands across the local day, 0…1: its reset, or the open
+            /// window's last reading, as on the strip.
+            public let x: Double
+            /// The figure alone, `49%`, or `So far 13%` on the open window. The mark's shape
+            /// says the rest, as it does on the strip and the weekly chart.
+            public let label: String
+
+            public init(id: String, x: Double, label: String) {
+                self.id = id
+                self.x = min(max(x, 0), 1)
+                self.label = label
+            }
+        }
+
+        /// The local day, `2026-08-11`.
+        public let id: String
+        /// `Aug 11 · 5 windows`.
+        public let title: String
+        /// The day's windows in time order.
+        public let marks: [Mark]
+        /// The hour axis: a labelled tick every six hours (`12 am`, `6 am`, `12 pm`, `6 pm`,
+        /// `12 am`), an unlabelled one every three.
+        public let ticks: [QuotaAxisTick]
+        /// Where the day sits across the report period, so a click on the strip's axis band can
+        /// find the day under the pointer.
+        public let periodRange: ClosedRange<Double>
+        /// The window the lens is open on, ringed. Set by `QuotaSection.dayLens(selecting:)`.
+        public let selectedID: String?
+
+        public init(id: String, title: String, marks: [Mark], ticks: [QuotaAxisTick],
+                    periodRange: ClosedRange<Double>, selectedID: String? = nil) {
+            self.id = id
+            self.title = title
+            self.marks = marks
+            self.ticks = ticks
+            let lower = min(max(periodRange.lowerBound, 0), 1)
+            self.periodRange = lower...max(lower, min(periodRange.upperBound, 1))
+            self.selectedID = selectedID
+        }
+
+        /// The same lens, open on `id`.
+        public func selecting(_ id: String) -> QuotaDayLens {
+            QuotaDayLens(id: self.id, title: title, marks: marks, ticks: ticks,
+                         periodRange: periodRange, selectedID: id)
+        }
+
+        /// The mark nearest on x — what a click on the lens selects. A tie goes to the later one.
+        public func nearestMark(atX x: Double) -> Mark? {
+            var best: Mark?
+            for mark in marks where best == nil || abs(mark.x - x) <= abs(best!.x - x) {
+                best = mark
+            }
+            return best
+        }
+
+        /// How far `x` lies outside the day's span across the period; zero inside it.
+        func distance(toX x: Double) -> Double {
+            if periodRange.contains(x) { return 0 }
+            return x < periodRange.lowerBound ? periodRange.lowerBound - x : x - periodRange.upperBound
+        }
+    }
+
     /// One provider's quota charts, full width: the weekly window's burn-up first where the
     /// provider has one, then the short-window strip, sharing one date axis and one hover
     /// cursor. On `All` the sections stack, Claude then Codex; they never sit side by side and
@@ -649,8 +721,23 @@ public struct HistoryExperience: Sendable {
         public let ticks: [QuotaAxisTick]
         /// The `% used` gridlines: 100, 50, 0.
         public let valueLabels: [QuotaValueLabel]
+        /// One lens per local day with a short window on the strip, oldest first.
+        public let dayLenses: [QuotaDayLens]
 
         public var id: Tool { provider }
+
+        /// The lens for the day of the selected window, open on it — nil for a weekly window, a
+        /// window of unknown width, or a selection this section does not hold.
+        public func dayLens(selecting id: String) -> QuotaDayLens? {
+            dayLenses.first { lens in lens.marks.contains { $0.id == id } }?.selecting(id)
+        }
+
+        /// The lens for the day under fraction `x` of the strip's axis — the day whose span
+        /// holds `x`, else the nearest day that has one, so a click on a quiet day still opens
+        /// something. Nil only where the section has no lens at all.
+        public func dayLens(atX x: Double) -> QuotaDayLens? {
+            dayLenses.min { $0.distance(toX: x) < $1.distance(toX: x) }
+        }
 
         /// Which side of its mark an in-place label is written on.
         public enum LabelSide: Sendable, Equatable {
@@ -731,7 +818,8 @@ public struct HistoryExperience: Sendable {
                     stripTitle: String? = nil, summary: String, sparseNote: String? = nil,
                     segments: [QuotaSegment] = [], points: [QuotaPoint] = [],
                     weeklyPoints: [QuotaPoint] = [], curves: [QuotaCurve] = [],
-                    ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = []) {
+                    ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = [],
+                    dayLenses: [QuotaDayLens] = []) {
             self.provider = provider
             self.title = title
             self.weeklyTitle = weeklyTitle
@@ -744,6 +832,7 @@ public struct HistoryExperience: Sendable {
             self.curves = curves
             self.ticks = ticks
             self.valueLabels = valueLabels
+            self.dayLenses = dayLenses
         }
     }
 

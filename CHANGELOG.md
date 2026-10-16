@@ -11,7 +11,9 @@ the line of their change.
   it, the legend is gone, the sentence counts only windows seen to the end, and a window's
   detail opens under its own chart. The weekly limit gets its own chart above the strip: each
   week is drawn as its own climb from the readings Kvotar recorded, ending at its last reading
-  with its result written there.
+  with its result written there. Selecting a short window lays out its day by the hour under
+  the strip, with every window of that day and its figure, so a busy day's windows stop
+  stacking; a click on the strip's date axis opens that day.
 
 ## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
 

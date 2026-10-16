@@ -42,6 +42,11 @@ struct QuotaChartView: View {
                 QuotaPlot(section: section, chart: .strip, selectedID: selectedID, scope: scope,
                           plotHeight: 130, vm: vm)
             }
+            // The selected window's day, laid out by the hour, so the three to five windows a
+            // busy day stacks on the strip stand apart. Absent for a weekly window.
+            if let selectedID, let lens = section.dayLens(selecting: selectedID) {
+                QuotaDayLensView(section: section, lens: lens, vm: vm)
+            }
             // The unjoined-run sentence is the same one for every such run, so it is stated once
             // under the chart rather than per segment — three copies of one caveat is noise, not
             // three facts.
@@ -120,8 +125,14 @@ private struct QuotaPlot: View {
                 }
             }
             .onTapGesture(coordinateSpace: .local) { location in
-                vm.selectQuotaPoint(nearestTo: section, atX: fraction(of: location.x, width: width),
-                                    chart: chart)
+                let x = fraction(of: location.x, width: width)
+                // A click on the strip's axis band opens that day in the lens, on its first
+                // window; a click on the plot selects the window nearest on x.
+                if chart == .strip, location.y > plotHeight {
+                    vm.selectQuotaDay(in: section, atX: x)
+                } else {
+                    vm.selectQuotaPoint(nearestTo: section, atX: x, chart: chart)
+                }
             }
         }
         .frame(height: plotHeight + axisHeight)
@@ -364,6 +375,130 @@ private struct QuotaPlot: View {
         } else {
             line
         }
+    }
+}
+
+/// The day lens: the selected window's local day on a 0–24 h baseline under the strip, one mark
+/// per window of that day at its reset (the open window at its last reading, as on the strip),
+/// its figure above it, the selected one ringed. The strip's marks are the same `QuotaMark`, so
+/// a window looks the same in both places. A click anywhere over the lens selects the window
+/// nearest on x, the strip's own convention; VoiceOver selects a mark through its action. The
+/// model laid the day out — the marks' x, the hour ticks, the title — and the view multiplies.
+private struct QuotaDayLensView: View {
+    let section: HistoryExperience.QuotaSection
+    let lens: HistoryExperience.QuotaDayLens
+    @ObservedObject var vm: HistoryViewModel
+
+    /// The same left gutter and right margin as the plots above, so the lens's baseline starts
+    /// and ends under theirs even though its scale is the day, not the period.
+    private let gutter: CGFloat = 34
+    private var rightPad: CGFloat { HistoryExperience.QuotaSection.rightMargin }
+    private let markSize: CGFloat = 9
+    /// The figure's row, the marks' row and the baseline, top down; then the hour labels.
+    private let labelY: CGFloat = 8
+    private let markY: CGFloat = 27
+    private let baseline: CGFloat = 42
+    private let axisHeight: CGFloat = 20
+    private let hourLabelWidth: CGFloat = 48
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(lens.title)
+                .font(HistoryTheme.small.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(HistoryTheme.text)
+                .padding(.leading, gutter)
+            GeometryReader { geo in
+                let width = max(geo.size.width - gutter - rightPad, 1)
+                ZStack(alignment: .topLeading) {
+                    axis(width: width)
+                    ForEach(lens.marks) { mark in
+                        if let point = section.points.first(where: { $0.id == mark.id }) {
+                            self.mark(mark, point: point, width: width)
+                        }
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture(coordinateSpace: .local) { location in
+                    vm.selectQuotaPoint(nearestTo: lens,
+                                        atX: min(max((location.x - gutter) / width, 0), 1))
+                }
+            }
+            .frame(height: baseline + axisHeight)
+        }
+        .padding(.top, 10)
+        .overlay(alignment: .top) {
+            Rectangle().fill(HistoryTheme.line).frame(height: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(section.title) · \(lens.title)")
+    }
+
+    /// The baseline and the hour ticks the model named: a 6 pt tick and a label every six hours,
+    /// a 3 pt tick every three.
+    @ViewBuilder
+    private func axis(width: CGFloat) -> some View {
+        Rectangle()
+            .fill(HistoryTheme.line)
+            .frame(width: width, height: 1)
+            .offset(x: gutter, y: baseline)
+        ForEach(lens.ticks) { tick in
+            let x = gutter + width * tick.x
+            if let label = tick.label {
+                Rectangle()
+                    .fill(HistoryTheme.secondary)
+                    .frame(width: 1, height: 6)
+                    .offset(x: x, y: baseline)
+                Text(label)
+                    .font(HistoryTheme.note)
+                    .monospacedDigit()
+                    .foregroundStyle(HistoryTheme.secondary)
+                    .fixedSize()
+                    .frame(width: hourLabelWidth)
+                    .offset(x: x - hourLabelWidth / 2, y: baseline + 8)
+            } else {
+                Rectangle()
+                    .fill(HistoryTheme.line)
+                    .frame(width: 1, height: 3)
+                    .offset(x: x, y: baseline)
+            }
+        }
+    }
+
+    /// One window of the day: a faint stem to the baseline, the strip's own mark, and its figure
+    /// above — in the text colour on the selected window, secondary on the rest, and faded with
+    /// the dot on a window seen only in part.
+    @ViewBuilder
+    private func mark(_ mark: HistoryExperience.QuotaDayLens.Mark,
+                      point: HistoryExperience.QuotaPoint, width: CGFloat) -> some View {
+        let x = gutter + width * mark.x
+        let isSelected = mark.id == lens.selectedID
+        let accent = HistoryTheme.accent(section.provider)
+        let traits: AccessibilityTraits = isSelected ? [.isButton, .isSelected] : [.isButton]
+        Rectangle()
+            .fill(accent.opacity(0.35))
+            .frame(width: 1, height: baseline - markY - markSize / 2)
+            .offset(x: x, y: markY + markSize / 2)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        QuotaMark(point: point, accent: accent, size: markSize, isSelected: isSelected)
+            .position(x: x, y: markY)
+            .allowsHitTesting(false)
+            .accessibilityElement()
+            .accessibilityLabel(point.detail.title)
+            .accessibilityValue(point.accessibilityValue)
+            .accessibilityAddTraits(traits)
+            .accessibilityAction { vm.selectQuotaPoint(mark.id) }
+        Text(mark.label)
+            .font(HistoryTheme.note)
+            .monospacedDigit()
+            .foregroundStyle(isSelected ? HistoryTheme.text : HistoryTheme.secondary)
+            .opacity(point.kind == .completedPartial ? 0.6 : 1)
+            .fixedSize()
+            .frame(width: 80)
+            .position(x: x, y: labelY)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 

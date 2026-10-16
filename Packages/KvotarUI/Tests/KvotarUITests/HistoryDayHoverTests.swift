@@ -124,6 +124,18 @@ final class HistoryDayHoverTests: XCTestCase {
         XCTAssertEqual(vm.selectedQuotaPoint, section.points[2].id)
     }
 
+    /// A click on the strip's axis band opens the day under the pointer on its first window, and
+    /// a click on the day lens selects the mark nearest on x across the day.
+    func testAClickOnTheAxisBandOpensTheDayOnItsFirstWindow() throws {
+        let vm = model()
+        let section = quotaSection()
+        vm.selectQuotaDay(in: section, atX: section.points[2].x)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.points[0].id)
+        let lens = try XCTUnwrap(section.dayLens(selecting: section.points[0].id))
+        vm.selectQuotaPoint(nearestTo: lens, atX: 1)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.points[2].id)
+    }
+
     /// A click on the weekly chart selects a week, and the page resolves it like any point.
     func testAClickOnTheWeeklyChartSelectsTheWeek() {
         let vm = model()

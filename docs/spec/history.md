@@ -597,6 +597,29 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   `testLocalWorkIsLabelledAsContextNotCause`, `testARecordedBlockInsideTheWindowBecomesATypedLink`,
   `HistoryDayHoverTests.testAClickSelectsTheWindowNearestThePointer`,
   `testAClickOnTheWeeklyChartSelectsTheWeek`)
+- **The day lens.** A busy day holds three to five short windows inside a few points of the
+  strip's axis, so their marks stack. Under the strip, above the detail, the selected window's
+  **local day** is laid out by reset time on a 0–24 h baseline, titled `Oct 7 · 5 windows`: one
+  mark per short window of that day, the strip's own mark (dot, faded dot, ring, diamond), each
+  standing where it stands on the strip (its reset; the open window at its last reading), with
+  its figure above it in the weekly chart's style — `49%`, `So far 13%` on the open window, the
+  figure alone otherwise, because the shape already says what kind of window it was — and the
+  selected one ringed. The hour axis is a labelled tick every six hours (`12 am`, `6 am`, `12 pm`,
+  `6 pm`, `12 am`) and an unlabelled one every three. A click anywhere over the lens selects the
+  window nearest on x, as on the strip; a click on the strip's **axis band** opens the day under
+  the pointer on its first window, or the nearest day that has a lens when that day has no short
+  window. The lens is absent for a window a day wide or wider and for one of unknown width
+  (nothing shows it is not a week); such windows are not counted in a day's lens either. The
+  30-day plot does not change. The local day is cut on the report's injected calendar, the same
+  one the axis midnights use. The model supplies the lens (`QuotaSection.dayLenses`,
+  `QuotaDayLens`: title, marks with x in 0…1 of the day, labels, hour ticks, the day's span
+  across the period, the selected id); the view multiplies by a width. (`quotaDayLenses`,
+  `QuotaSection.dayLens(selecting:)`, `dayLens(atX:)`, `HistoryViewModel.selectQuotaDay`; tests
+  `testTheDayLensLaysOutTheSelectedWindowsLocalDayByResetTime`,
+  `testTheLensWritesTheFigureAloneAndSoFarOnTheOpenWindow`,
+  `testTheLensIsAbsentForAWeekAndForAnUnknownWidth`,
+  `testAClickOnTheAxisBandOpensThatDayOnItsFirstWindow`,
+  `HistoryDayHoverTests.testAClickOnTheAxisBandOpensTheDayOnItsFirstWindow`)
 - **Spoken values** name provider, width, span, outcome, a hit limit and an early ending, as plain
   text. (`quotaAccessibility`)
 
