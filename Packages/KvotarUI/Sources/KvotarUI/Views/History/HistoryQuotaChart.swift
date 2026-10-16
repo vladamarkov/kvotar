@@ -8,7 +8,7 @@ import KvotarCore
 /// bar shapes. So this is a new primitive, built to the conventions those two already set —
 /// the block itself is the keyboard stop, `←`/`→` move the selection, and every drawn mark is a
 /// value the model already decided (`x`, `fraction`, `kind`, `hitLimit`, `accessibilityValue`,
-/// the axis ticks, the `Nothing recorded` bands, the in-place labels and the hover card). The
+/// the axis ticks, the in-place labels and the hover card). The
 /// only arithmetic here is a fraction times a size, and its inverse for the pointer.
 ///
 /// **No legend.** Every ended window is the same dot, a partly seen one faded; the open window
@@ -62,9 +62,6 @@ struct QuotaChartView: View {
             let width = max(geo.size.width - gutter - rightPad, 1)
             let labelSides = section.inPlaceLabelSides(plotWidth: width)
             ZStack(alignment: .topLeading) {
-                ForEach(section.bands) { band in
-                    self.band(band, width: width)
-                }
                 axis(width: width)
                 ForEach(Array(section.segments.enumerated()), id: \.offset) { index, segment in
                     boundary(segment, isFirst: index == 0, width: width)
@@ -79,8 +76,8 @@ struct QuotaChartView: View {
                 if let hover { cursor(hover, width: width) }
             }
             .contentShape(Rectangle())
-            // The pointer anywhere over the plot resolves to the nearest window or the band under
-            // it, at once — the macOS tooltip appeared late and only over a 9 pt mark.
+            // The pointer anywhere over the plot resolves to the nearest window, at once — the
+            // macOS tooltip appeared late and only over a 9 pt mark.
             .onContinuousHover(coordinateSpace: .local) { phase in
                 switch phase {
                 case .active(let location):
@@ -166,29 +163,6 @@ struct QuotaChartView: View {
                     .offset(x: x, y: plotHeight)
             }
         }
-    }
-
-    /// A stretch with no recorded reading, shaded under everything else. Whether it carries its
-    /// label is the model's call, made on the width only the view knows.
-    private func band(_ band: HistoryExperience.QuotaBand, width: CGFloat) -> some View {
-        let x0 = gutter + width * band.x0
-        let bandWidth = max(width * (band.x1 - band.x0), 2)
-        return ZStack(alignment: .top) {
-            Rectangle()
-                .fill(HistoryTheme.tertiary.opacity(0.09))
-            if let label = band.label(plotWidth: width) {
-                Text(label)
-                    .font(HistoryTheme.note)
-                    .foregroundStyle(HistoryTheme.tertiary)
-                    .fixedSize()
-                    .padding(.top, 6)
-            }
-        }
-        .frame(width: bandWidth, height: plotHeight)
-        .offset(x: x0)
-        .allowsHitTesting(false)
-        .accessibilityElement()
-        .accessibilityLabel(band.hoverBody)
     }
 
     /// Where a segment begins — a dashed hairline carrying the reason as its hover and spoken
@@ -281,9 +255,9 @@ struct QuotaChartView: View {
             .position(x: gutter + width * hover.cursorX, y: (plotHeight + axisHeight) / 2)
             .allowsHitTesting(false)
             .anchorPreference(key: DayHoverAnchorKey.self, value: .bounds) {
-                [.quota(hover.id): DayHoverAnchor(bounds: $0, body: hover.body)]
+                [.quota(hover.pointID): DayHoverAnchor(bounds: $0, body: hover.body)]
             }
-        if let id = hover.ringedPointID, let point = section.points.first(where: { $0.id == id }) {
+        if let point = section.points.first(where: { $0.id == hover.pointID }) {
             Circle()
                 .strokeBorder(HistoryTheme.text.opacity(0.65), lineWidth: 1.5)
                 .frame(width: markSize + 8, height: markSize + 8)

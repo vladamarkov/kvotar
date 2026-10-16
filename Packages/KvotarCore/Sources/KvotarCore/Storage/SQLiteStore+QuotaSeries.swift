@@ -129,32 +129,6 @@ extension SQLiteStore {
         }
     }
 
-    /// When `tool`'s quota readings were recorded in `[since, until)`, oldest first — the times
-    /// alone, one per stored `quota_series` row of any kind. Explore quota's `Nothing recorded`
-    /// bands read this: a stretch of the period with no time in it is a stretch Kvotar recorded
-    /// nothing for, whatever the reason.
-    ///
-    /// Today this is the same row set `quotaSeriesRange` returns, because `writePoll` appends a
-    /// row only when the poll carried a primary reading; this read is kept separate so the bands
-    /// depend on the fact of a recorded poll, not on the fold's input. Half-open on both sides,
-    /// like `quotaSeriesRange`. Served by the table's `(tool, polled_at)` primary key.
-    public func quotaReadingTimes(tool: Tool, since: Date, until: Date) throws -> [Date] {
-        try withPool { pool in
-            try pool.read { db in
-                try Int.fetchAll(db, sql: """
-                    SELECT polled_at
-                      FROM quota_series
-                    WHERE tool = ? AND polled_at >= ? AND polled_at < ?
-                    ORDER BY polled_at ASC
-                    """, arguments: [
-                        tool.rawValue,
-                        Int(since.timeIntervalSince1970), Int(until.timeIntervalSince1970),
-                    ])
-                .map { Date(timeIntervalSince1970: TimeInterval($0)) }
-            }
-        }
-    }
-
     /// The boundaries of the most recent *ended* 5-hour window on record — the anchor the idle
     /// "last window" retrospective re-anchors §2.5a/§2.5b to (REV-46/D-41 — STEP_64).
     /// `start = resets_at − 5h`, mirroring the reset-anchor the live path uses.

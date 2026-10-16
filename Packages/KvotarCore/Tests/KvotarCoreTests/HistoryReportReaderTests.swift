@@ -63,29 +63,6 @@ final class HistoryReportReaderTests: XCTestCase {
         return (HistoryReportReader(store: store, valueEngine: engine), store)
     }
 
-    // MARK: - Recorded reading times
-
-    /// The report carries when each provider's quota readings were recorded, oldest first and
-    /// inside the period only; a provider with no rows carries an empty list, never a zero.
-    func testQuotaReadingTimesAreCarriedPerProviderAndEmptyWithoutRows() async throws {
-        let (reader, store) = try await makeReader([event(key: "a", daysAgo: 1)])
-        let resetsAt = now.addingTimeInterval(3_600)
-        for daysAgo in [2.0, 40, 5] {
-            try await store.writePoll(
-                snapshot: QuotaSnapshot(tool: .claude, primaryUsedPct: 30, primaryResetsAt: resetsAt,
-                                        secondaryUsedPct: nil, secondaryResetsAt: nil,
-                                        rateLimitReached: nil),
-                now: now.addingTimeInterval(-daysAgo * 86_400))
-        }
-        let report = await reader.report(now: now)
-        let claude = try XCTUnwrap(report.tools.first { $0.tool == .claude })
-        let codex = try XCTUnwrap(report.tools.first { $0.tool == .codex })
-        XCTAssertEqual(claude.quotaReadingTimes,
-                       [now.addingTimeInterval(-5 * 86_400), now.addingTimeInterval(-2 * 86_400)],
-                       "oldest first; the 40-day-old poll is outside the period")
-        XCTAssertEqual(codex.quotaReadingTimes, [], "no rows is an empty list")
-    }
-
     // MARK: - Empty corpus
 
     func testEmptyCorpusYieldsEmptyReportNotZeros() async throws {

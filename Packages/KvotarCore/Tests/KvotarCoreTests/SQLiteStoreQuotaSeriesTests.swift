@@ -199,27 +199,6 @@ final class SQLiteStoreQuotaSeriesTests: XCTestCase {
         XCTAssertEqual(codex.map(\.windowSeconds), [604_800], "rows are per tool")
     }
 
-    /// The bands read the times alone: half-open, per tool, oldest first — the same bounds as
-    /// the range read above, so a poll is in exactly one period.
-    func testQuotaReadingTimesAreHalfOpenAndPerTool() async throws {
-        for offset in [200.0, 0, 100] {
-            try await store.writePoll(
-                snapshot: widthSnapshot(pct: 10, resetsAt: resetsAt, width: 18_000),
-                now: base.addingTimeInterval(offset))
-        }
-        try await store.writePoll(
-            snapshot: widthSnapshot(tool: .codex, pct: 90, resetsAt: resetsAt, width: nil),
-            now: base.addingTimeInterval(100))
-
-        let claude = try await store.quotaReadingTimes(
-            tool: .claude, since: base, until: base.addingTimeInterval(200))
-        XCTAssertEqual(claude, [base, base.addingTimeInterval(100)],
-                       "[since, until), oldest first")
-        let codex = try await store.quotaReadingTimes(
-            tool: .codex, since: base, until: base.addingTimeInterval(200))
-        XCTAssertEqual(codex, [base.addingTimeInterval(100)], "rows are per tool; any kind counts")
-    }
-
     /// A database written by a pre-`v23` build keeps every row it had, and those rows stay
     /// width-unknown. No backfill: the width was never recorded, and inventing it is the
     /// fabrication REV-93 §4 forbids.

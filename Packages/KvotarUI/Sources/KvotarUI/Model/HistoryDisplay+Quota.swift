@@ -43,15 +43,6 @@ extension HistoryDisplay {
         "Local work is shown for context. It does not prove what moved the window."
     /// The title a section falls back to where its windows do not share one recorded width.
     static let quotaMixedWidthTitle = "main account window"
-    /// A stretch with no stored reading. It says that nothing was recorded, never why: Kvotar does
-    /// not log its own running time, so a quiet Mac and a closed app look the same here.
-    static let quotaBandLabel = "Nothing recorded"
-    static let quotaBandReason = "The reason is unknown."
-    /// A reading gap counts as a band when it is longer than the provider's shortest window
-    /// width in the period. A provider whose shortest window is a day or longer (a plan with only
-    /// a weekly) is read against six hours instead, since a quieter silence is normal there.
-    static let quotaBandThresholdFallback: TimeInterval = 6 * 3600
-    static let quotaBandWideWidth: TimeInterval = 86_400
     /// Why a run of windows is drawn as separate points rather than a line. Rows written before
     /// migration `v23` carry no width, so they have no defensible start — and without a start
     /// nothing can establish that one window abuts the next. Drawing a line would assert exactly
@@ -117,8 +108,7 @@ extension HistoryDisplay {
             segments: quotaSegments(windows, tool: t.tool),
             points: points,
             ticks: quotaTicks(t, period: report, calendar: calendar),
-            valueLabels: quotaValueLabels,
-            bands: quotaBands(t, period: report, calendar: calendar))
+            valueLabels: quotaValueLabels)
     }
 
     /// `5-hour windows` where every window in the section reported the same width, else the
@@ -462,17 +452,17 @@ extension HistoryDisplay {
         quotaFormatter("EEE MMM d", calendar: calendar).string(from: date)
     }
 
-    /// `Sep 14, 3:00 pm` (`Mon Sep 14, 3:00 pm` with the weekday) in the report's calendar — the
-    /// clock lowercased as `Fmt.clock` prints it, so one time never reads two ways on the page.
-    static func quotaStamp(_ date: Date, calendar: Calendar, weekday: Bool = false) -> String {
+    /// `Mon Sep 14, 3:00 pm` in the report's calendar — the clock lowercased as `Fmt.clock`
+    /// prints it, so one time never reads two ways on the page.
+    static func quotaStamp(_ date: Date, calendar: Calendar, weekday: Bool = true) -> String {
         let day = quotaFormatter(weekday ? "EEE MMM d" : "MMM d", calendar: calendar)
         return "\(day.string(from: date)), \(quotaClock(date, calendar: calendar))"
     }
 
-    /// `Sep 14, 3:00 pm – Sep 15, 9:00 am`, or `Sep 14, 3:00 pm – 9:00 pm` inside one day —
-    /// the `quotaSpan` rule, in the report's calendar.
+    /// `Fri Sep 18, 9:00 am – 2:00 pm`, or `Fri Sep 18, 9:00 pm – Sat Sep 19, 2:00 am` across
+    /// days — the `quotaSpan` rule, in the report's calendar.
     static func quotaStampSpan(from: Date, to: Date, calendar: Calendar,
-                               weekday: Bool = false) -> String {
+                               weekday: Bool = true) -> String {
         let day = quotaFormatter(weekday ? "EEE MMM d" : "MMM d", calendar: calendar)
         let fromDay = day.string(from: from), toDay = day.string(from: to)
         if fromDay == toDay {
@@ -496,60 +486,15 @@ extension HistoryDisplay {
         return f
     }
 
-    // MARK: - `Nothing recorded` bands
-
-    /// The reading gap a band must exceed: the provider's shortest window width reported in the
-    /// period, or six hours where that is a day or longer or no width was recorded at all.
-    static func quotaBandThreshold(_ windows: [QuotaWindowOutcome]) -> TimeInterval {
-        guard let shortest = windows.compactMap(\.windowSeconds).min(),
-              TimeInterval(shortest) < quotaBandWideWidth else {
-            return quotaBandThresholdFallback
-        }
-        return TimeInterval(shortest)
-    }
-
-    /// Every stretch longer than the threshold with no stored reading in it, oldest first, over
-    /// the part of the period Kvotar was watching: from the later of the period start and
-    /// `watchingSince` up to now, so the edges count too. Before Kvotar watched at all the reason
-    /// is known, and that stretch is not a band. No recorded time at all shades nothing: there is
-    /// no evidence either way.
-    static func quotaBands(_ t: HistoryReport.ToolReport, period: HistoryReport,
-                           calendar: Calendar) -> [HistoryExperience.QuotaBand] {
-        let spanStart = max(period.periodStart, t.watchingSince ?? period.periodStart)
-        let times = t.quotaReadingTimes
-            .filter { $0 >= spanStart && $0 <= period.periodEnd }
-            .sorted()
-        guard !times.isEmpty else { return [] }
-        let threshold = quotaBandThreshold(t.quotaWindows)
-        let edges = [spanStart] + times + [period.periodEnd]
-        var bands: [HistoryExperience.QuotaBand] = []
-        for (from, to) in zip(edges, edges.dropFirst()) where to.timeIntervalSince(from) > threshold {
-            bands.append(HistoryExperience.QuotaBand(
-                id: "\(t.tool.rawValue)-band-\(Int(from.timeIntervalSince1970))",
-                from: from, to: to,
-                x0: quotaX(from, period: period), x1: quotaX(to, period: period),
-                label: quotaBandLabel,
-                hoverBody: "\(quotaBandLabel) · "
-                    + quotaStampSpan(from: from, to: to, calendar: calendar)
-                    + " · \(quotaBandReason)"))
-        }
-        return bands
-    }
-
     // MARK: - Hover
 
-    /// What the pointer at fraction `x` of the plot rests on: the band under it, else the window
-    /// nearest on x, ringed, with the cursor snapped to its mark. Nil for a section with no points.
+    /// What the pointer at fraction `x` of the plot rests on: the window nearest on x, ringed,
+    /// with the cursor snapped to its mark. Nil for a section with no points.
     static func quotaHover(_ section: HistoryExperience.QuotaSection,
                            atX x: Double) -> HistoryExperience.QuotaHover? {
-        if let band = section.bands.first(where: { x >= $0.x0 && x <= $0.x1 }) {
-            return HistoryExperience.QuotaHover(
-                provider: section.provider, target: .band(band.id), cursorX: x,
-                body: band.hoverBody)
-        }
         guard let point = quotaNearestPoint(section, atX: x) else { return nil }
         return HistoryExperience.QuotaHover(
-            provider: section.provider, target: .window(point.id), cursorX: point.x,
+            provider: section.provider, pointID: point.id, cursorX: point.x,
             body: point.hoverBody)
     }
 

@@ -99,7 +99,7 @@ final class HistoryDayHoverTests: XCTestCase {
         let vm = model()
         let section = quotaSection()
         vm.quotaHover(section, atX: section.points[1].x)
-        XCTAssertEqual(vm.quotaHover?.target, .window(section.points[1].id))
+        XCTAssertEqual(vm.quotaHover?.pointID, section.points[1].id)
         XCTAssertEqual(vm.peekedDay, .quota(section.points[1].id), "no peek delay")
         XCTAssertEqual(vm.hoveredDay, vm.peekedDay)
 

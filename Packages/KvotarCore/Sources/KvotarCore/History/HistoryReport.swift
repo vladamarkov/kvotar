@@ -307,12 +307,6 @@ public struct HistoryReport: Sendable, Equatable {
         /// Starts where their readings start — 2026-09-13 for the secondary, 2026-09-16 for model
         /// allowances — and is empty for a tool with no weekly limit.
         public let weeklyLimits: [WeeklyLimitOutcome]
-        /// When this provider's quota readings were recorded inside the period, oldest first —
-        /// one instant per stored `quota_series` row of any kind (`SQLiteStore.quotaReadingTimes`).
-        /// Explore quota's `Nothing recorded` bands are the stretches between these. Empty when
-        /// the read failed or nothing was recorded; like every poll-side list it starts at
-        /// `watchingSince`, not at the period start.
-        public let quotaReadingTimes: [Date]
 
         public init(tool: Tool, sessions: Int, totalTokens: Int,
                     modelTotals: [SQLiteStore.ModelTokenTotals], cacheHitRatio: Double?,
@@ -325,8 +319,7 @@ public struct HistoryReport: Sendable, Equatable {
                     criticalObservations: [CriticalObservation] = [],
                     modelValues: [ModelValue] = [],
                     quotaWindows: [QuotaWindowOutcome] = [],
-                    weeklyLimits: [WeeklyLimitOutcome] = [],
-                    quotaReadingTimes: [Date] = []) {
+                    weeklyLimits: [WeeklyLimitOutcome] = []) {
             self.tool = tool
             self.sessions = sessions
             self.totalTokens = totalTokens
@@ -347,7 +340,6 @@ public struct HistoryReport: Sendable, Equatable {
             self.criticalObservations = criticalObservations
             self.quotaWindows = quotaWindows
             self.weeklyLimits = weeklyLimits
-            self.quotaReadingTimes = quotaReadingTimes
         }
 
         /// Windows blocked in the period. Derived, so the facts tile and the rows cannot diverge.

@@ -5,8 +5,8 @@ the line of their change.
 
 ## Unreleased
 
-- Explore quota's chart has dates along its axis at the weekly resets, shades the stretches where
-  nothing was recorded, and shows its card as soon as the pointer moves over the chart. Every
+- Explore quota's chart has dates along its axis at the weekly resets and shows its card as soon
+  as the pointer moves over the chart. Every
   ended window is the same dot, the open window sits at its last reading with `So far` beside
   it, the legend is gone, the sentence counts only windows seen to the end, and a window's
   detail opens under its own chart.

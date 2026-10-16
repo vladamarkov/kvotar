@@ -286,7 +286,7 @@ public final class HistoryViewModel: ObservableObject {
     public enum HoverColumn: Sendable, Hashable {
         case day(Int)
         case hour(Int)
-        /// A quota chart's hover: the window id or band id the card is keyed by.
+        /// A quota chart's hover: the window id the card is keyed by.
         case quota(String)
     }
 
@@ -402,7 +402,7 @@ public final class HistoryViewModel: ObservableObject {
         if hover != quotaHover { quotaHover = hover }
         dayTimer?.cancel()
         dayTimer = nil
-        let column = hover.map { HoverColumn.quota($0.id) }
+        let column = hover.map { HoverColumn.quota($0.pointID) }
         if hoveredDay != column { hoveredDay = column }
         if peekedDay != column { peekedDay = column }
     }

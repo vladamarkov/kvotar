@@ -524,75 +524,22 @@ public struct HistoryExperience: Sendable {
         }
     }
 
-    /// A stretch of the period with no recorded reading for this provider, longer than the
-    /// section's threshold. Shaded on the chart; it says that Kvotar recorded nothing, never
-    /// why. The same bands belong to every chart of the provider.
-    public struct QuotaBand: Sendable, Equatable, Identifiable {
-        public let id: String
-        public let from: Date
-        public let to: Date
-        /// Geometry, clamped 0…1: the view multiplies both by its plot width.
-        public let x0: Double
-        public let x1: Double
-        /// `Nothing recorded` — drawn only where the band is wide enough (`label(plotWidth:)`).
-        public let label: String
-        /// The hover card's text: the label, the span and that the reason is unknown.
-        public let hoverBody: String
-
-        /// A band narrower than this on the chart carries no label; the hover still names it.
-        public static let labelMinimumWidth: CGFloat = 64
-
-        public init(id: String, from: Date, to: Date, x0: Double, x1: Double, label: String,
-                    hoverBody: String) {
-            self.id = id
-            self.from = from
-            self.to = to
-            self.x0 = min(max(x0, 0), 1)
-            self.x1 = min(max(x1, 0), 1)
-            self.label = label
-            self.hoverBody = hoverBody
-        }
-
-        /// The label where the band is at least `labelMinimumWidth` wide at the chart's own
-        /// scale, else nil. The rule is the model's; the view hands over the one number only it
-        /// knows.
-        public func label(plotWidth: CGFloat) -> String? {
-            (x1 - x0) * plotWidth >= Self.labelMinimumWidth ? label : nil
-        }
-    }
-
-    /// What the pointer over a quota chart is resting on: the window nearest on x, ringed, or
-    /// the band under it. Resolved by the model from the pointer's fraction; the view draws the
-    /// cursor line at `cursorX`, rings `ringedPointID` and shows `body` in the day strip's card.
+    /// What the pointer over a quota chart is resting on: the window nearest on x, ringed.
+    /// Resolved by the model from the pointer's fraction; the view draws the cursor line at
+    /// `cursorX`, rings `pointID` and shows `body` in the day strip's card.
     public struct QuotaHover: Sendable, Equatable {
-        public enum Target: Sendable, Equatable {
-            case window(String)
-            case band(String)
-        }
-
         public let provider: Tool
-        public let target: Target
-        /// The ringed mark's x, or the pointer's own x over a band. Clamped 0…1.
+        /// The ringed window — what the hover card is keyed by.
+        public let pointID: String
+        /// The ringed mark's x. Clamped 0…1.
         public let cursorX: Double
         public let body: String
 
-        public init(provider: Tool, target: Target, cursorX: Double, body: String) {
+        public init(provider: Tool, pointID: String, cursorX: Double, body: String) {
             self.provider = provider
-            self.target = target
+            self.pointID = pointID
             self.cursorX = min(max(cursorX, 0), 1)
             self.body = body
-        }
-
-        /// The point id or band id — what the hover card is keyed by.
-        public var id: String {
-            switch target {
-            case .window(let id), .band(let id): return id
-            }
-        }
-
-        public var ringedPointID: String? {
-            if case .window(let id) = target { return id }
-            return nil
         }
     }
 
@@ -617,8 +564,6 @@ public struct HistoryExperience: Sendable {
         public let ticks: [QuotaAxisTick]
         /// The `% used` gridlines: 100, 50, 0.
         public let valueLabels: [QuotaValueLabel]
-        /// `Nothing recorded` stretches, oldest first.
-        public let bands: [QuotaBand]
 
         public var id: Tool { provider }
 
@@ -699,8 +644,7 @@ public struct HistoryExperience: Sendable {
 
         public init(provider: Tool, title: String, summary: String, sparseNote: String? = nil,
                     segments: [QuotaSegment] = [], points: [QuotaPoint] = [],
-                    ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = [],
-                    bands: [QuotaBand] = []) {
+                    ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = []) {
             self.provider = provider
             self.title = title
             self.summary = summary
@@ -709,7 +653,6 @@ public struct HistoryExperience: Sendable {
             self.points = points
             self.ticks = ticks
             self.valueLabels = valueLabels
-            self.bands = bands
         }
     }
 
