@@ -19,7 +19,9 @@ the line of their change.
   blocks on windows of six hours or less are drawn, a line under the chart says what the bars
   and the dots are, and the caption names whose busiest hours it means. The coverage note says
   that blocks are recorded only while Notify me ▸ Over quota is on, and no longer warns about
-  weekly-only exhaustion.
+  weekly-only exhaustion. With too few blocks to call a typical time, the note says so as plain
+  text instead of an amber warning card. Each recorded incident links to its quota window on
+  Explore quota, which opens with that window selected.
 - On Explore usage, a day with no work draws nothing in the day strip instead of a faint stub,
   and the 30-day breakdown on All lists each provider's projects and largest work as its own
   group, Claude then Codex, up to three rows each, instead of one list ordered across both.

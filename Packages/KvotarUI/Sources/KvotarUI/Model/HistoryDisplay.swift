@@ -179,15 +179,20 @@ public struct HistoryScreen: Sendable {
         /// arrival can find its rows without re-reading the label (STEP_183). Never displayed:
         /// the row's own label already carries the date in the D-80/D-81 grammar.
         public let at: Date?
+        /// Where the row leads, where it leads anywhere: a hard block row's typed link to the
+        /// quota window it fell in (`blockWindowLink`). Nil on a row that is only a fact.
+        public let link: HistoryExperience.RecapLink?
 
         public init(row: LabeledRow, tag: String? = nil, fraction: Double? = nil,
-                    accent: Tool? = nil, warn: Bool = false, at: Date? = nil) {
+                    accent: Tool? = nil, warn: Bool = false, at: Date? = nil,
+                    link: HistoryExperience.RecapLink? = nil) {
             self.row = row
             self.tag = tag
             self.fraction = fraction.map { min(max($0, 0), 1) }
             self.accent = accent
             self.warn = warn
             self.at = at
+            self.link = link
         }
     }
 

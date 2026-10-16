@@ -537,9 +537,13 @@ extension HistoryDisplay {
                                  row: HistoryScreen.RankedRow(
                                     row: blockRow($0),
                                     tag: tagged ? t.tool.tabLabel : nil,
+                                    accent: t.tool,
                                     // Unknown lockout → the `—` in warn (STEP_163).
                                     warn: $0.lockoutSeconds == nil,
-                                    at: $0.firedAt)) }
+                                    at: $0.firedAt,
+                                    // The way back to the window on Explore quota, where
+                                    // that page draws it.
+                                    link: blockWindowLink($0, tool: t.tool, report: t))) }
         }
         .sorted { $0.at > $1.at }
         .map(\.row)
@@ -612,21 +616,25 @@ extension HistoryDisplay {
     }
 
     /// Provider-scoped pattern claim, still behind `claimedRhythmFloor` (REV-73). Below the
-    /// floor the investigative note states the sample honestly — here and only here.
+    /// floor the investigative note states the sample honestly — here and only here — and
+    /// says so in its state, so the view draws it as a note rather than a finding.
     static func patternNote(_ scope: [HistoryReport.ToolReport], named: Bool,
-                            calendar: Calendar = .current) -> String? {
+                            calendar: Calendar = .current) -> HistoryExperience.PatternNote? {
         let withBlocks = scope.filter { !$0.limitBlocks.isEmpty }
         guard !withBlocks.isEmpty else { return nil }
         let claims = withBlocks.compactMap { t in
             claimedRhythm(t.limitBlocks, calendar: calendar).map { (tool: t.tool, band: $0) }
         }
-        guard !claims.isEmpty else { return blockSampleNote }
-        return claims.map { claim in
+        guard !claims.isEmpty else {
+            return HistoryExperience.PatternNote(state: .belowFloor, text: blockSampleNote)
+        }
+        let text = claims.map { claim in
             named
                 ? "\(claim.tool.tabLabel) · \(mostOftenLabel) \(claim.band)"
                 : "\(mostOftenLabel) \(claim.band)"
         }
         .joined(separator: " · ")
+        return HistoryExperience.PatternNote(state: .claimed, text: text)
     }
 
     /// Coverage, honestly (REV-84 §6 item 5): the watching horizon, the one switch a recorded

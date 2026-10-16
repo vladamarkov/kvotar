@@ -148,6 +148,7 @@ receiver parses can drift from the link that built it. (`Model/HistoryDestinatio
 | Popover `N more projects ›` | Explore usage, that provider, the local day the section described, a `projects` focus, no banner | That day is selected; the day's project rows are what the popover's overflow pointed at |
 | A recap evidence link | The mode holding the evidence, the provider where the fact is one provider's, the exact week, a banner | The banner shows; the mode still shows all 30 days |
 | A quota window's `Recorded block` link | Hard blocks, that provider, a banner naming the window | The banner shows; no week is scoped |
+| A hard block row's `Quota window` link | Explore quota, that provider, a `quotaWindow` focus naming the window by its id, a banner naming the block | The banner shows; that window is selected and its detail pinned; no week is scoped |
 
 - **The day is captured at click time and matched by calendar day.** A midnight between the
   click and the load cannot move the target, and the oldest column, which starts mid-day, still
@@ -163,12 +164,21 @@ receiver parses can drift from the link that built it. (`Model/HistoryDestinatio
   destination and remembers the recap week the reader was on. (test
   `HistoryViewModelNavigationTests.testAnEvidenceLinkOpensItsModeWithARemovableBanner`)
 - **The banner** reads `From weekly recap · <provider> · <span>` (provider only when the link
-  has one) or `From quota window · <provider> · <span>`. It is built beside the link, so the two
+  has one), `From quota window · <provider> · <span>` or `From hard block · <provider> · <date>,
+  <time>`. It is built beside the link, so the two
   cannot drift. It carries `Back to weekly recap`, which returns to the recap week the link came
   from, and a clear button (`Clear scope`), which drops the banner and keeps the provider.
-  (`HistoryDisplay.recapLink`, `quotaBlockLink`; `ScopeBannerView`;
+  (`HistoryDisplay.recapLink`, `quotaBlockLink`, `blockWindowLink`; `ScopeBannerView`;
   `HistoryViewModel.clearScope`, `backToWeeklyRecap`; test
   `testBackToWeeklyRecapReturnsToTheWeekTheLinkCameFrom`)
+- **A window focus pins that window.** The destination names it by `QuotaWindowOutcome.id`
+  (provider, reset and width), the id a click selects, so nothing is parsed on arrival. The pin
+  is applied after the mode and the provider, whose setters drop it; a reload that no longer
+  holds the window drops it silently, and clearing the scope drops it too. The reader's own
+  selection then replaces it. (`HistoryDestination.quotaWindow`, `quotaWindowID`;
+  `HistoryViewModel.navigate`, `prepareForOpen`; tests
+  `HistoryViewModelNavigationTests.testABlockRowsLinkPinsItsWindowOnExploreQuota`,
+  `HistoryViewModelDestinationTests.testAQuotaWindowDestinationArrivesPinned`)
 - **A scope moves attention; it never re-bases a figure.** A week scope dims quota points outside
   the week and pins the first window inside it, selects the newest active day of that week on
   Explore usage, and highlights event rows inside the week. Every sentence still describes all
@@ -595,7 +605,8 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   `withdrawn by the provider` where so), and `Local work that day | those days` with the note
   `Local work is shown for context. It does not prove what moved the window.` A fact with no
   value is omitted. A block recorded inside the window adds a `Recorded block · <date>, <time>`
-  link to Hard blocks. Before a selection: `Select a window to see how it ended.` (`quotaDetail`,
+  link to Hard blocks; the block's row there links back (see *Hard blocks*), and arriving on
+  that link pins the window. Before a selection: `Select a window to see how it ended.` (`quotaDetail`,
   `quotaBlockLink`; tests `testTheDetailCarriesWidthUsedCoverageAndReset`,
   `testLocalWorkIsLabelledAsContextNotCause`, `testARecordedBlockInsideTheWindowBecomesATypedLink`,
   `HistoryDayHoverTests.testAClickSelectsTheWindowNearestThePointer`,
@@ -690,6 +701,20 @@ Whether History should keep its own record: Questions for owner, item 1.)
 - **Row:** `<date> · <width> · <time>` → `locked out 3h 25m`, newest first. The width and the
   duration drop out together when unknown; an unknown lockout reads `—` in the warn hue, never
   zero. (`blockRow`; test `HistoryExperienceHardBlocksTests.testUnknownLockoutRowIsFlaggedWarnAndKeepsTheDash`)
+- **The way back to the window.** Under the row, `Quota window · <span>` opens Explore quota
+  for that provider with the window selected and its detail pinned, under the banner `From
+  hard block · <provider> · <date>, <time>` — the mirror of the quota detail's `Recorded block`
+  link, built beside it. The window is found among the ones Explore quota draws (the
+  provider's main windows and its overall weekly limits) by the block's own facts, never by a
+  string: it holds the block's instant and, where the reset was recovered, its reset is that
+  reset within the fold's jitter. When a five-hour window and the weekly share the reset, the
+  block's own width picks; a block of unknown width takes the narrowest window holding it. A
+  block whose window is not on the page carries no link, and the row stands without one. On
+  `All` the link names the row's own provider. The row carries the link as a typed destination
+  (`RankedRow.link`); the view only follows it. (`blockWindowLink`,
+  `HistoryDestination.quotaWindow`; tests `testABlockRowLinksToItsQuotaWindow`,
+  `testABlockPicksItsOwnWindowWhereTheWeeklySharesTheReset`,
+  `testABlockWhoseWindowIsNotOnThePageCarriesNoLink`)
 - **The reset is derived, never guessed.** The block row stores the instant and a window key; the
   reset comes from the primary window's last reset in the `history_rollups` hours. Rules
   (`HistoryReportReader.limitBlock`): candidates come from the fired hour and the hour before,
@@ -735,7 +760,11 @@ Whether History should keep its own record: Questions for owner, item 1.)
   `testTheHourChartAndTheRhythmReadTheReportsCalendar`)
 - **Pattern note.** `Most often 2–6 pm` only with 12 or more blocks and more than half of them in
   one 4-hour band, hours only, never weekdays; below that, `Not enough recorded blocks to call a
-  typical time.` (`claimedRhythm`, `claimedRhythmFloor`; test `testPatternClaimStaysBehindTheFloor`)
+  typical time.` The note says which it is (`PatternNote.state`): a claim is the amber `Possible
+  pattern` card with the coverage note inside it; below the floor the note is an ordinary panel
+  note above the coverage note, no amber and no title, because an amber card over *not enough
+  blocks* read as a warning about nothing. The view switches on the state, never on the text.
+  (`claimedRhythm`, `claimedRhythmFloor`, `patternNote`; test `testPatternClaimStaysBehindTheFloor`)
 - **Coverage note.** `Recorded since <date>, when Kvotar began watching. Blocks are recorded
   only while Notify me ▸ Over quota is on. An unknown reset means an unknown lockout, not
   zero.`; before any watching, `Recorded from the day Kvotar starts watching — nothing yet.`
@@ -835,7 +864,7 @@ recorded account changes. It is context near an event, never a claimed cause.
 | "Last 30 days" wording oversells the poll-side half | The popover link reads `History · last 30 days` and the menu-item comment says "the last 30 days of the local corpus"; quota windows, blocks and changes start at the watching date | The label is [popover](popover.md)'s to decide; fix the comment with the next change to `MenuBarController` |
 | Live diagnostics can read the live database | With `KVOTAR_LIVE=1`, several env-gated tests reach the real database file. `HistoryExperienceLiveDiagnostics` falls back to `SQLiteStore.defaultPath()` when `KVOTAR_LIVE_DB` is unset (`HistoryExperienceLiveDiagnostics.swift:18`) and opens it writable with migrations on, though its type comment says read-only. `ExplanationLiveDiagnostics` falls back the same way (`ExplanationLiveDiagnostics.swift:145`), then copies the file before opening it. Core `LiveDiagnostics` opens `SQLiteStore.defaultPath()` directly in four tests (`LiveDiagnostics.swift:31`, `:52`, `:129`, `:160`) and falls back to it in two more (`:201`, `:254`); only `testLiveQuotaWindowOutcomes` demands a copy (`:313`). `HistoryExperienceSnapshots` opens whatever `KVOTAR_LIVE_DB` names writable | Require an explicit database copy in every live test: skip unless `KVOTAR_LIVE_DB` is set and is not the live path, and open it with `readOnly: true, runMigrations: false` (`SQLiteStore.openReadOnly`) |
 | The oldest, clipped recap week usually says nothing happened | On a clipped week the pattern and calm leads are withheld, so without a block or change the lead falls to `Nothing was recorded this week.` beside the week's own work. No test pins this lead | Give a clipped week its own lead (for example, name the coverage limit as the lead) and pin it with a test |
-| `HistoryDestination.focus` is carried but never read | The projects hand-off sets `focus: .projects`; nothing reads it. The day's project rows show because the day is selected | Read it (scroll to the project rows) or drop the field |
+| `HistoryDestination.focus == .projects` is carried but never read | The projects hand-off sets `focus: .projects`; nothing reads it (the `.quotaWindow` focus is read). The day's project rows show because the day is selected | Read it (scroll to the project rows) or drop the case |
 | A comment names a release stage | `HistoryViewModel`'s selection comment ties "nothing persisted" to a release stage | Drop the stage from the comment |
 
 ## Code and tests

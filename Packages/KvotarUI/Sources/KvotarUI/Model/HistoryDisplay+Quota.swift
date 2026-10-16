@@ -429,6 +429,39 @@ extension HistoryDisplay {
                 banner: "From quota window · \(tool.tabLabel) · \(quotaSpan(window))"))
     }
 
+    /// The mirror of `quotaBlockLink`: a hard block row's link to the window it fell in, on
+    /// Explore quota with that window pinned. The window is found among the ones that page
+    /// draws — the provider's main windows and its overall weekly limits — by the block's own
+    /// facts, never by a string: it holds the block's instant, and where the block's reset was
+    /// recovered it is that reset (within the fold's jitter). Among several — a five-hour
+    /// window and a weekly routinely share a reset — the block's own width wins, then the
+    /// narrowest. A block whose window is not on the page carries no link.
+    static func blockWindowLink(_ block: HistoryReport.LimitBlock, tool: Tool,
+                                report t: HistoryReport.ToolReport)
+        -> HistoryExperience.RecapLink? {
+        var seen = Set<String>()
+        let drawn = (t.quotaWindows + t.weeklyLimits.filter { $0.limit == .overall }.map(\.outcome))
+            .filter { seen.insert($0.id).inserted }
+        let holding = drawn.filter { window in
+            let from = window.start ?? window.firstObservedAt
+            return block.firedAt >= from && block.firedAt <= window.resetsAt
+        }
+        let candidates = block.resetAt.map { reset in
+            holding.filter { abs($0.resetsAt.timeIntervalSince(reset)) <= quotaAdjacencyTolerance }
+        } ?? holding
+        func rank(_ window: QuotaWindowOutcome) -> (Int, Int) {
+            let ownWidth = block.windowSeconds != nil && window.windowSeconds == block.windowSeconds
+            return (ownWidth ? 0 : 1, window.windowSeconds ?? Int.max)
+        }
+        guard let window = candidates.min(by: { rank($0) < rank($1) }) else { return nil }
+        return HistoryExperience.RecapLink(
+            label: "Quota window · \(quotaSpan(window))",
+            destination: .quotaWindow(
+                provider: tool, id: window.id,
+                banner: "From hard block · \(tool.tabLabel) · "
+                    + "\(Fmt.monthDay(block.firedAt)), \(Fmt.clock(block.firedAt))"))
+    }
+
     // MARK: - Date axis
 
     /// The `% used` gridlines: the limit and the floor solid, the halfway hint faint.

@@ -1105,6 +1105,27 @@ public struct HistoryExperience: Sendable {
 
     // MARK: - Hard blocks (REV-84 §6)
 
+    /// The line under the hour chart, typed by what it says. Above `claimedRhythmFloor` a
+    /// pattern is **claimed** and drawn as the amber card; below it the note states the sample
+    /// and is drawn like any other panel note — the amber card over `Not enough recorded
+    /// blocks` read as a warning about nothing. The view switches on `state`, never on the
+    /// words.
+    public struct PatternNote: Sendable, Equatable {
+        public enum State: Sendable, Equatable {
+            /// Twelve or more blocks, more than half of them in one four-hour band.
+            case claimed
+            /// Fewer blocks than the floor, or no band holding more than half: nothing claimed.
+            case belowFloor
+        }
+        public let state: State
+        public let text: String
+
+        public init(state: State, text: String) {
+            self.state = state
+            self.text = text
+        }
+    }
+
     /// Hard blocks answers: **what happened when access stopped, and how does it relate to my
     /// activity?** Investigative and provider-honest: unknown durations stay excluded with the
     /// denominator named, and the pattern claim stays behind the REV-73 floor.
@@ -1126,9 +1147,10 @@ public struct HistoryExperience: Sendable {
         /// provider's lane. On `All`, each bar's fraction is against its own provider's busiest
         /// hour. The caption describes local token activity — never effort or productivity.
         public let chart: HistoryScreen.HourChart?
-        /// `Most often 2–6 pm` above `claimedRhythmFloor`; below it, the investigative
-        /// sample note — which Summary must never borrow as a conclusion.
-        public let patternNote: String?
+        /// `Most often 2–6 pm` above `claimedRhythmFloor`, as a claim; below it, the
+        /// investigative sample note — which Summary must never borrow as a conclusion — as a
+        /// plain note. Nil without blocks.
+        public let patternNote: PatternNote?
         /// Watching-since plus the honest gaps: a block is recorded only while the Over quota
         /// notifications are on, and an unknown reset means an unknown lockout, not zero.
         public let coverageNote: String
@@ -1141,7 +1163,7 @@ public struct HistoryExperience: Sendable {
 
         public init(eyebrow: String = "", conclusion: String, consequence: Stat? = nil,
                     rows: [HistoryScreen.RankedRow] = [],
-                    chart: HistoryScreen.HourChart? = nil, patternNote: String? = nil,
+                    chart: HistoryScreen.HourChart? = nil, patternNote: PatternNote? = nil,
                     coverageNote: String, allowance: AllowancePanel? = nil,
                     emptyMessage: String? = nil) {
             self.eyebrow = eyebrow

@@ -59,6 +59,9 @@ struct HistoryEventList: View {
     /// still the full 30 days: the banner above it moves the reader's attention rather than the
     /// population, so nothing the surrounding copy counts can disagree with what is drawn.
     var scope: HistoryViewModel.Scope? = nil
+    /// Follows a row's typed link (a hard block row's way back to its quota window). The row
+    /// draws its link only when the host can follow it.
+    var follow: ((HistoryDestination) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -66,13 +69,27 @@ struct HistoryEventList: View {
                 if index > 0 {
                     Rectangle().fill(HistoryTheme.line).frame(height: 1)
                 }
-                RankedRowView(ranked: row)
-                    .padding(.top, index == 0 ? 0 : 9)
-                    .padding(.bottom, index == rows.count - 1 ? 0 : 9)
-                    .padding(.horizontal, 6)
-                    .background(scope?.contains(row.at) == true
-                                ? HistoryTheme.soft : Color.clear)
-                    .padding(.horizontal, -6)
+                VStack(alignment: .leading, spacing: 4) {
+                    RankedRowView(ranked: row)
+                    if let link = row.link, let follow {
+                        Button { follow(link.destination) } label: {
+                            HStack(spacing: 3) {
+                                Text(link.label)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 9, weight: .semibold))
+                            }
+                            .font(HistoryTheme.small)
+                            .foregroundStyle(HistoryTheme.accent(row.accent ?? .claude))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, index == 0 ? 0 : 9)
+                .padding(.bottom, index == rows.count - 1 ? 0 : 9)
+                .padding(.horizontal, 6)
+                .background(scope?.contains(row.at) == true
+                            ? HistoryTheme.soft : Color.clear)
+                .padding(.horizontal, -6)
             }
         }
     }

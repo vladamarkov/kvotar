@@ -1004,29 +1004,14 @@ struct HardBlocksModeView: View {
                 if let chart = page.chart {
                     HourChartView(chart: chart, vm: vm)
                 }
-                if let pattern = page.patternNote {
-                    HStack(spacing: 0) {
-                        Rectangle().fill(HistoryTheme.warn).frame(width: 3)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(HistoryDisplay.possiblePatternTitle)
-                                .font(Font.system(size: 17, weight: .semibold))
-                                .foregroundStyle(HistoryTheme.text)
-                            Text(pattern)
-                                .font(HistoryTheme.body)
-                                .foregroundStyle(HistoryTheme.amberText)
-                                .fixedSize(horizontal: false, vertical: true)
-                            HistoryNote(text: page.coverageNote,
-                                        color: HistoryTheme.amberText)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 18)
-                    }
-                    .background(HistoryTheme.amberSoft)
-                    .clipShape(UnevenRoundedRectangle(bottomTrailingRadius: 9,
-                                                      topTrailingRadius: 9,
-                                                      style: .continuous))
+                if let pattern = page.patternNote, pattern.state == .claimed {
+                    patternCard(pattern.text)
                 } else {
+                    // Below the floor nothing is claimed, so the sample note is a note like
+                    // the coverage note under it — no amber, no title.
+                    if let pattern = page.patternNote {
+                        HistoryNote(text: pattern.text)
+                    }
                     HistoryNote(text: page.coverageNote)
                 }
             }
@@ -1035,7 +1020,7 @@ struct HardBlocksModeView: View {
             chartPanel
         } else {
             let historyPanel = HistoryPanel(title: HistoryDisplay.recordedIncidentsTitle) {
-                HistoryEventList(rows: page.rows, scope: vm.scope)
+                HistoryEventList(rows: page.rows, scope: vm.scope) { vm.navigate(to: $0) }
             }
             if page.chart != nil {
                 if isNarrow {
@@ -1056,5 +1041,30 @@ struct HardBlocksModeView: View {
                 }
             }
         }
+    }
+
+    /// The amber `Possible pattern` card: a claimed pattern, with the coverage note inside it.
+    private func patternCard(_ text: String) -> some View {
+        HStack(spacing: 0) {
+            Rectangle().fill(HistoryTheme.warn).frame(width: 3)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(HistoryDisplay.possiblePatternTitle)
+                    .font(Font.system(size: 17, weight: .semibold))
+                    .foregroundStyle(HistoryTheme.text)
+                Text(text)
+                    .font(HistoryTheme.body)
+                    .foregroundStyle(HistoryTheme.amberText)
+                    .fixedSize(horizontal: false, vertical: true)
+                HistoryNote(text: page.coverageNote,
+                            color: HistoryTheme.amberText)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+        }
+        .background(HistoryTheme.amberSoft)
+        .clipShape(UnevenRoundedRectangle(bottomTrailingRadius: 9,
+                                          topTrailingRadius: 9,
+                                          style: .continuous))
     }
 }

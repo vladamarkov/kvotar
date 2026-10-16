@@ -72,17 +72,18 @@ public final class HistoryViewModel: ObservableObject {
     /// With a `destination` the open is explicit instead: the mode the destination names, its
     /// provider, and — for the popover's projects hand-off — that local day. `provider` is set
     /// **before** the day because its `didSet` clears the selection, and the day is held pending
-    /// until a page exists to resolve it against.
+    /// until a page exists to resolve it against. A quota window the destination names is
+    /// pinned last, for the same reason: the mode and provider setters both drop the pin.
     public func prepareForOpen(destination: HistoryDestination? = nil,
                                calendar: Calendar = .current) {
         self.calendar = calendar
         providerByMode = [:]
         recapWeekIndex = 0
         scope = nil
-        selectedQuotaPoint = nil
         mode = destination?.mode ?? .weeklyRecap
         provider = destination?.provider.map { .tool($0) } ?? .all
         selectedDay = nil
+        selectedQuotaPoint = destination?.quotaWindowID
         pendingDay = destination?.day
         applyScope(of: destination, returningTo: nil)
         releaseDayPeek()
@@ -135,7 +136,7 @@ public final class HistoryViewModel: ObservableObject {
         mode = destination.mode
         provider = destination.provider.map { .tool($0) } ?? .all
         selectedDay = nil
-        selectedQuotaPoint = nil
+        selectedQuotaPoint = destination.quotaWindowID
         pendingDay = destination.day
         applyScope(of: destination, returningTo: returnWeek)
         releaseDayPeek()
