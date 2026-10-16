@@ -716,7 +716,8 @@ Whether History should keep its own record: Questions for owner, item 1.)
   lanes: with two lanes and one blocked provider it is named (`The one block landed in the
   afternoon, though Claude works hardest in the evening.`); when the blocked providers' busiest
   bands disagree the clause is dropped (`Blocks landed across the day.`); when they agree, or
-  the chart has one lane, it reads `when you work hardest`. The hover card's block line names
+  the chart has one lane, it reads `when you work hardest`. A provider whose quarters tie for
+  the most work has no busiest band, so the clause is dropped rather than one of them chosen. The hover card's block line names
   the provider when two lanes draw (`Codex 1 block`). (`experienceHourChart`, `hourCaption`,
   `hourChartCue`, `shortWindowSeconds`; tests `HistoryExperienceChartTests
   .testTheChartNeedsAShortWindowBlockAndSomeWorkToDrawIt`,

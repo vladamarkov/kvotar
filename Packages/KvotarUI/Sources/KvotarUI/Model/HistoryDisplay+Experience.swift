@@ -789,10 +789,12 @@ extension HistoryDisplay {
         let named = lanes.count >= 2
 
         var marks: [Int: [Tool]] = [:]
+        var counts: [Int: [Tool: Int]] = [:]
         for lane in plotted {
             for block in lane.blocks {
-                marks[calendar.component(.hour, from: block.firedAt), default: []]
-                    .append(lane.tool)
+                let hour = calendar.component(.hour, from: block.firedAt)
+                marks[hour, default: []].append(lane.tool)
+                counts[hour, default: [:]][lane.tool, default: 0] += 1
             }
         }
         // Each blocked provider's busiest band from its own bars, never from a sum across lanes.
@@ -819,13 +821,12 @@ extension HistoryDisplay {
                 : (named ? ([head] + figures).joined(separator: "\n") : "\(head) · \(figures[0])")
             // The block line names its provider on a two-lane chart, as the figures do.
             for tool in lanes {
-                let blocks = marks[hour]?.filter { $0 == tool }.count ?? 0
-                guard blocks > 0 else { continue }
+                guard let blocks = counts[hour]?[tool], blocks > 0 else { continue }
                 let fact = "\(blocks) block\(blocks == 1 ? "" : "s")"
                 hover += "\n" + (named ? "\(tool.tabLabel) \(fact)" : fact)
             }
             points.append(HistoryScreen.HourPoint(
-                bars: bars, blockTools: marks[hour] ?? [],
+                bars: bars, blockCounts: counts[hour] ?? [:],
                 tickLabel: hour % 6 == 0 ? shortHourLabel(hour) : nil,
                 hoverBody: hover))
         }

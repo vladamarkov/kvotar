@@ -229,10 +229,10 @@ final class HistoryExperienceChartTests: XCTestCase {
                            watchingSince: HXFix.now.addingTimeInterval(-29 * 86_400),
                            workByHour: spreadWork)
         let chart = try XCTUnwrap(hourChart([t]))
-        XCTAssertEqual(chart.points[9].blockTools, [],
+        XCTAssertEqual(chart.points[9].blockCounts, [:],
                        "a weekly block is not about the hour it began")
-        XCTAssertEqual(chart.points[11].blockTools, [], "an unknown width is not a short one")
-        XCTAssertEqual(chart.points[15].blockTools, [.claude])
+        XCTAssertEqual(chart.points[11].blockCounts, [:], "an unknown width is not a short one")
+        XCTAssertEqual(chart.points[15].blockCounts, [.claude: 1])
         XCTAssertEqual(chart.caption,
                        "The one block landed in the afternoon, though you work hardest in the "
                        + "evening.", "the caption describes the drawing, not the row list")
@@ -250,7 +250,7 @@ final class HistoryExperienceChartTests: XCTestCase {
         let chart = try XCTUnwrap(hourChart([claude, codex]))
         XCTAssertEqual(chart.lanes, [.claude, .codex], "a lane for bars or for marks")
         XCTAssertEqual(chart.points[9].bars.map(\.tool), [.claude])
-        XCTAssertEqual(chart.points[9].blockTools, [.codex])
+        XCTAssertEqual(chart.points[9].blockCounts, [.codex: 1])
         XCTAssertEqual(chart.legend.map(\.label), ["Claude", "Codex", "Hit the limit"])
         XCTAssertEqual(chart.points[9].hoverBody, "**9 am**\nClaude 3\nCodex 1 block")
         XCTAssertEqual(chart.caption, "The one block landed in the morning.",
@@ -290,9 +290,9 @@ final class HistoryExperienceChartTests: XCTestCase {
         let t = HXFix.tool(.claude, limitBlocks: blocks,
                            watchingSince: HXFix.now.addingTimeInterval(-29 * 86_400),
                            workByHour: spreadWork)
-        XCTAssertEqual(hourChart([t])?.points[23].blockTools.count, 12)
+        XCTAssertEqual(hourChart([t])?.points[23].blockCounts, [.claude: 12])
         let shifted = HistoryDisplay.experienceHourChart([t], calendar: plusTwo)
-        XCTAssertEqual(shifted?.points[1].blockTools.count, 12, "23:30 UTC is 1:30 at +2")
+        XCTAssertEqual(shifted?.points[1].blockCounts, [.claude: 12], "23:30 UTC is 1:30 at +2")
         XCTAssertEqual(HistoryDisplay.claimedRhythm(blocks, calendar: HXFix.utcCalendar),
                        HistoryDisplay.hourBand(from: 23, hours: 4))
         XCTAssertEqual(HistoryDisplay.claimedRhythm(blocks, calendar: plusTwo),
@@ -308,8 +308,8 @@ final class HistoryExperienceChartTests: XCTestCase {
                            workByHour: spreadWork)
         let chart = try XCTUnwrap(hourChart([t]))
         XCTAssertEqual(chart.points.count, 24, "the axis is the clock, not the data")
-        XCTAssertEqual(chart.points[15].blockTools, [.claude, .claude], "two blocks, two marks")
-        XCTAssertEqual(chart.points[13].blockTools, [.claude])
+        XCTAssertEqual(chart.points[15].blockCounts, [.claude: 2], "two blocks, two marks")
+        XCTAssertEqual(chart.points[13].blockCounts, [.claude: 1])
         XCTAssertEqual(chart.points.compactMap(\.tickLabel), ["12a", "6a", "12p", "6p"])
         XCTAssertEqual(chart.points[15].hoverBody, "**3 pm** · 1\n2 blocks")
         XCTAssertEqual(chart.caption,
@@ -346,8 +346,8 @@ final class HistoryExperienceChartTests: XCTestCase {
         XCTAssertEqual(chart.points[0].bars.map(\.tool), [.claude, .codex])
         XCTAssertEqual(chart.points[0].bars.map(\.fraction), [1.0, 1.0],
                        "flat work fills each provider's own lane — scales never shared")
-        XCTAssertEqual(chart.points[15].blockTools, [.claude])
-        XCTAssertEqual(chart.points[21].blockTools, [.codex])
+        XCTAssertEqual(chart.points[15].blockCounts, [.claude: 1])
+        XCTAssertEqual(chart.points[21].blockCounts, [.codex: 1])
         XCTAssertEqual(chart.legend.map(\.label), ["Claude", "Codex", "Hit the limit"])
         XCTAssertEqual(chart.points[0].hoverBody, "**12 am**\nClaude 8.0M\nCodex 2.0M")
         XCTAssertEqual(chart.points[15].hoverBody,
@@ -355,6 +355,8 @@ final class HistoryExperienceChartTests: XCTestCase {
                        "the block line names its provider when two lanes draw")
         let text = chart.points.map(\.hoverBody).joined(separator: " ") + chart.caption
         XCTAssertFalse(text.contains("10.0M"), "no combined figure anywhere")
+        XCTAssertEqual(chart.caption, "Blocks landed across the day.",
+                       "flat work ties every quarter, and a tie names no busiest band")
     }
 
     // MARK: - REV-72 window summary (helpers survive the cutover unchanged)

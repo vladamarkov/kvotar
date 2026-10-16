@@ -115,18 +115,20 @@ public struct HistoryScreen: Sendable {
     public struct HourPoint: Sendable, Equatable {
         /// Stacked bottom-up in this order; a tool with nothing in this hour contributes no bar.
         public let bars: [DayBar]
-        /// **One entry per block**, not per tool that has one — three blocks are three marks. This
-        /// is what makes a rhythm honest at n = 3, where an averaged distribution would not be.
-        public let blockTools: [Tool]
+        /// Blocks in this hour **per provider, every block counted** — three blocks are three
+        /// marks under that provider's lane, not one mark per provider that had any. This is what
+        /// makes a rhythm honest at n = 3, where an averaged distribution would not be. The hover
+        /// line and the drawn dots read the same count, so the two cannot disagree.
+        public let blockCounts: [Tool: Int]
         /// Set on the quarter hours (12a / 6a / 12p / 6p) so the axis can be read without counting.
         public let tickLabel: String?
         /// The hover card's markdown. Pre-formatted here; the view renders it and parses nothing.
         public let hoverBody: String
 
-        public init(bars: [DayBar], blockTools: [Tool] = [], tickLabel: String? = nil,
+        public init(bars: [DayBar], blockCounts: [Tool: Int] = [:], tickLabel: String? = nil,
                     hoverBody: String) {
             self.bars = bars
-            self.blockTools = blockTools
+            self.blockCounts = blockCounts
             self.tickLabel = tickLabel
             self.hoverBody = hoverBody
         }
@@ -467,12 +469,14 @@ public enum HistoryDisplay {
         }
     }
 
-    /// The quarter of the day holding the most drawn work, or `nil` when there is none to name.
+    /// The quarter of the day holding the most drawn work, or `nil` when there is none to name
+    /// — or when two quarters tie, since naming one of them would be a choice, not a fact.
     static func busiestBand(_ work: [Int]) -> DayBand? {
         var totals: [DayBand: Int] = [:]
         for (hour, tokens) in work.enumerated() { totals[dayBand(hour), default: 0] += tokens }
-        guard let best = totals.max(by: { $0.value < $1.value }), best.value > 0 else { return nil }
-        return best.key
+        guard let best = totals.values.max(), best > 0 else { return nil }
+        let leaders = totals.filter { $0.value == best }.keys
+        return leaders.count == 1 ? leaders.first : nil
     }
 
     /// `12 am` / `2 pm` — the clock vocabulary `Fmt.clock` uses, for an hour with no date attached.

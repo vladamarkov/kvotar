@@ -513,9 +513,8 @@ struct HourChartView: View {
             // One mark per block, never one per hour that had any: three blocks in an hour are
             // three dots, which is what makes the drawing a set of facts rather than a claim.
             // The row keeps its size when the column is narrower than its dots, so none is lost.
-            let marks = point.blockTools.filter { $0 == tool }.count
             HStack(spacing: 2) {
-                ForEach(0..<marks, id: \.self) { _ in
+                ForEach(0..<(point.blockCounts[tool] ?? 0), id: \.self) { _ in
                     Circle().fill(HistoryTheme.accent(tool)).frame(width: 6, height: 6)
                 }
             }
