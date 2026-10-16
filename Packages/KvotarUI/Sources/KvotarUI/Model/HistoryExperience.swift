@@ -1120,15 +1120,15 @@ public struct HistoryExperience: Sendable {
         /// Block history, **newest first** — REV-73 row grammar; `All` merges chronologically
         /// with provider tags. This view always lists rows; the conclusion is the aggregate.
         public let rows: [HistoryScreen.RankedRow]
-        /// Activity by hour with every block drawn as its own mark. On `All`, each bar's
-        /// fraction is against its own provider's busiest hour. The caption describes local
-        /// token activity — never effort or productivity.
+        /// Activity by hour with every short-window block drawn as its own mark under its
+        /// provider's lane. On `All`, each bar's fraction is against its own provider's busiest
+        /// hour. The caption describes local token activity — never effort or productivity.
         public let chart: HistoryScreen.HourChart?
         /// `Most often 2–6 pm` above `claimedRhythmFloor`; below it, the investigative
         /// sample note — which Summary must never borrow as a conclusion.
         public let patternNote: String?
-        /// Watching-since plus the honest gaps: weekly-only exhaustion may be absent, and an
-        /// unknown reset means an unknown lockout, not zero.
+        /// Watching-since plus the honest gaps: a block is recorded only while the Over quota
+        /// notifications are on, and an unknown reset means an unknown lockout, not zero.
         public let coverageNote: String
         /// `Allowance history` (REV-84 §6 item 6): the same provider-filtered recorded
         /// allowance/window context Summary carries, after the investigation — structural

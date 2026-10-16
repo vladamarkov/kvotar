@@ -266,10 +266,7 @@ struct DayStripView: View {
     private func lane(_ tool: Tool, showsAxis: Bool) -> some View {
         HStack(alignment: .top, spacing: 9) {
             if laneTools.count > 1 {
-                Text(tool.tabLabel)
-                    .font(HistoryTheme.bodySemibold)
-                    .foregroundStyle(HistoryTheme.text)
-                    .frame(width: labelWidth, height: barHeight, alignment: .leading)
+                LaneLabel(tool: tool, width: labelWidth, height: barHeight)
             }
             HStack(alignment: .top, spacing: 3) {
                 ForEach(Array(strip.points.enumerated()), id: \.offset) { index, point in
@@ -353,44 +350,19 @@ struct DayStripView: View {
     private var legend: some View { ChartLegendView(entries: strip.legend) }
 }
 
-/// One chart column's bar area: a **lane per provider**, each with its own baseline, dividing
-/// `totalHeight` (REV-84 §3.1 / UI Spec §6.1 — on `All` every fraction is against that
-/// provider's own busiest bucket, so lanes never share a scale and no drawn height implies a
-/// token comparison). One provider collapses to a single full-height lane, which is exactly
-/// the legacy geometry. The selected column's bottom baseline thickens into a primary-colour
-/// bar — a shape, not a colour swap (REV-84 §8).
-struct ChartColumnLanes: View {
-    let lanes: [Tool]
-    let bars: [HistoryScreen.DayBar]
-    let totalHeight: CGFloat
-    let emphasiseBaseline: Bool
+/// The bold provider label at the left of a lane, shared by the day strip and the hour chart so
+/// a lane reads the same on both. Drawn only when a chart has two lanes; on one lane the word
+/// would be decoration.
+struct LaneLabel: View {
+    let tool: Tool
+    let width: CGFloat
+    let height: CGFloat
 
     var body: some View {
-        let count = max(1, lanes.count)
-        let laneHeight = (totalHeight - CGFloat(count - 1) * 2) / CGFloat(count)
-        VStack(spacing: 2) {
-            ForEach(Array(lanes.enumerated()), id: \.offset) { position, tool in
-                ZStack(alignment: .bottom) {
-                    Color.clear
-                    if let bar = bars.first(where: { $0.tool == tool }) {
-                        // A day with work is never invisible, however small its share.
-                        Rectangle().fill(HistoryTheme.accent(tool))
-                            .frame(height: max(2, laneHeight * bar.fraction))
-                            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2,
-                                                              topTrailingRadius: 2,
-                                                              style: .continuous))
-                    }
-                }
-                .frame(height: laneHeight)
-                .overlay(alignment: .bottom) {
-                    let isLast = position == count - 1
-                    Rectangle()
-                        .fill(isLast && emphasiseBaseline ? HistoryTheme.text : HistoryTheme.line)
-                        .frame(height: isLast && emphasiseBaseline ? 2 : 1)
-                }
-            }
-        }
-        .frame(height: totalHeight)
+        Text(tool.tabLabel)
+            .font(HistoryTheme.bodySemibold)
+            .foregroundStyle(HistoryTheme.text)
+            .frame(width: width, height: height, alignment: .leading)
     }
 }
 
@@ -444,55 +416,70 @@ struct ChartLegendView: View {
 // MARK: - Work by hour of day (STEP_120)
 
 /// The hour-of-day chart inside *When did I hit limits?* (REV-73/D-80): 24 columns of work with
-/// **every block drawn as its own mark** under the axis. Deliberately the `DayStripView` vocabulary
-/// — same bar geometry, same baseline rule, same marker band, same hover card — because a second
-/// chart language on one page would make the reader learn twice. The only arithmetic here is a
+/// **every short-window block drawn as its own mark** under the lane of the provider it blocked.
+/// Deliberately the `DayStripView` vocabulary — same bar geometry, same baseline rule, same
+/// marker band under each lane, same lane label, same hover card — because a second chart
+/// language on one page would make the reader learn twice. The only arithmetic here is a
 /// supplied 0…1 fraction times a height.
 struct HourChartView: View {
     let chart: HistoryScreen.HourChart
     @ObservedObject var vm: HistoryViewModel
 
-    /// Prototype metrics (STEP_163): a 110-pt bar area with 3-pt gaps, the marks in their own
-    /// band under the baseline, tick labels drawn under their own columns.
+    /// Prototype metrics (STEP_163): a 110-pt bar area shared by the lanes with 3-pt gaps, each
+    /// lane's marks in their own band under its baseline, tick labels under the last lane.
     private let barHeight: CGFloat = 110
     private let markerHeight: CGFloat = 8
+    private let laneGap: CGFloat = 6
     private let tickHeight: CGFloat = 14
+    private let labelWidth: CGFloat = 58
+
+    private var laneBarHeight: CGFloat {
+        let count = CGFloat(max(1, chart.lanes.count))
+        return (barHeight - (count - 1) * laneGap) / count
+    }
+    /// A lane's bars, the gap under the baseline and its marker band.
+    private var laneHeight: CGFloat { laneBarHeight + 3 + markerHeight }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .bottom, spacing: 3) {
-                ForEach(Array(chart.points.enumerated()), id: \.offset) { index, point in
-                    column(index: index, point: point)
+            HStack(alignment: .top, spacing: 9) {
+                if chart.lanes.count > 1 {
+                    VStack(alignment: .leading, spacing: laneGap) {
+                        ForEach(chart.lanes, id: \.self) { tool in
+                            LaneLabel(tool: tool, width: labelWidth, height: laneHeight)
+                        }
+                    }
                 }
+                HStack(alignment: .top, spacing: 3) {
+                    ForEach(Array(chart.points.enumerated()), id: \.offset) { index, point in
+                        column(index: index, point: point)
+                    }
+                }
+                .overlay(alignment: .top) { baselines }
             }
             if !chart.legend.isEmpty { ChartLegendView(entries: chart.legend) }
+            HistoryNote(text: chart.cue)
             HistoryNote(text: chart.caption)
         }
     }
 
-    /// One lane per token-active provider — same rule as `DayStripView.laneTools`.
-    private var laneTools: [Tool] {
-        var seen: [Tool] = []
-        for point in chart.points {
-            for bar in point.bars where !seen.contains(bar.tool) { seen.append(bar.tool) }
+    /// One continuous baseline hairline per lane, as the day strip draws its one.
+    private var baselines: some View {
+        ZStack(alignment: .top) {
+            ForEach(Array(chart.lanes.indices), id: \.self) { position in
+                Rectangle().fill(HistoryTheme.line)
+                    .frame(height: 1)
+                    .offset(y: CGFloat(position) * (laneHeight + laneGap) + laneBarHeight)
+            }
         }
-        return seen
     }
 
     private func column(index: Int, point: HistoryScreen.HourPoint) -> some View {
-        VStack(spacing: 3) {
-            ChartColumnLanes(lanes: laneTools, bars: point.bars, totalHeight: barHeight,
-                             emphasiseBaseline: false)
-
-            // One mark per block, never one per hour that had any: three blocks in an hour are
-            // three dots, which is what makes the drawing a set of facts rather than a claim.
-            HStack(spacing: 2) {
-                ForEach(Array(point.blockTools.enumerated()), id: \.offset) { _, tool in
-                    Circle().fill(HistoryTheme.accent(tool)).frame(width: 6, height: 6)
-                }
+        VStack(spacing: 0) {
+            ForEach(Array(chart.lanes.enumerated()), id: \.offset) { position, tool in
+                lane(tool, point: point)
+                    .padding(.bottom, position == chart.lanes.count - 1 ? 3 : laneGap)
             }
-            .frame(height: markerHeight)
-
             Text(point.tickLabel ?? "")
                 .font(HistoryTheme.note)
                 .foregroundStyle(HistoryTheme.tertiary)
@@ -504,6 +491,36 @@ struct HourChartView: View {
         .onHover { vm.hourHover(index, hovering: $0) }
         .anchorPreference(key: DayHoverAnchorKey.self, value: .bounds) {
             [.hour(index): DayHoverAnchor(bounds: $0, body: point.hoverBody)]
+        }
+    }
+
+    /// One provider's share of a column: its bar, then its own marker band.
+    private func lane(_ tool: Tool, point: HistoryScreen.HourPoint) -> some View {
+        VStack(spacing: 3) {
+            ZStack(alignment: .bottom) {
+                Color.clear
+                if let bar = point.bars.first(where: { $0.tool == tool }) {
+                    // An hour with work is never invisible, however small its share.
+                    Rectangle().fill(HistoryTheme.accent(tool))
+                        .frame(height: max(2, laneBarHeight * bar.fraction))
+                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2,
+                                                          topTrailingRadius: 2,
+                                                          style: .continuous))
+                }
+            }
+            .frame(height: laneBarHeight)
+
+            // One mark per block, never one per hour that had any: three blocks in an hour are
+            // three dots, which is what makes the drawing a set of facts rather than a claim.
+            // The row keeps its size when the column is narrower than its dots, so none is lost.
+            let marks = point.blockTools.filter { $0 == tool }.count
+            HStack(spacing: 2) {
+                ForEach(0..<marks, id: \.self) { _ in
+                    Circle().fill(HistoryTheme.accent(tool)).frame(width: 6, height: 6)
+                }
+            }
+            .fixedSize()
+            .frame(height: markerHeight)
         }
     }
 }

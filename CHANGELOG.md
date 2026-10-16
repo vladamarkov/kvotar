@@ -14,6 +14,12 @@ the line of their change.
   with its result written there. Selecting a short window lays out its day by the hour under
   the strip, with every window of that day and its figure, so a busy day's windows stop
   stacking; a click on the strip's date axis opens that day.
+- On Hard blocks, each provider's block dots sit in their own band under that provider's bars,
+  with the lane named, and a provider blocked with no local work still gets its lane. Only
+  blocks on windows of six hours or less are drawn, a line under the chart says what the bars
+  and the dots are, and the caption names whose busiest hours it means. The coverage note says
+  that blocks are recorded only while Notify me ▸ Over quota is on, and no longer warns about
+  weekly-only exhaustion.
 
 ## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
 

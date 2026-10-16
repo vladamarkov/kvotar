@@ -34,16 +34,16 @@ read_when: Changing HistoryWindowController, HistoryViewModel, HistoryDestinatio
 
 ## Decided
 
-The maintainer ruled on this on 2026-10-04. The code does not follow it yet; its row in *Known
-gaps* below names the change.
+The maintainer ruled on this on 2026-10-04; the code follows it since the History chart
+redesign (#25).
 
 1. **Rewrite the out-of-date weekly-exhaustion coverage copy.** The Hard blocks coverage note
-   says *Weekly-only exhaustion may not appear*. That was true when the state engine read only
+   said *Weekly-only exhaustion may not appear*. That was true when the state engine read only
    the five-hour window; it now enters Over quota on a spent weekly too
    ([state](state.md#the-states)), so a spent weekly reaches the same notification path. The
-   clause, and the `ToolReport.limitBlocks` doc that says such a block "cannot" be recorded, are
-   to be rewritten. (Whether a weekly block shows the right reset is a separate, unverified gap;
-   see *Known gaps*.)
+   clause is gone and the `ToolReport.limitBlocks` doc no longer says such a block "cannot" be
+   recorded. (Whether a weekly block shows the right reset is a separate, unverified gap; see
+   *Known gaps*.)
 
 ## About this page
 
@@ -702,19 +702,39 @@ Whether History should keep its own record: Questions for owner, item 1.)
   more than one block has a known lockout), or `Unknown` with `No reset could be recovered.`
   With one block: `The reset was recovered.` or `Unknown` with `The reset could not be
   recovered.` No card without blocks. (`blocksConclusion`, `blockConsequence`; tests in `HistoryExperienceHardBlocksTests`)
-- **Activity by hour.** 24 local-clock bars of displayed tokens with every block drawn as its own
-  mark, shown only when a block's window is 6 hours wide or less and there is work to draw.
-  Reason: a seven-day lockout is not about the hour it began. The caption describes only what is
-  drawn (`Every block landed in the afternoon, though you work hardest in the evening.`).
-  (`experienceHourChart`, `hourCaption`, `shortWindowSeconds`; tests
-  `testChartStaysGatedOnAShortBlockingWindow`, `testEveryBlockIsItsOwnMarkAndTheCaptionDescribesTheDrawing`)
+- **Activity by hour.** 24 clock-hour bars of displayed tokens in the report's calendar, one
+  lane per provider, with every **short-window** block drawn as its own mark in a band directly
+  under its provider's bars. Shown only when a block's window is 6 hours wide or less and there
+  is work to draw; only those blocks are drawn, so a weekly block or one of unknown width never
+  lands on it. Reason: a seven-day lockout is not about the hour it began. A lane is a provider
+  with bars or marks, so a provider blocked with no local work still has a lane for its dot;
+  with two lanes each is labelled by its provider, as on the day strip. Several blocks in one
+  hour are that many dots. No time on a dot: the hour is the bucket and the incident row carries
+  the time. Under the legend, one cue line: `Bars: local tokens by hour over the last 30 days.
+  Dots: recorded blocks on windows of 6 hours or less.` The caption describes only what is drawn.
+  Its busiest-band clause comes from the blocked provider's **own** bars, never a sum across
+  lanes: with two lanes and one blocked provider it is named (`The one block landed in the
+  afternoon, though Claude works hardest in the evening.`); when the blocked providers' busiest
+  bands disagree the clause is dropped (`Blocks landed across the day.`); when they agree, or
+  the chart has one lane, it reads `when you work hardest`. The hover card's block line names
+  the provider when two lanes draw (`Codex 1 block`). (`experienceHourChart`, `hourCaption`,
+  `hourChartCue`, `shortWindowSeconds`; tests `HistoryExperienceChartTests
+  .testTheChartNeedsAShortWindowBlockAndSomeWorkToDrawIt`,
+  `testOnlyShortWindowBlocksAreDrawnAndTheCueSaysSo`,
+  `testAProviderBlockedWithNoLocalWorkStillGetsALaneForItsDot`,
+  `testTheCaptionNamesTheBlockedProvidersOwnBand`,
+  `testEveryBlockIsItsOwnMarkAndTheCaptionDescribesTheDrawing`,
+  `testTheHourChartAndTheRhythmReadTheReportsCalendar`)
 - **Pattern note.** `Most often 2–6 pm` only with 12 or more blocks and more than half of them in
   one 4-hour band, hours only, never weekdays; below that, `Not enough recorded blocks to call a
   typical time.` (`claimedRhythm`, `claimedRhythmFloor`; test `testPatternClaimStaysBehindTheFloor`)
-- **Coverage note.** `Recorded since <date>, when Kvotar began watching. Weekly-only exhaustion
-  may not appear, and an unknown reset means an unknown lockout, not zero.`; before any watching,
-  `Recorded from the day Kvotar starts watching — nothing yet.` replaces the first sentence. The
-  middle clause is out of date and is to be rewritten (*Decided*, item 1). (`coverageNote`)
+- **Coverage note.** `Recorded since <date>, when Kvotar began watching. Blocks are recorded
+  only while Notify me ▸ Over quota is on. An unknown reset means an unknown lockout, not
+  zero.`; before any watching, `Recorded from the day Kvotar starts watching — nothing yet.`
+  replaces the first sentence. The middle sentence is the dependency *Hard blocks depend on the
+  Over quota notifications* describes; the old weekly-only clause went with *Decided*, item 1.
+  (`coverageNote`, `blocksNeedNotificationsSentence`; test
+  `HistoryExperienceHardBlocksTests.testNoBlockStateReportsHonestlyWithoutAChart`)
 
 ### Allowance history and the work-per-1% display gate
 
@@ -797,14 +817,13 @@ recorded account changes. It is context near an event, never a claimed cause.
 
 | Gap | Today | Proposed fix |
 |---|---|---|
-| Hard blocks depend on a notification switch | With Over quota notifications off, no block is recorded and History says there were none; nothing on the page says why | Owner's choice (Questions for owner, item 1). At minimum, have the coverage note say blocks are recorded only while Over quota notifications are on |
-| Stale weekly-exhaustion copy and comment | The coverage note says weekly-only exhaustion may not appear; the `ToolReport.limitBlocks` doc says it "cannot" be there because the state engine ignores the weekly. The state engine now enters Over quota on a spent weekly (`StateEngine`, the secondary check) | Rewrite the coverage clause and the doc (*Decided*, item 1) |
+| Hard blocks depend on a notification switch | With Over quota notifications off, no block is recorded and History says there were none; the coverage note says so, but nothing records the blocks | Owner's choice (Questions for owner, item 1) |
 | A weekly block may show the wrong reset (until verified) | `limitBlock` reads `primaryResetsAtLast` only, and the row's window key is built from the primary window, so a block driven by a spent weekly probably shows the five-hour reset as its lockout end. Unverified | Build a fixture of a block driven by a spent weekly; if confirmed, take the reset of the limit that caused the block |
 | Stale "Summary · All" comments | `HistoryWindowController.show`, the History block in `AppDelegate`, `AppViewModel.onOpenHistory` and the `HistoryViewModelSelectionTests` header still say an ordinary open lands on Summary · All; it lands on Weekly recap. `HistoryExperience.AllowancePanel` still names a Summary title | Fix with the next change to each file |
 | Dead `HistoryDisplay` helpers | `footer` (the old `evidence from <date>` footer), `changeFootnote` with `providerCutSentence`, `projectRows` and the private `work` have no caller; `ToolReport.evidenceFrom` is read only by the dead `footer`, tests and previews | Delete the helpers; then keep or drop `evidenceFrom` |
 | The window's lifecycle has no test | `HistoryWindowController` (one window, close hides, reload on open and focus, frame autosave) is App-level and checked by hand | Add an App-level test that shows, closes and shows again and asserts one window and a reload each time |
 | No ⌘W in the History window | The app window wires ⌘W and ⌘Q by hand because an accessory app has no app menu (`QuotaWindowController.installKeyMonitor`); the History controller wires nothing. Whether ⌘W closes History is untested | Check by hand; if it does nothing, add the same scoped key monitor |
-| The hour chart's block marks and the pattern band use `Calendar.current` | The report's local days, and Explore quota's date axis and hover card, use the injected calendar; `experienceHourChart` and `claimedRhythm` still read the system calendar directly, and the quota point and detail copy (`Fmt.monthDay`, `Fmt.clock`) formats in the system zone | Pass the injected calendar through |
+| The quota point and detail copy format in the system zone | The report's local days, Explore quota's date axis and hover card, the hour chart and the pattern band use the injected calendar; `Fmt.monthDay` and `Fmt.clock` still format in the system zone | Pass the injected calendar through |
 | "Last 30 days" wording oversells the poll-side half | The popover link reads `History · last 30 days` and the menu-item comment says "the last 30 days of the local corpus"; quota windows, blocks and changes start at the watching date | The label is [popover](popover.md)'s to decide; fix the comment with the next change to `MenuBarController` |
 | Live diagnostics can read the live database | With `KVOTAR_LIVE=1`, several env-gated tests reach the real database file. `HistoryExperienceLiveDiagnostics` falls back to `SQLiteStore.defaultPath()` when `KVOTAR_LIVE_DB` is unset (`HistoryExperienceLiveDiagnostics.swift:18`) and opens it writable with migrations on, though its type comment says read-only. `ExplanationLiveDiagnostics` falls back the same way (`ExplanationLiveDiagnostics.swift:145`), then copies the file before opening it. Core `LiveDiagnostics` opens `SQLiteStore.defaultPath()` directly in four tests (`LiveDiagnostics.swift:31`, `:52`, `:129`, `:160`) and falls back to it in two more (`:201`, `:254`); only `testLiveQuotaWindowOutcomes` demands a copy (`:313`). `HistoryExperienceSnapshots` opens whatever `KVOTAR_LIVE_DB` names writable | Require an explicit database copy in every live test: skip unless `KVOTAR_LIVE_DB` is set and is not the live path, and open it with `readOnly: true, runMigrations: false` (`SQLiteStore.openReadOnly`) |
 | The oldest, clipped recap week usually says nothing happened | On a clipped week the pattern and calm leads are withheld, so without a block or change the lead falls to `Nothing was recorded this week.` beside the week's own work. No test pins this lead | Give a clipped week its own lead (for example, name the coverage limit as the lead) and pin it with a test |

@@ -90,8 +90,10 @@ final class HistoryExperienceHardBlocksTests: XCTestCase {
         XCTAssertNil(page.patternNote)
         XCTAssertEqual(page.coverageNote,
                        "Recorded since \(Fmt.monthDay(watching)), when Kvotar began watching. "
-                       + "Weekly-only exhaustion may not appear, and an unknown reset means "
-                       + "an unknown lockout, not zero.")
+                       + "Blocks are recorded only while Notify me ▸ Over quota is on. "
+                       + "An unknown reset means an unknown lockout, not zero.")
+        XCTAssertFalse(HXFix.allStrings(of: page).contains { $0.contains("Weekly-only") },
+                       "a spent weekly reaches the same path now; the old clause is gone")
     }
 
     func testNeverWatchedCoverageNoteSaysNothingYet() {

@@ -103,11 +103,12 @@ enum HXFix {
             windowSeconds: lockout == nil ? nil : width)
     }
 
-    /// A block `daysBack` days before `now` at a given **local** clock hour — for the
-    /// rhythm/hour tests, whose subject is the local clock.
+    /// A block `daysBack` days before `now` at a given clock hour of the fixture calendar
+    /// (`utcCalendar`, the one `pages(_:_:)` injects) — for the rhythm/hour tests, whose
+    /// subject is the clock the report keeps.
     static func localBlock(daysBack: Double, hour: Int, minute: Int = 0, lockout: Int? = 3600,
                            width: Int? = 18_000) -> HistoryReport.LimitBlock {
-        let midnight = Calendar.current.startOfDay(for: now)
+        let midnight = utcCalendar.startOfDay(for: now)
         return block(at: midnight.addingTimeInterval(-daysBack * 86_400 + Double(hour) * 3600
                                                      + Double(minute) * 60),
                      lockout: lockout, width: width)
