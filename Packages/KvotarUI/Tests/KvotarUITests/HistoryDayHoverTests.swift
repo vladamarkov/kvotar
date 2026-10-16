@@ -82,4 +82,45 @@ final class HistoryDayHoverTests: XCTestCase {
         await settle()
         XCTAssertNil(vm.peekedDay, "one timer, one card — nothing is left behind")
     }
+
+    // MARK: - Explore quota hover
+
+    private func quotaSection() -> HistoryExperience.QuotaSection {
+        let windows = (1...3).map {
+            HXFix.quotaWindow(.claude, daysBack: 3, hour: 5 * $0, used: 50)
+        }
+        return HXFix.pages([HXFix.tool(.claude, quotaWindows: windows)], .tool(.claude))
+            .quota.sections[0]
+    }
+
+    /// The quota chart's card waits for no timer: the pointer is somewhere over a plot of many
+    /// marks, and the card shows the nearest window at once.
+    func testAQuotaHoverShowsItsCardAtOnce() {
+        let vm = model()
+        let section = quotaSection()
+        vm.quotaHover(section, atX: section.points[1].x)
+        XCTAssertEqual(vm.quotaHover?.target, .window(section.points[1].id))
+        XCTAssertEqual(vm.peekedDay, .quota(section.points[1].id), "no peek delay")
+        XCTAssertEqual(vm.hoveredDay, vm.peekedDay)
+
+        vm.quotaHoverEnded()
+        XCTAssertNil(vm.quotaHover)
+        XCTAssertNil(vm.peekedDay)
+    }
+
+    func testEscDropsAQuotaCardToo() {
+        let vm = model()
+        let section = quotaSection()
+        vm.quotaHover(section, atX: 0.5)
+        vm.releaseDayPeek()
+        XCTAssertNil(vm.quotaHover)
+        XCTAssertNil(vm.peekedDay)
+    }
+
+    func testAClickSelectsTheWindowNearestThePointer() {
+        let vm = model()
+        let section = quotaSection()
+        vm.selectQuotaPoint(nearestTo: section, atX: section.points[2].x + 0.001)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.points[2].id)
+    }
 }

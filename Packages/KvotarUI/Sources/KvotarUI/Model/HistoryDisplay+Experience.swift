@@ -98,8 +98,11 @@ extension HistoryDisplay {
     /// and a test must be able to pin a zone without touching `Calendar.current`.
     public static func experience(_ report: HistoryReport, now: Date,
                                   calendar: Calendar = .current) -> HistoryExperience {
-        var pages = [providerPages(.all, scope: report.tools, report: report)]
-        pages += report.tools.map { providerPages(.tool($0.tool), scope: [$0], report: report) }
+        var pages = [providerPages(.all, scope: report.tools, report: report,
+                                   calendar: calendar)]
+        pages += report.tools.map {
+            providerPages(.tool($0.tool), scope: [$0], report: report, calendar: calendar)
+        }
         return HistoryExperience(
             header: HistoryScreen.Header(
                 title: "History",
@@ -113,7 +116,8 @@ extension HistoryDisplay {
 
     static func providerPages(_ provider: HistoryExperience.Provider,
                               scope: [HistoryReport.ToolReport],
-                              report: HistoryReport) -> HistoryExperience.ProviderPages {
+                              report: HistoryReport,
+                              calendar: Calendar = .current) -> HistoryExperience.ProviderPages {
         let active = scope.filter { !$0.isEmpty }
         // Two token-active providers means every figure has to say whose it is — the same rule
         // the legacy tabs used, page-wide so a day detail and its strip cannot disagree.
@@ -122,7 +126,7 @@ extension HistoryDisplay {
         let strip = experienceDayStrip(scope, weeks: scope.first?.weeks ?? [])
         return HistoryExperience.ProviderPages(
             provider: provider,
-            quota: quotaPage(provider, scope: scope, report: report),
+            quota: quotaPage(provider, scope: scope, report: report, calendar: calendar),
             explore: explorePage(provider, scope: scope, tagged: tagged, strip: strip,
                                  report: report),
             hardBlocks: hardBlocksPage(provider, scope: scope, tagged: tagged))

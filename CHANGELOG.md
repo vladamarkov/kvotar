@@ -5,6 +5,9 @@ the line of their change.
 
 ## Unreleased
 
+- Explore quota's chart has dates along its axis at the weekly resets, shades the stretches where
+  nothing was recorded, and shows its card as soon as the pointer moves over the chart.
+
 ## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
 
 - Kvotar can be installed with Homebrew: `brew install --cask vladamarkov/tap/kvotar`.

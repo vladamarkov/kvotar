@@ -403,10 +403,14 @@ public struct HistoryExperience: Sendable {
         /// plain text (§6.0 accessibility) — no markdown, so VoiceOver never reads punctuation.
         public let accessibilityValue: String
         public let detail: QuotaDetail
+        /// The hover card's markdown — the window's weekday, date and span in bold, then its
+        /// result — in the day strip's register. Pre-formatted here; the view renders it and
+        /// parses nothing.
+        public let hoverBody: String
 
         public init(id: String, provider: Tool, at: Date, kind: Kind, hitLimit: Bool,
                     fraction: Double, x: Double, label: String, accessibilityValue: String,
-                    detail: QuotaDetail) {
+                    detail: QuotaDetail, hoverBody: String = "") {
             self.id = id
             self.provider = provider
             self.at = at
@@ -417,6 +421,7 @@ public struct HistoryExperience: Sendable {
             self.label = label
             self.accessibilityValue = accessibilityValue
             self.detail = detail
+            self.hoverBody = hoverBody
         }
     }
 
@@ -477,6 +482,110 @@ public struct HistoryExperience: Sendable {
         }
     }
 
+    /// One mark on the chart's date axis. A labelled tick is a weekly reset of the provider (or
+    /// a local Monday where the provider has none in the period): the view draws a faint gridline,
+    /// a 7 pt tick and the label. An unlabelled tick is a local midnight: a 3 pt tick and nothing
+    /// else. The instants and the words are the model's; the view decides nothing.
+    public struct QuotaAxisTick: Sendable, Equatable, Identifiable {
+        public let id: String
+        /// Where the instant sits across the report period, clamped 0…1.
+        public let x: Double
+        /// `Fri Sep 18`, or nil for a midnight tick.
+        public let label: String?
+
+        public init(id: String, x: Double, label: String?) {
+            self.id = id
+            self.x = min(max(x, 0), 1)
+            self.label = label
+        }
+    }
+
+    /// One `% used` gridline and its gutter label. The limit (100) and the floor (0) are drawn
+    /// solid, the halfway hint faint; the view reads `prominent` rather than deciding by value.
+    public struct QuotaValueLabel: Sendable, Equatable {
+        public let fraction: Double
+        public let label: String
+        public let prominent: Bool
+
+        public init(fraction: Double, label: String, prominent: Bool) {
+            self.fraction = min(max(fraction, 0), 1)
+            self.label = label
+            self.prominent = prominent
+        }
+    }
+
+    /// A stretch of the period with no recorded reading for this provider, longer than the
+    /// section's threshold. Shaded on the chart; it says that Kvotar recorded nothing, never
+    /// why. The same bands belong to every chart of the provider.
+    public struct QuotaBand: Sendable, Equatable, Identifiable {
+        public let id: String
+        public let from: Date
+        public let to: Date
+        /// Geometry, clamped 0…1: the view multiplies both by its plot width.
+        public let x0: Double
+        public let x1: Double
+        /// `Nothing recorded` — drawn only where the band is wide enough (`label(plotWidth:)`).
+        public let label: String
+        /// The hover card's text: the label, the span and that the reason is unknown.
+        public let hoverBody: String
+
+        /// A band narrower than this on the chart carries no label; the hover still names it.
+        public static let labelMinimumWidth: CGFloat = 64
+
+        public init(id: String, from: Date, to: Date, x0: Double, x1: Double, label: String,
+                    hoverBody: String) {
+            self.id = id
+            self.from = from
+            self.to = to
+            self.x0 = min(max(x0, 0), 1)
+            self.x1 = min(max(x1, 0), 1)
+            self.label = label
+            self.hoverBody = hoverBody
+        }
+
+        /// The label where the band is at least `labelMinimumWidth` wide at the chart's own
+        /// scale, else nil. The rule is the model's; the view hands over the one number only it
+        /// knows.
+        public func label(plotWidth: CGFloat) -> String? {
+            (x1 - x0) * plotWidth >= Self.labelMinimumWidth ? label : nil
+        }
+    }
+
+    /// What the pointer over a quota chart is resting on: the window nearest on x, ringed, or
+    /// the band under it. Resolved by the model from the pointer's fraction; the view draws the
+    /// cursor line at `cursorX`, rings `ringedPointID` and shows `body` in the day strip's card.
+    public struct QuotaHover: Sendable, Equatable {
+        public enum Target: Sendable, Equatable {
+            case window(String)
+            case band(String)
+        }
+
+        public let provider: Tool
+        public let target: Target
+        /// The ringed mark's x, or the pointer's own x over a band. Clamped 0…1.
+        public let cursorX: Double
+        public let body: String
+
+        public init(provider: Tool, target: Target, cursorX: Double, body: String) {
+            self.provider = provider
+            self.target = target
+            self.cursorX = min(max(cursorX, 0), 1)
+            self.body = body
+        }
+
+        /// The point id or band id — what the hover card is keyed by.
+        public var id: String {
+            switch target {
+            case .window(let id), .band(let id): return id
+            }
+        }
+
+        public var ringedPointID: String? {
+            if case .window(let id) = target { return id }
+            return nil
+        }
+    }
+
     /// One provider's full-width quota chart. On `All` these stack, Claude then Codex; they
     /// never sit side by side and never share an axis or a summary (§6.3).
     public struct QuotaSection: Sendable, Equatable, Identifiable {
@@ -493,17 +602,29 @@ public struct HistoryExperience: Sendable {
         public let segments: [QuotaSegment]
         /// Every point of this section in time order, oldest first.
         public let points: [QuotaPoint]
+        /// The date axis, by x. Labelled ticks at the provider's weekly resets (or Mondays),
+        /// unlabelled ones at every other local midnight.
+        public let ticks: [QuotaAxisTick]
+        /// The `% used` gridlines: 100, 50, 0.
+        public let valueLabels: [QuotaValueLabel]
+        /// `Nothing recorded` stretches, oldest first.
+        public let bands: [QuotaBand]
 
         public var id: Tool { provider }
 
         public init(provider: Tool, title: String, summary: String, sparseNote: String? = nil,
-                    segments: [QuotaSegment] = [], points: [QuotaPoint] = []) {
+                    segments: [QuotaSegment] = [], points: [QuotaPoint] = [],
+                    ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = [],
+                    bands: [QuotaBand] = []) {
             self.provider = provider
             self.title = title
             self.summary = summary
             self.sparseNote = sparseNote
             self.segments = segments
             self.points = points
+            self.ticks = ticks
+            self.valueLabels = valueLabels
+            self.bands = bands
         }
     }
 

@@ -124,8 +124,8 @@ which exist only from the day Kvotar started watching.
   so History and the popover cannot disagree about a dollar
   ([estimated value](estimated-value.md#spans-and-where-each-figure-shows);
   `AttributionEngine.historyReport`).
-- **Keys.** Esc drops a day or hour hover card (`HistoryView`, `onExitCommand`). The quota chart
-  takes ← and → (see *Explore quota*). The controller installs no ⌘W or ⌘Q handling (see Known
+- **Keys.** Esc drops a day, hour or quota hover card (`HistoryView`, `onExitCommand`;
+  `HistoryViewModel.releaseDayPeek`). The quota chart takes ← and → (see *Explore quota*). The controller installs no ⌘W or ⌘Q handling (see Known
   gaps).
 
 ## Arriving with a destination
@@ -312,6 +312,13 @@ table stamp. (`History/HistoryReportReader.swift`; `History/HistoryReport.swift`
 - **Quota windows and weekly limits** come from the fold below. The work-per-1% series is built by
   [capacity learning](capacity-learning.md#the-work-per-1-series) over
   `[max(period start, watchingSince), now)`.
+- **Recorded reading times** (`quotaReadingTimes`): when each tool's quota readings were
+  recorded in the period, oldest first — one instant per stored `quota_series` row of any kind,
+  read as times alone (`SQLiteStore.quotaReadingTimes`). Explore quota's `Nothing recorded` bands
+  are the stretches between these; nothing else reads the raw series outside the fold. Empty when
+  the read failed or nothing was recorded, and like every poll-side list it starts at
+  `watchingSince`. (tests `testQuotaReadingTimesAreCarriedPerProviderAndEmptyWithoutRows`,
+  `SQLiteStoreQuotaSeriesTests.testQuotaReadingTimesAreHalfOpenAndPerTool`)
 - `evidenceFrom` (the tool's oldest local event) is computed but read only by a dead helper (see
   Known gaps).
 
@@ -498,6 +505,18 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   count). Hitting the limit is its own mark, never colour alone. A point's horizontal place is its
   reset across the period. (`quotaPoint`; tests `testPointCopyDistinguishesEndedLowerBoundAndSoFar`,
   `testHitLimitIsItsOwnFlagNotAColour`)
+- **Date axis.** The model gives each section its ticks (`QuotaSection.ticks`): a labelled tick
+  at each weekly reset of the provider inside the period, from the report's weekly limits (an
+  early ending at its actual time; the overall and a model weekly sharing one instant are one
+  tick), labelled weekday and date in the report's calendar (`Fri Sep 18`) and drawn as a faint
+  gridline, a 7 pt tick and the label; an unlabelled 3 pt tick at every other local midnight. A
+  provider with no weekly reset in the period is labelled at local Mondays in the same form. The
+  midnights are cut on the report's injected calendar, the one its local days use, so the axis and
+  the day strip agree on where a day begins. The `0` / `50` / `100` gridline labels come from the
+  model too (`QuotaSection.valueLabels`); the view draws nothing it decided itself. (`quotaTicks`,
+  `quotaValueLabels`; tests `testTicksLabelTheWeeklyResetsAndMarkEveryOtherMidnight`,
+  `testAProviderWithNoWeeklyResetTicksAtMondays`, `testMidnightTicksAreTheDayStripsDayStarts`,
+  `testTheValueLabelsComeFromTheModel`)
 - **Segments.** Points join into a line only within a run. A run breaks, and names why, when the
   previous window ended early (`Reset early`) or was withdrawn (`Withdrawn by the provider`), when
   the width changed (`Window width changed`), or when windows overlap or the gap between them
@@ -508,7 +527,35 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   `testShortIdlePauseDoesNotBecomeAMissingHistoryGap`,
   `testWindowsWithNoRecordedWidthAreGroupedButNeverJoined`,
   `testRecoveredLegacyWidthsJoinAndCarryOneEvidenceNote`)
-- **Selecting a point** (click, or ← / → on the chart, which is one keyboard stop) pins a detail
+- **`Nothing recorded` bands.** From the report's recorded reading times the model gives each
+  section its bands (`QuotaSection.bands`): every stretch longer than the threshold with no
+  reading in it, over the part of the period Kvotar was watching — from the later of the period
+  start and `watchingSince` up to now, so a silence before the first reading or after the last one
+  counts, and the days before Kvotar watched at all do not. Threshold: the provider's shortest
+  window width reported in the period; 6 hours when that is a day or longer (a plan with only a
+  weekly) or no width was recorded. No recorded time at all shades nothing. The view shades the
+  band; the model says whether it carries the label `Nothing recorded`, only when the band is at
+  least 64 pt wide at the chart's own scale (`QuotaBand.label(plotWidth:)`), and gives the hover
+  text `Nothing recorded · <from> – <to> · The reason is unknown.` A band says that nothing was
+  recorded, never why: Kvotar does not log its own running time. The same bands belong to every
+  chart of that provider. The run-boundary hairline and its reason stay as they are. (`quotaBands`,
+  `quotaBandThreshold`; tests `testAReadingGapLongerThanTheShortestWindowIsABand`,
+  `testAGapShorterThanTheShortestWindowIsNotABand`, `testAWeeklyOnlyProviderUsesTheSixHourThreshold`,
+  `testTheEdgesAreBandsFromTheWatchingStartOnly`, `testNoRecordedTimeShadesNothing`,
+  `testABandIsLabelledOnlyWhenItIsWideEnoughOnTheChart`)
+- **Hover, anywhere, at once.** The pointer anywhere over the plot rests on the window nearest on
+  x: that mark is ringed, a faint cursor line stands at it, and the day strip's own card
+  (`DayHoverOverlay`, never the macOS `.help` tooltip) shows the window's weekday, date, span and
+  result (`QuotaPoint.hoverBody`: `**Fri Sep 18, 9:00 am – 2:00 pm**` over `Ended at 87% used`,
+  with `Hit the limit` where it did) with no delay — the day strip's peek timer does not apply.
+  Over a band the card shows the band's text and the cursor follows the pointer. What the pointer
+  rests on is the model's answer to the pointer's fraction of the plot (`quotaHover`); the view
+  positions the overlay. Esc drops the card (see *Keys*). (`HistoryViewModel.quotaHover`; tests
+  `testTheHoverCardNamesTheSpanAndTheResultForEachKindOfWindow`,
+  `testHoverResolvesToTheNearestWindowOrTheBandUnderThePointer`,
+  `HistoryDayHoverTests.testAQuotaHoverShowsItsCardAtOnce`, `testEscDropsAQuotaCardToo`)
+- **Selecting a point** (a click anywhere over the plot selects the window nearest on x, the one
+  the hover rings; or ← / → on the chart, which is one keyboard stop) pins a detail
   below the charts: title `<provider> · <span>` (the reset alone when the start is unknown);
   rows `Width`, `Used`, `Coverage` (`Seen to the reset`, `Seen at the limit`, `Last seen <span>
   before the reset`, `Partly observed`, `Open now`, with the reading count), `Reset` (with `reset early` or
@@ -517,7 +564,8 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   value is omitted. A block recorded inside the window adds a `Recorded block · <date>, <time>`
   link to Hard blocks. Before a selection: `Select a window to see how it ended.` (`quotaDetail`,
   `quotaBlockLink`; tests `testTheDetailCarriesWidthUsedCoverageAndReset`,
-  `testLocalWorkIsLabelledAsContextNotCause`, `testARecordedBlockInsideTheWindowBecomesATypedLink`)
+  `testLocalWorkIsLabelledAsContextNotCause`, `testARecordedBlockInsideTheWindowBecomesATypedLink`,
+  `HistoryDayHoverTests.testAClickSelectsTheWindowNearestThePointer`)
 - **Spoken values** name provider, width, span, outcome, a hit limit and an early ending, as plain
   text. (`quotaAccessibility`)
 
@@ -697,7 +745,7 @@ recorded account changes. It is context near an event, never a claimed cause.
 | Dead `HistoryDisplay` helpers | `footer` (the old `evidence from <date>` footer), `changeFootnote` with `providerCutSentence`, `projectRows` and the private `work` have no caller; `ToolReport.evidenceFrom` is read only by the dead `footer`, tests and previews | Delete the helpers; then keep or drop `evidenceFrom` |
 | The window's lifecycle has no test | `HistoryWindowController` (one window, close hides, reload on open and focus, frame autosave) is App-level and checked by hand | Add an App-level test that shows, closes and shows again and asserts one window and a reload each time |
 | No ⌘W in the History window | The app window wires ⌘W and ⌘Q by hand because an accessory app has no app menu (`QuotaWindowController.installKeyMonitor`); the History controller wires nothing. Whether ⌘W closes History is untested | Check by hand; if it does nothing, add the same scoped key monitor |
-| The hour chart's block marks and the pattern band use `Calendar.current` | The report's local days use the injected calendar; `experienceHourChart` and `claimedRhythm` read the system calendar directly | Pass the injected calendar through |
+| The hour chart's block marks and the pattern band use `Calendar.current` | The report's local days, and Explore quota's date axis, bands and hover card, use the injected calendar; `experienceHourChart` and `claimedRhythm` still read the system calendar directly, and the quota point and detail copy (`Fmt.monthDay`, `Fmt.clock`) formats in the system zone | Pass the injected calendar through |
 | "Last 30 days" wording oversells the poll-side half | The popover link reads `History · last 30 days` and the menu-item comment says "the last 30 days of the local corpus"; quota windows, blocks and changes start at the watching date | The label is [popover](popover.md)'s to decide; fix the comment with the next change to `MenuBarController` |
 | Live diagnostics can read the live database | With `KVOTAR_LIVE=1`, several env-gated tests reach the real database file. `HistoryExperienceLiveDiagnostics` falls back to `SQLiteStore.defaultPath()` when `KVOTAR_LIVE_DB` is unset (`HistoryExperienceLiveDiagnostics.swift:18`) and opens it writable with migrations on, though its type comment says read-only. `ExplanationLiveDiagnostics` falls back the same way (`ExplanationLiveDiagnostics.swift:145`), then copies the file before opening it. Core `LiveDiagnostics` opens `SQLiteStore.defaultPath()` directly in four tests (`LiveDiagnostics.swift:31`, `:52`, `:129`, `:160`) and falls back to it in two more (`:201`, `:254`); only `testLiveQuotaWindowOutcomes` demands a copy (`:313`). `HistoryExperienceSnapshots` opens whatever `KVOTAR_LIVE_DB` names writable | Require an explicit database copy in every live test: skip unless `KVOTAR_LIVE_DB` is set and is not the live path, and open it with `readOnly: true, runMigrations: false` (`SQLiteStore.openReadOnly`) |
 | The oldest, clipped recap week usually says nothing happened | On a clipped week the pattern and calm leads are withheld, so without a block or change the lead falls to `Nothing was recorded this week.` beside the week's own work. No test pins this lead | Give a clipped week its own lead (for example, name the coverage limit as the lead) and pin it with a test |
@@ -713,7 +761,8 @@ App: `App/HistoryWindowController.swift`; `App/AppDelegate.swift` (the History w
 Core, under `Packages/KvotarCore/Sources/KvotarCore/`: `History/HistoryReport.swift`
 (`HistoryReport`, `WeeklyLimitOutcome`), `History/HistoryReportReader.swift`,
 `History/QuotaWindowOutcomes.swift`, `Storage/SQLiteStore+History.swift`; also read:
-`SQLiteStore+QuotaSeries.swift` (`quotaSeriesRange`, `quotaSeriesSecondaryRange`),
+`SQLiteStore+QuotaSeries.swift` (`quotaSeriesRange`, `quotaSeriesSecondaryRange`,
+`quotaReadingTimes`),
 `SQLiteStore+ModelLimitSeries.swift`, `SQLiteStore+StateTransitions.swift`
 (`criticalStateEntries`), `SQLiteStore+Discontinuities.swift`, `SQLiteStore+Retention.swift`
 (`historyRollups`), `State/PlanChangeStability.swift`, `Attribution/AttributionEngine.swift`
@@ -728,7 +777,7 @@ UI, under `Packages/KvotarUI/Sources/KvotarUI/`: `Model/HistoryExperience.swift`
 `Previews/HistoryPreviews.swift`.
 
 Tests. Core (`Packages/KvotarCore/Tests/KvotarCoreTests/`): `HistoryReportReaderTests`,
-`HistoryReportWeeklyLimitsTests`, `QuotaWindowOutcomesTests`, `PlanChangeStabilityTests`,
+`HistoryReportWeeklyLimitsTests`, `SQLiteStoreQuotaSeriesTests`, `QuotaWindowOutcomesTests`, `PlanChangeStabilityTests`,
 `NotificationGroupTests.testOverQuotaDisabledDropsOverQuota`. UI
 (`Packages/KvotarUI/Tests/KvotarUITests/`): `HistoryExperienceContractTests`,
 `HistoryExperienceRecapTests`, `HistoryExperienceQuotaTests`, `HistoryExperienceExploreTests`,

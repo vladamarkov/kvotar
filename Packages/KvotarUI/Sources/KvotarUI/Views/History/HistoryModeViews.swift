@@ -487,7 +487,7 @@ struct ExploreQuotaModeView: View {
                                            selectedID: selected?.id,
                                            scope: vm.scope,
                                            periodLabel: periodLabel,
-                                           onSelect: { vm.selectQuotaPoint($0) })
+                                           vm: vm)
                         }
                     }
                 }

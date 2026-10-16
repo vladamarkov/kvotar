@@ -302,4 +302,192 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(link.destination.provider, .claude)
         XCTAssertTrue(link.destination.banner?.hasPrefix("From quota window · Claude · ") == true)
     }
+
+    // MARK: - Date axis
+
+    private func x(_ date: Date) -> Double {
+        HistoryDisplay.quotaX(date, period: HXFix.report([]))
+    }
+
+    /// The axis is labelled at the provider's weekly resets — weekday and date in the report's
+    /// calendar — and every other local midnight is a small unlabelled tick.
+    func testTicksLabelTheWeeklyResetsAndMarkEveryOtherMidnight() throws {
+        let early = HXFix.quotaWindow(.claude, daysBack: 12, hour: 14).resetsAt
+        let late = HXFix.quotaWindow(.claude, daysBack: 5, hour: 14).resetsAt
+        let tool = HXFix.tool(.claude, quotaWindows: contiguousFiveHour(count: 3),
+                              weeklyLimits: [
+                                  HXFix.weeklyLimit(endedAt: early, used: 40),
+                                  HXFix.weeklyLimit(.claude, .model(key: "m", name: "Opus"),
+                                                    endedAt: early, used: 10),
+                                  HXFix.weeklyLimit(endedAt: late, used: 55),
+                              ])
+        let ticks = quota([tool], .tool(.claude)).sections[0].ticks
+        let labelled = ticks.filter { $0.label != nil }
+        XCTAssertEqual(labelled.map(\.label), ["Tue Aug 4", "Tue Aug 11"],
+                       "one tick per reset; a model weekly sharing the instant is not a second tick")
+        XCTAssertEqual(labelled.map(\.x), [x(early), x(late)])
+        XCTAssertEqual(ticks.filter { $0.label == nil }.count, 30,
+                       "every local midnight strictly inside the 30 days, unlabelled")
+        XCTAssertEqual(ticks.map(\.x), ticks.map(\.x).sorted(), "ordered by x")
+    }
+
+    func testAProviderWithNoWeeklyResetTicksAtMondays() {
+        let codex = HXFix.tool(.codex, quotaWindows: [
+            HXFix.quotaWindow(.codex, daysBack: 4, width: 604_800, used: 40)])
+        let ticks = quota([codex], .tool(.codex)).sections[0].ticks
+        XCTAssertEqual(ticks.compactMap(\.label),
+                       ["Mon Jul 20", "Mon Jul 27", "Mon Aug 3", "Mon Aug 10"])
+        XCTAssertEqual(ticks.filter { $0.label == nil }.count, 26,
+                       "a Monday midnight is the labelled tick, not a second mark")
+    }
+
+    /// The midnight ticks and the day strip are cut on one calendar: with no weekly reset every
+    /// tick is a midnight (the Mondays labelled), and those are exactly the whole days' starts
+    /// the report carries.
+    func testMidnightTicksAreTheDayStripsDayStarts() {
+        let days = HXFix.days(Array(repeating: 1, count: 31))
+        let tool = HXFix.tool(.claude, days: days, quotaWindows: contiguousFiveHour(count: 3))
+        let ticks = quota([tool], .tool(.claude)).sections[0].ticks
+        let dayStarts = Set(days.filter { !$0.isPartial }.map { x($0.start) })
+        XCTAssertEqual(Set(ticks.map(\.x)), dayStarts)
+        XCTAssertEqual(ticks.count, dayStarts.count)
+    }
+
+    func testTheValueLabelsComeFromTheModel() {
+        let labels = quota([claude(contiguousFiveHour(count: 3))], .tool(.claude))
+            .sections[0].valueLabels
+        XCTAssertEqual(labels.map(\.label), ["100", "50", "0"])
+        XCTAssertEqual(labels.map(\.fraction), [1, 0.5, 0])
+        XCTAssertEqual(labels.map(\.prominent), [true, false, true])
+    }
+
+    // MARK: - `Nothing recorded` bands
+
+    private let threeDaysAgo = HXFix.now.addingTimeInterval(-3 * 86_400)
+
+    private func bands(_ tool: Tool, width: Int, times: [Date],
+                       watchingSince: Date? = nil) -> [HistoryExperience.QuotaBand] {
+        let windows = [HXFix.quotaWindow(tool, daysBack: 3, hour: 15, width: width, used: 40)]
+        let report = HXFix.tool(tool, watchingSince: watchingSince ?? threeDaysAgo,
+                                quotaWindows: windows, quotaReadingTimes: times)
+        return quota([report], .tool(tool)).sections[0].bands
+    }
+
+    /// Hourly readings with an eight-hour silence on a five-hour provider: one band, placed and
+    /// named from the two readings around it.
+    func testAReadingGapLongerThanTheShortestWindowIsABand() throws {
+        let times = HXFix.readingTimes(from: threeDaysAgo, hours: 72, skipping: 10...16)
+        let found = bands(.claude, width: 18_000, times: times)
+        let band = try XCTUnwrap(found.first)
+        XCTAssertEqual(found.count, 1)
+        XCTAssertEqual(band.x0, x(threeDaysAgo.addingTimeInterval(9 * 3600)))
+        XCTAssertEqual(band.x1, x(threeDaysAgo.addingTimeInterval(17 * 3600)))
+        XCTAssertEqual(band.label, "Nothing recorded")
+        XCTAssertEqual(band.hoverBody,
+                       "Nothing recorded · Aug 13, 9:00 pm – Aug 14, 5:00 am · The reason is unknown.")
+    }
+
+    func testAGapShorterThanTheShortestWindowIsNotABand() {
+        let times = HXFix.readingTimes(from: threeDaysAgo, hours: 72, skipping: 10...12)
+        XCTAssertEqual(bands(.claude, width: 18_000, times: times), [], "a four-hour silence")
+    }
+
+    /// A plan with only a weekly window is read against six hours, not seven days.
+    func testAWeeklyOnlyProviderUsesTheSixHourThreshold() {
+        let five = HXFix.readingTimes(from: threeDaysAgo, hours: 72, skipping: 10...13)
+        XCTAssertEqual(bands(.codex, width: 604_800, times: five), [], "five hours is under it")
+        let seven = HXFix.readingTimes(from: threeDaysAgo, hours: 72, skipping: 10...15)
+        XCTAssertEqual(bands(.codex, width: 604_800, times: seven).count, 1, "seven hours is over")
+    }
+
+    /// The edges count from when Kvotar began watching: a silence before the first reading or
+    /// after the last one is a band, the days before Kvotar watched at all are not.
+    func testTheEdgesAreBandsFromTheWatchingStartOnly() throws {
+        let times = HXFix.readingTimes(from: threeDaysAgo, hours: 64)
+        let found = bands(.claude, width: 18_000, times: times,
+                          watchingSince: threeDaysAgo.addingTimeInterval(-7 * 3600))
+        XCTAssertEqual(found.map(\.x0), [x(threeDaysAgo.addingTimeInterval(-7 * 3600)),
+                                         x(threeDaysAgo.addingTimeInterval(64 * 3600))])
+        XCTAssertEqual(found.map(\.x1), [x(threeDaysAgo), 1],
+                       "the trailing band runs to now")
+        XCTAssertEqual(bands(.claude, width: 18_000, times: times,
+                             watchingSince: threeDaysAgo).map(\.x1), [1],
+                       "a watching start at the first reading is no band")
+    }
+
+    func testNoRecordedTimeShadesNothing() {
+        XCTAssertEqual(bands(.claude, width: 18_000, times: []), [])
+    }
+
+    /// Whether a band carries its label is decided on the chart's own scale: 64 pt or wider.
+    func testABandIsLabelledOnlyWhenItIsWideEnoughOnTheChart() {
+        let band = HistoryExperience.QuotaBand(
+            id: "b", from: HXFix.now, to: HXFix.now, x0: 0, x1: 0.25,
+            label: "Nothing recorded", hoverBody: "")
+        XCTAssertEqual(band.label(plotWidth: 256), "Nothing recorded", "exactly 64 pt wide")
+        XCTAssertNil(band.label(plotWidth: 252), "63 pt wide")
+    }
+
+    // MARK: - Hover
+
+    func testTheHoverCardNamesTheSpanAndTheResultForEachKindOfWindow() {
+        let windows = [
+            HXFix.quotaWindow(.claude, daysBack: 5, hour: 6, used: 87),
+            HXFix.quotaWindow(.claude, daysBack: 5, hour: 11, used: 62,
+                              lastSeenBefore: 3 * 3600, completion: .completedPartial),
+            HXFix.quotaWindow(.claude, daysBack: 5, hour: 16, used: 41, completion: .current),
+            HXFix.quotaWindow(.claude, daysBack: 4, hour: 2, used: 100, hitLimit: true),
+        ]
+        let points = quota([claude(windows)], .tool(.claude)).sections[0].points
+        XCTAssertEqual(points.map(\.hoverBody), [
+            "**Tue Aug 11, 1:00 am – 6:00 am**\nEnded at 87% used",
+            "**Tue Aug 11, 6:00 am – 11:00 am**\nReached at least 62% used · Partial",
+            "**Tue Aug 11, 11:00 am – 4:00 pm**\nSo far 41% used",
+            "**Tue Aug 11, 9:00 pm – Wed Aug 12, 2:00 am**\nEnded at 100% used · Hit the limit",
+        ])
+    }
+
+    /// The pointer anywhere over the plot rests on the nearest window on x, ringed, with the
+    /// cursor snapped to its mark; over a band it rests on the band, cursor where the pointer is.
+    func testHoverResolvesToTheNearestWindowOrTheBandUnderThePointer() throws {
+        let times = HXFix.readingTimes(from: threeDaysAgo, hours: 72, skipping: 10...16)
+        let windows = [
+            HXFix.quotaWindow(.claude, daysBack: 3, hour: 5, used: 30),
+            HXFix.quotaWindow(.claude, daysBack: 2, hour: 20, used: 70),
+        ]
+        let tool = HXFix.tool(.claude, watchingSince: threeDaysAgo, quotaWindows: windows,
+                              quotaReadingTimes: times)
+        let section = quota([tool], .tool(.claude)).sections[0]
+        let band = try XCTUnwrap(section.bands.first)
+
+        let nearFirst = try XCTUnwrap(
+            HistoryDisplay.quotaHover(section, atX: section.points[0].x - 0.01))
+        XCTAssertEqual(nearFirst.target, .window(section.points[0].id))
+        XCTAssertEqual(nearFirst.cursorX, section.points[0].x, "the cursor snaps to the mark")
+        XCTAssertEqual(nearFirst.body, section.points[0].hoverBody)
+
+        let overBand = try XCTUnwrap(
+            HistoryDisplay.quotaHover(section, atX: (band.x0 + band.x1) / 2))
+        XCTAssertEqual(overBand.target, .band(band.id))
+        XCTAssertEqual(overBand.cursorX, (band.x0 + band.x1) / 2, "the cursor follows the pointer")
+        XCTAssertEqual(overBand.body, band.hoverBody)
+        XCTAssertNil(overBand.ringedPointID)
+
+        XCTAssertEqual(HistoryDisplay.quotaNearestPoint(section, atX: 1)?.id,
+                       section.points[1].id, "a click at the right edge selects the last window")
+    }
+
+    func testNoNewQuotaCopyNamesPollingInternals() {
+        let times = HXFix.readingTimes(from: threeDaysAgo, hours: 72, skipping: 10...16)
+        let tool = HXFix.tool(.claude, watchingSince: threeDaysAgo,
+                              quotaWindows: contiguousFiveHour(count: 3),
+                              weeklyLimits: [HXFix.weeklyLimit(
+                                  endedAt: HXFix.now.addingTimeInterval(-5 * 86_400), used: 40)],
+                              quotaReadingTimes: times)
+        let page = quota([tool], .tool(.claude))
+        XCTAssertFalse(page.sections[0].bands.isEmpty)
+        for string in HXFix.allStrings(of: page) {
+            XCTAssertNil(UserCopyRules.pollingWord(in: string), "copy ban in: \(string)")
+        }
+    }
 }

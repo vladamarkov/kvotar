@@ -286,6 +286,8 @@ public final class HistoryViewModel: ObservableObject {
     public enum HoverColumn: Sendable, Hashable {
         case day(Int)
         case hour(Int)
+        /// A quota chart's hover: the window id or band id the card is keyed by.
+        case quota(String)
     }
 
     /// The column the pointer is resting on.
@@ -384,5 +386,39 @@ public final class HistoryViewModel: ObservableObject {
         dayTimer = nil
         if hoveredDay != nil { hoveredDay = nil }
         if peekedDay != nil { peekedDay = nil }
+        if quotaHover != nil { quotaHover = nil }
+    }
+
+    // MARK: Explore quota hover
+
+    /// What the pointer over a quota chart rests on. Unlike the day strip there is no peek delay:
+    /// the pointer is anywhere over a plot of ninety marks, and a card that waits reads as a card
+    /// that failed. Same overlay, same card, same Esc.
+    @Published public private(set) var quotaHover: HistoryExperience.QuotaHover?
+
+    /// The pointer moved to fraction `x` of a section's plot.
+    public func quotaHover(_ section: HistoryExperience.QuotaSection, atX x: Double) {
+        let hover = HistoryDisplay.quotaHover(section, atX: x)
+        if hover != quotaHover { quotaHover = hover }
+        dayTimer?.cancel()
+        dayTimer = nil
+        let column = hover.map { HoverColumn.quota($0.id) }
+        if hoveredDay != column { hoveredDay = column }
+        if peekedDay != column { peekedDay = column }
+    }
+
+    /// The pointer left the plot.
+    public func quotaHoverEnded() {
+        if quotaHover != nil { quotaHover = nil }
+        if case .quota = hoveredDay { hoveredDay = nil }
+        if case .quota = peekedDay { peekedDay = nil }
+    }
+
+    /// A click anywhere over the plot selects the window nearest on x — the same window the
+    /// hover rings — as ← and → already select by stepping.
+    public func selectQuotaPoint(nearestTo section: HistoryExperience.QuotaSection,
+                                 atX x: Double) {
+        guard let point = HistoryDisplay.quotaNearestPoint(section, atX: x) else { return }
+        selectQuotaPoint(point.id)
     }
 }

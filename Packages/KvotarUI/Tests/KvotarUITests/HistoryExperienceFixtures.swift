@@ -157,7 +157,8 @@ enum HXFix {
                      workByHour: [Int] = [],
                      criticalObservations: [HistoryReport.CriticalObservation] = [],
                      quotaWindows: [QuotaWindowOutcome] = [],
-                     weeklyLimits: [WeeklyLimitOutcome] = [])
+                     weeklyLimits: [WeeklyLimitOutcome] = [],
+                     quotaReadingTimes: [Date] = [])
         -> HistoryReport.ToolReport {
         let defaultModel = tool == .codex ? nil : "claude-sonnet-4-6"
         return HistoryReport.ToolReport(
@@ -169,7 +170,17 @@ enum HXFix {
             watchingSince: watchingSince, workPerPercent: workPerPercent, days: days,
             workByHour: workByHour, criticalObservations: criticalObservations,
             modelValues: modelValues ?? [mv(defaultModel, value)],
-            quotaWindows: quotaWindows, weeklyLimits: weeklyLimits)
+            quotaWindows: quotaWindows, weeklyLimits: weeklyLimits,
+            quotaReadingTimes: quotaReadingTimes)
+    }
+
+    /// Hourly reading times from `from` for `hours` hours, with the hours in `skipping` left
+    /// out — the shape of a provider polled all day with one silence in it.
+    static func readingTimes(from: Date, hours: Int, skipping: ClosedRange<Int>? = nil) -> [Date] {
+        (0...hours).compactMap { hour in
+            if let skipping, skipping.contains(hour) { return nil }
+            return from.addingTimeInterval(Double(hour) * 3600)
+        }
     }
 
     /// One weekly limit instance (STEP_227/228). `endedAt` is when it ended — its scheduled reset

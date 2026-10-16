@@ -144,6 +144,10 @@ public struct HistoryReportReader: Sendable {
         let weeklyLimits = Self.weeklyLimits(
             tool: tool, secondary: secondarySeries, mainWindows: quotaWindows,
             modelRows: modelLimitRows, discontinuities: quotaBreaks, now: end)
+        // When readings were recorded at all: the times alone, for Explore quota's `Nothing
+        // recorded` bands. A failed read is an empty list, which shades nothing.
+        let quotaReadingTimes = (try? await store.quotaReadingTimes(tool: tool, since: start,
+                                                                     until: end)) ?? []
 
         return HistoryReport.ToolReport(
             tool: tool, sessions: sessions,
@@ -157,7 +161,8 @@ public struct HistoryReportReader: Sendable {
             watchingSince: watchingSince,
             workPerPercent: workPerPercent, days: days, workByHour: workByHour,
             criticalObservations: criticalObservations, modelValues: modelValues,
-            quotaWindows: quotaWindows, weeklyLimits: weeklyLimits)
+            quotaWindows: quotaWindows, weeklyLimits: weeklyLimits,
+            quotaReadingTimes: quotaReadingTimes)
     }
 
     // MARK: - Weekly limits (STEP_227 — REV-104 §4)
