@@ -423,7 +423,10 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
   and calm leads, the day and project observations, and comparisons against it). The note is
   omitted when the clipped week's own lead (rung 3 below) already names the limit, so it is said
   once. A week that began before `watchingSince` says `Kvotar began watching <date>, so part of
-  this week has no poll evidence.` (`recapCoverage`; tests `testAClippedWeekWithholdsWholeWeekConclusions`,
+  this week has no poll evidence.` The horizon clip outranks the watching date: a clipped week
+  that Kvotar also began watching partway through names the horizon only, in its lead or its
+  note, never both limits. (`recapCoverage`; tests `testAClippedWeekWithholdsWholeWeekConclusions`,
+  `testAClippedWeekWatchedPartwayNamesTheHorizonOnly`,
   `testAWeekAfterAClippedWeekCarriesNoComparison`,
   `testAWatchingDateInsideTheWeekIsNamedBesideTheConclusion`)
 - **Five blocks, in order, each omitted when empty** (no empty heading):

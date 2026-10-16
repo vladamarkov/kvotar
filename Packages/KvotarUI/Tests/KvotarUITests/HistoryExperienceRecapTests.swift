@@ -279,6 +279,19 @@ final class HistoryExperienceRecapTests: XCTestCase {
         XCTAssertFalse(oldest.lead.sentence.contains("Nothing was recorded"))
     }
 
+    /// The horizon clip outranks the watching date: a clipped week Kvotar also began watching
+    /// partway through names the horizon in its lead and carries no second limit under it.
+    func testAClippedWeekWatchedPartwayNamesTheHorizonOnly() throws {
+        let days = HXFix.days(Array(repeating: 400_000, count: 31))
+        let clipped = try XCTUnwrap(recap([HXFix.tool(.claude, days: days)]).weeks.last)
+        let watching = clipped.end.addingTimeInterval(-day * 1.5)
+        let watched = try XCTUnwrap(recap([HXFix.tool(.claude, watchingSince: watching,
+                                                      days: days)]).weeks.last)
+        XCTAssertEqual(watched.lead.kind, .partialWeek)
+        XCTAssertNil(watched.coverageNote)
+        XCTAssertFalse(HXFix.allStrings(of: watched).contains { $0.contains("began watching") })
+    }
+
     /// A recorded fact still outranks the coverage lead on a clipped week, and the coverage
     /// note then stands beside it as before.
     func testABlockOnAClippedWeekStillLeadsWithTheCoverageNoteBesideIt() throws {
