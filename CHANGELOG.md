@@ -20,6 +20,9 @@ the line of their change.
   and the dots are, and the caption names whose busiest hours it means. The coverage note says
   that blocks are recorded only while Notify me ▸ Over quota is on, and no longer warns about
   weekly-only exhaustion.
+- On Explore usage, a day with no work draws nothing in the day strip instead of a faint stub,
+  and the 30-day breakdown on All lists each provider's projects and largest work as its own
+  group, Claude then Codex, up to three rows each, instead of one list ordered across both.
 
 ## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
 

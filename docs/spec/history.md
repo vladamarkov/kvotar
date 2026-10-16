@@ -636,10 +636,13 @@ time: `By day` (the default), `By week`, `30-day breakdown`.
 
 - **By day.** A 31-column strip, oldest first, with a dot under a day a quota window was blocked
   and a diamond on a day the account or its windows changed; ticks on the report's own week
-  starts; a footer `Busiest day <date> · <tokens>` per provider. The newest day with work is
-  selected first, else today. Hovering a column peeks a card; a click or arrow key selects it.
+  starts; a footer `Busiest day <date> · <tokens>` per provider. A day with no work for a
+  provider has no bar in that lane, so nothing is drawn there and a selected empty day shows
+  the selection outline alone. The newest day with work is selected first, else today.
+  Hovering a column peeks a card; a click or arrow key selects it.
   (`experienceDayStrip`; tests in `HistoryExperienceChartTests`, `HistoryDayHoverTests`,
-  `HistoryExperienceExploreTests.testInitialSelectionIsTheNewestDayWithActivity`)
+  `HistoryExperienceExploreTests.testInitialSelectionIsTheNewestDayWithActivity`,
+  `testAnEmptyDayHasNoBarForTheStripToDraw`)
 - **The selected day** shows, per provider with work: displayed tokens, Est. token value,
   sessions or threads, model rows (tokens only) and project rows; on `All` with both providers,
   one combined value. Then the day's blocks, critical observations (`At risk · 3:34 pm` → `8%
@@ -654,9 +657,13 @@ time: `By day` (the default), `By week`, `30-day breakdown`.
   `testWeekRowsCarryTokensValueOwnScaleAndPartialNote`)
 - **30-day breakdown.** `Projects`, `Models` (per provider, tokens and value) and `Largest work`
   (sessions and threads: `<date> · <project>` → tokens · value; the session id is never shown).
-  On `All` the projects and largest-work lists merge, keep 3 rows, and carry provider tags only
-  when both providers contribute. No day input exists, so selecting a day cannot change it.
-  (`breakdown`, `allRankedRowLimit`; test `testBreakdownIsThirtyDayGrainAndNeverCrossesTheDayModels`)
+  On `All` the projects and largest-work lists are grouped by provider — Claude rows, then
+  Codex rows — each group on its own scale and keeping at most 3 rows, never sorted into one
+  order across providers (each bar is against its own provider's top row, so a cross-provider
+  order would imply a comparison the bars cannot make); rows carry provider tags only when
+  both providers contribute. No day input exists, so selecting a day cannot change it.
+  (`breakdown`, `allRankedRowLimit`; tests `testBreakdownIsThirtyDayGrainAndNeverCrossesTheDayModels`,
+  `testAllBreakdownGroupsByProviderEachOnItsOwnScaleAndCap`)
 
 ## Hard blocks
 

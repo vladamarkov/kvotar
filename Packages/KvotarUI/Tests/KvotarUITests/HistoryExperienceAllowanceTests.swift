@@ -106,9 +106,10 @@ final class HistoryExperienceAllowanceTests: XCTestCase {
         XCTAssertEqual(single.projects.map(\.tag), [nil, nil])
 
         let all = HXFix.pages([claude, codex], .all).explore.breakdown
-        XCTAssertEqual(all.projects.map(\.row.label), ["kvotar", "api", "(no project)"],
-                       "All merges by tokens and caps at the shared-row limit")
-        XCTAssertEqual(all.projects.map(\.tag), ["Claude", "Codex", "Claude"])
+        XCTAssertEqual(all.projects.map(\.row.label), ["kvotar", "(no project)", "api"],
+                       "All groups by provider — Claude's rows, then Codex's — never one "
+                       + "order by tokens across the two scales")
+        XCTAssertEqual(all.projects.map(\.tag), ["Claude", "Claude", "Codex"])
     }
 
     // MARK: - Provider-safe strip geometry (REV-84 §3.1)

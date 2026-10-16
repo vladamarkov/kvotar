@@ -290,7 +290,7 @@ public enum HistoryDisplay {
     /// The most of a cycle's rise that may have no local work behind it — the web app, another
     /// machine. Above this the cycle is not evidence about this Mac's work.
     static let maximumUnseenShare = 0.20
-    /// Ranked rows kept on the All tab, where two tools share the list.
+    /// Ranked rows kept **per provider** on the All tab, where two tools share the list.
     public static let allRankedRowLimit = 3
 
     public static var emptyReportMessage: String {

@@ -1049,10 +1049,12 @@ public struct HistoryExperience: Sendable {
     /// cannot silently change what its rows mean — structurally: nothing here takes a day.
     public struct Breakdown: Sendable {
         public let title: String
-        /// `ProjectGrouping` ranking, provider-tagged only when both providers contribute.
+        /// `ProjectGrouping` ranking; on `All`, one provider's rows after the other's, each
+        /// group on its own scale and under its own cap, provider-tagged only when both
+        /// providers contribute.
         public let projects: [HistoryScreen.RankedRow]
         public let models: [ModelGroup]
-        /// The merged session/thread ranking, provider tags only when needed.
+        /// The session/thread ranking, grouped and tagged the same way as `projects`.
         public let largestWork: [HistoryScreen.RankedRow]
 
         public init(title: String, projects: [HistoryScreen.RankedRow] = [],

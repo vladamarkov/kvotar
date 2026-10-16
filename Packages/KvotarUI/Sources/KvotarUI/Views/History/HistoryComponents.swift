@@ -285,19 +285,23 @@ struct DayStripView: View {
                         showsAxis: Bool) -> some View {
         let id: Date? = entries?.indices.contains(index) == true ? entries?[index].id : nil
         let isSelected = id != nil && id == selectedID
-        let fraction = point.bars.first { $0.tool == tool }?.fraction ?? 0
+        // Whether this provider has a bar on this day is the model's statement (a day with no
+        // work contributes no `DayBar`), not a test on the fraction here.
+        let bar = point.bars.first { $0.tool == tool }
         var traits: AccessibilityTraits = []
         if onSelect != nil, id != nil { _ = traits.insert(.isButton) }
         if isSelected { _ = traits.insert(.isSelected) }
         return VStack(spacing: 5) {
             ZStack(alignment: .bottom) {
                 Color.clear
-                // Every day draws at least the prototype's 2-pt nub, so the selection ring
-                // always has something to hold onto.
+                // A day with work draws at least the prototype's 2-pt nub. A day without draws
+                // no accent at all — a nub would make a known-empty day look faintly active —
+                // and keeps only the clear 2-pt footprint, so the neutral selection ring still
+                // has something to hold onto.
                 UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2,
                                        style: .continuous)
-                    .fill(HistoryTheme.accent(tool))
-                    .frame(height: max(2, barHeight * fraction))
+                    .fill(bar == nil ? Color.clear : HistoryTheme.accent(tool))
+                    .frame(height: bar.map { max(2, barHeight * $0.fraction) } ?? 2)
                     .frame(maxWidth: 18)
                     .overlay {
                         if isSelected {

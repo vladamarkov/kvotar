@@ -254,7 +254,8 @@ extension HistoryDisplay {
                             scope: [HistoryReport.ToolReport], tagged: Bool,
                             strip: HistoryScreen.DayStrip?,
                             report: HistoryReport) -> HistoryExperience.ExplorePage {
-        let breakdown = breakdown(scope, merged: isAll(provider), tagged: tagged)
+        let breakdown = breakdown(scope, rowLimit: isAll(provider) ? allRankedRowLimit : nil,
+                                  tagged: tagged)
         guard scope.contains(where: { !$0.isEmpty }) else {
             return HistoryExperience.ExplorePage(breakdown: breakdown,
                                                  emptyMessage: pageEmptyMessage(provider))
@@ -462,48 +463,39 @@ extension HistoryDisplay {
     }
 
     /// The 30-day breakdown (REV-84 §5.3): projects and largest work ranked as the legacy
-    /// window ranked them, models grouped per provider with tokens and value.
-    static func breakdown(_ scope: [HistoryReport.ToolReport], merged: Bool,
+    /// window ranked them, models grouped per provider with tokens and value. `rowLimit` is
+    /// each provider's cap on `All`, where two providers share a list; nil keeps the reader's
+    /// own top rows on a provider filter.
+    static func breakdown(_ scope: [HistoryReport.ToolReport], rowLimit: Int?,
                           tagged: Bool) -> HistoryExperience.Breakdown {
         HistoryExperience.Breakdown(
             title: breakdownTitle,
-            projects: breakdownProjects(scope, merged: merged, tagged: tagged),
+            projects: breakdownProjects(scope, rowLimit: rowLimit, tagged: tagged),
             models: scope.compactMap { t in
                 let rows = modelValueRows(totals: t.modelTotals, values: t.modelValues,
                                           tool: t.tool)
                 return rows.isEmpty
                     ? nil : HistoryExperience.ModelGroup(provider: t.tool, rows: rows)
             },
-            largestWork: largestWorkRows(scope, merged: merged, tagged: tagged))
+            largestWork: largestWorkRows(scope, rowLimit: rowLimit, tagged: tagged))
     }
 
-    /// The corrected `ProjectGrouping` ranking (STEP_157 preserved): merged and capped on
-    /// `All`, the reader's own top rows on a provider filter.
-    static func breakdownProjects(_ scope: [HistoryReport.ToolReport], merged: Bool,
+    /// The corrected `ProjectGrouping` ranking (STEP_157 preserved), **grouped by provider**
+    /// in scope order on `All` — Claude rows, then Codex rows — each group capped at
+    /// `rowLimit` and on its own scale. The two groups are never sorted into one list: each
+    /// bar is against its own provider's top row, so a cross-provider order would put a
+    /// shorter bar above a longer one and imply the token comparison REV-70 §4.6 forbids.
+    static func breakdownProjects(_ scope: [HistoryReport.ToolReport], rowLimit: Int?,
                                   tagged: Bool) -> [HistoryScreen.RankedRow] {
-        guard merged else {
-            return scope.flatMap { t -> [HistoryScreen.RankedRow] in
-                let top = t.projects.map(\.tokens).max() ?? 0
-                return t.projects.map {
-                    HistoryScreen.RankedRow(row: projectRow($0, tool: t.tool),
-                                            fraction: fraction($0.tokens, of: top),
-                                            accent: t.tool)
-                }
-            }
-        }
-        return scope.flatMap { t -> [(tokens: Int, row: HistoryScreen.RankedRow)] in
+        scope.flatMap { t -> [HistoryScreen.RankedRow] in
             let top = t.projects.map(\.tokens).max() ?? 0
-            return t.projects.map { project in
-                (tokens: project.tokens,
-                 row: HistoryScreen.RankedRow(row: projectRow(project, tool: t.tool),
-                                              tag: tagged ? t.tool.tabLabel : nil,
-                                              fraction: fraction(project.tokens, of: top),
-                                              accent: t.tool))
+            return t.projects.prefix(rowLimit ?? t.projects.count).map {
+                HistoryScreen.RankedRow(row: projectRow($0, tool: t.tool),
+                                        tag: tagged ? t.tool.tabLabel : nil,
+                                        fraction: fraction($0.tokens, of: top),
+                                        accent: t.tool)
             }
         }
-        .sorted { $0.tokens > $1.tokens }
-        .prefix(allRankedRowLimit)
-        .map(\.row)
     }
 
     /// Track geometry for a ranked row (STEP_162): this row's share of the same provider's
@@ -512,31 +504,18 @@ extension HistoryDisplay {
         top > 0 ? Double(tokens) / Double(top) : nil
     }
 
-    static func largestWorkRows(_ scope: [HistoryReport.ToolReport], merged: Bool,
+    /// Sessions and threads, grouped and capped the same way as `breakdownProjects`.
+    static func largestWorkRows(_ scope: [HistoryReport.ToolReport], rowLimit: Int?,
                                 tagged: Bool) -> [HistoryScreen.RankedRow] {
-        guard merged else {
-            return scope.flatMap { t -> [HistoryScreen.RankedRow] in
-                let top = t.topSessions.map(\.tokens).max() ?? 0
-                return t.topSessions.map {
-                    HistoryScreen.RankedRow(row: sessionRow($0),
-                                            fraction: fraction($0.tokens, of: top),
-                                            accent: t.tool)
-                }
-            }
-        }
-        return scope.flatMap { t -> [(tokens: Int, row: HistoryScreen.RankedRow)] in
+        scope.flatMap { t -> [HistoryScreen.RankedRow] in
             let top = t.topSessions.map(\.tokens).max() ?? 0
-            return t.topSessions.map { session in
-                (tokens: session.tokens,
-                 row: HistoryScreen.RankedRow(row: sessionRow(session),
-                                              tag: tagged ? t.tool.tabLabel : nil,
-                                              fraction: fraction(session.tokens, of: top),
-                                              accent: t.tool))
+            return t.topSessions.prefix(rowLimit ?? t.topSessions.count).map {
+                HistoryScreen.RankedRow(row: sessionRow($0),
+                                        tag: tagged ? t.tool.tabLabel : nil,
+                                        fraction: fraction($0.tokens, of: top),
+                                        accent: t.tool)
             }
         }
-        .sorted { $0.tokens > $1.tokens }
-        .prefix(allRankedRowLimit)
-        .map(\.row)
     }
 
     // MARK: - Hard blocks (REV-84 §6)
