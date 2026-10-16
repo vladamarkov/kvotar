@@ -616,16 +616,26 @@ public struct HistoryExperience: Sendable {
         /// ending beside a scheduled one) would print over each other.
         public static let tickLabelWidth: CGFloat = 72
 
+        /// Where a tick's label is centred on a plot `plotWidth` wide: on the tick, pulled in
+        /// at either edge so the label stays inside the plot. The view places labels with this
+        /// and the spacing rule below judges them with it, so the two cannot disagree.
+        public static func tickLabelCenter(x: Double, plotWidth: CGFloat) -> CGFloat {
+            let half = tickLabelWidth / 2
+            return min(max(CGFloat(x) * plotWidth, half), max(plotWidth - half, half))
+        }
+
         /// Which labelled ticks print their label at the chart's own scale: walking left to
-        /// right, a label is shown only when the last shown one is at least `tickLabelWidth`
-        /// away. The tick and its gridline are drawn either way; only the words give way.
+        /// right, a label is shown only when its centre, as placed, is at least
+        /// `tickLabelWidth` from the last shown one. The tick and its gridline are drawn either
+        /// way; only the words give way.
         public func labelledTickIDs(plotWidth: CGFloat) -> Set<String> {
             var shown: Set<String> = []
-            var lastX: Double?
+            var lastCenter: CGFloat?
             for tick in ticks where tick.label != nil {
-                if let lastX, (tick.x - lastX) * plotWidth < Self.tickLabelWidth { continue }
+                let center = Self.tickLabelCenter(x: tick.x, plotWidth: plotWidth)
+                if let lastCenter, center - lastCenter < Self.tickLabelWidth { continue }
                 shown.insert(tick.id)
-                lastX = tick.x
+                lastCenter = center
             }
             return shown
         }

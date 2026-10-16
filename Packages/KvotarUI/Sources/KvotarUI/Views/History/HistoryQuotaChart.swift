@@ -150,15 +150,15 @@ struct QuotaChartView: View {
                     .frame(width: 1, height: 7)
                     .offset(x: x, y: plotHeight)
                 if labelled.contains(tick.id) {
+                    let center = HistoryExperience.QuotaSection.tickLabelCenter(
+                        x: tick.x, plotWidth: width)
                     Text(label)
                         .font(HistoryTheme.note)
                         .monospacedDigit()
                         .foregroundStyle(HistoryTheme.secondary)
                         .fixedSize()
                         .frame(width: tickLabelWidth)
-                        .offset(x: min(max(x - tickLabelWidth / 2, 0),
-                                       gutter + width + rightPad - tickLabelWidth),
-                                y: plotHeight + 10)
+                        .offset(x: gutter + center - tickLabelWidth / 2, y: plotHeight + 10)
                 }
             } else {
                 Rectangle()
@@ -237,11 +237,14 @@ struct QuotaChartView: View {
                          size: markSize, isSelected: isSelected)
             .opacity(dimmed ? 0.25 : 1)
             .position(x: gutter + width * point.x, y: plotHeight * (1 - point.fraction))
+            // The pointer is handled by the plot (nearest window on x); the mark itself takes
+            // no hits, and VoiceOver selects it through its action.
             .allowsHitTesting(false)
             .accessibilityElement()
             .accessibilityLabel(point.detail.title)
             .accessibilityValue(point.accessibilityValue)
             .accessibilityAddTraits(traits)
+            .accessibilityAction { vm.selectQuotaPoint(point.id) }
     }
 
     /// The hover: a faint cursor line through the plot and the axis, a ring on the nearest mark,

@@ -371,6 +371,21 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(section.labelledTickIDs(plotWidth: 2400), Set(ids))
     }
 
+    /// A label at the right edge is pulled in to stay on the plot, so the spacing rule judges
+    /// the labels where they are drawn: 75 pt apart by tick, two labels at 0.85 and 1.0 on a
+    /// 500 pt plot land 39 pt apart and the later one gives way.
+    func testTheSpacingRuleJudgesLabelsWhereTheEdgePlacesThem() {
+        typealias Section = HistoryExperience.QuotaSection
+        let section = Section(
+            provider: .claude, title: "", summary: "",
+            ticks: [.init(id: "a", x: 0.85, label: "Sat Oct 10"),
+                    .init(id: "b", x: 1, label: "Fri Oct 16")])
+        XCTAssertEqual(Section.tickLabelCenter(x: 1, plotWidth: 500), 464, "pulled in by half a label")
+        XCTAssertEqual(Section.tickLabelCenter(x: 0, plotWidth: 500), 36)
+        XCTAssertEqual(section.labelledTickIDs(plotWidth: 500), ["a"])
+        XCTAssertEqual(section.labelledTickIDs(plotWidth: 1000), ["a", "b"])
+    }
+
     func testTheValueLabelsComeFromTheModel() {
         let labels = quota([claude(contiguousFiveHour(count: 3))], .tool(.claude))
             .sections[0].valueLabels

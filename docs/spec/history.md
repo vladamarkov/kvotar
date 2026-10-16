@@ -511,15 +511,17 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   model allowance's weekly resets at its own first use and is not the provider's reset), labelled
   weekday and date in the report's calendar (`Fri Sep 18`) and drawn as a faint gridline, a 7 pt
   tick and the label; an unlabelled 3 pt tick at every other local midnight. A provider with no
-  weekly reset in the period is labelled at local Mondays in the same form. Two labelled ticks
-  closer than one label's width (72 pt) at the chart's own scale keep both marks and print the
-  earlier label only (`QuotaSection.labelledTickIDs(plotWidth:)`). The midnights are cut on the
+  weekly reset in the period is labelled at local Mondays in the same form. A label is centred on its
+  tick and pulled in at either edge to stay on the plot (`QuotaSection.tickLabelCenter`); two
+  labels closer than one label's width (72 pt) as placed keep both marks and print the earlier
+  label only (`QuotaSection.labelledTickIDs(plotWidth:)`). The midnights are cut on the
   report's injected calendar, the one its local days use, so the axis and the day strip agree on
   where a day begins. The `0` / `50` / `100` gridline labels come from the model too
   (`QuotaSection.valueLabels`); the view draws nothing it decided itself. (`quotaTicks`,
   `quotaValueLabels`; tests `testTicksLabelTheWeeklyResetsAndMarkEveryOtherMidnight`,
   `testAProviderWithNoWeeklyResetTicksAtMondays`, `testMidnightTicksAreTheDayStripsDayStarts`,
-  `testACrowdedTickKeepsItsMarkAndDropsItsLabel`, `testTheValueLabelsComeFromTheModel`)
+  `testACrowdedTickKeepsItsMarkAndDropsItsLabel`, `testTheSpacingRuleJudgesLabelsWhereTheEdgePlacesThem`,
+  `testTheValueLabelsComeFromTheModel`)
 - **Segments.** Points join into a line only within a run. A run breaks, and names why, when the
   previous window ended early (`Reset early`) or was withdrawn (`Withdrawn by the provider`), when
   the width changed (`Window width changed`), or when windows overlap or the gap between them
