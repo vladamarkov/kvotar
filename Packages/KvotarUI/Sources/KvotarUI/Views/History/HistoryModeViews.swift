@@ -458,9 +458,6 @@ struct WeeklyRecapModeView: View {
 /// there is no combined figure — two allowances are not comparable magnitudes.
 struct ExploreQuotaModeView: View {
     let page: HistoryExperience.QuotaPage
-    /// `Aug 12 – Sep 11` — the window header's own subtitle, so the axis and the heading name
-    /// one period.
-    let periodLabel: String
     @ObservedObject var vm: HistoryViewModel
 
     var body: some View {
@@ -486,16 +483,17 @@ struct ExploreQuotaModeView: View {
                             QuotaChartView(section: section,
                                            selectedID: selected?.id,
                                            scope: vm.scope,
-                                           periodLabel: periodLabel,
                                            vm: vm)
                         }
                     }
+                    // The detail sits under the chart it belongs to (§6.3) — click or keyboard,
+                    // never hover alone — so a Claude selection is not read under the Codex
+                    // chart, often off screen.
+                    if let point = selected, point.provider == section.provider {
+                        QuotaDetailView(point: point, vm: vm)
+                    }
                 }
-                // One detail for the page, below every chart (§6.3) — click or keyboard, never
-                // hover alone.
-                if let point = selected {
-                    QuotaDetailView(point: point, vm: vm)
-                } else {
+                if selected == nil {
                     HistoryNote(text: HistoryDisplay.quotaSelectHint)
                 }
             }

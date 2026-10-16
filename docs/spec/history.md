@@ -494,17 +494,32 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   that reported no window has no section. With none at all: `Quota history starts as Kvotar
   observes provider windows on this Mac. Earlier windows cannot be recovered.` (tests
   `testAllStacksOneSectionPerProvider`, `testAFreshInstallSaysEarlierWindowsCannotBeRecovered`)
-- **One factual sentence per section**, counting completed windows only: `2 of 7 completed
-  windows hit the limit.` or `None of the 7 completed windows hit the limit.`, plus `One more
-  ended above 80% used.` when it applies; `No completed window recorded yet.` when none. Below 3
-  completed windows: `Not enough completed windows to show a pattern yet.`, and the points are
-  still drawn. No advice, no pattern language. (`quotaSummary`, `quotaPatternFloor`; tests
-  `testTheSummaryCountsOnlyCompletedWindows`, `testSparseHistoryStillDrawsItsPointsAndSaysSo`)
-- **One point per window.** `Ended at N% used` (seen to the end), `Reached at least N% used ·
-  Partial` (a lower bound, drawn hollow), `So far N% used` (the open window, dashed, in no
-  count). Hitting the limit is its own mark, never colour alone. A point's horizontal place is its
-  reset across the period. (`quotaPoint`; tests `testPointCopyDistinguishesEndedLowerBoundAndSoFar`,
-  `testHitLimitIsItsOwnFlagNotAColour`)
+- **One factual sentence per section**, counting ended windows only, with the windows seen to
+  the end as the denominator: `2 of 7 windows seen to the end hit the limit.` or `None of the 7
+  windows seen to the end hit the limit.`, plus `One more ended at or above 80% used.` when it
+  applies; `No window seen to the end yet.` when none. A partly seen window's figure is a floor,
+  so it reaches neither count; it is counted in its own clause, `3 windows were only partly
+  seen.` Below 3 ended windows: `Not enough completed windows to show a pattern yet.`, and the
+  points are still drawn. No advice, no pattern language. (`quotaSummary`, `quotaPatternFloor`;
+  tests `testTheSummaryCountsOnlyCompletedWindows`,
+  `testPartlySeenWindowsAreCountedApartFromThoseSeenToTheEnd`,
+  `testSparseHistoryStillDrawsItsPointsAndSaysSo`)
+- **One point per window, one shape.** Every ended window is a filled dot in the provider's
+  colour: `Ended at N% used` (seen to the end) or `Reached at least N% used` (a lower bound; the
+  same dot at 40 % opacity, the fact in the hover, the detail and the sentence). The open window
+  is a hollow ring, `So far N% used`, in no count, standing at its **last recorded reading**,
+  never at now; its detail's `Reset` row ends `after the period shown`. A window seen at the
+  limit is a red diamond whatever else it is, never colour alone. An ended window's horizontal
+  place is its reset across the period. There is no legend: the ring is labelled `So far` beside
+  it, inside a margin the chart keeps free of the period for it (`QuotaSection.rightMargin`), and
+  a diamond is labelled `Hit the limit` where the model finds room on the chart's own scale —
+  right of the mark, else left, else not at all (`QuotaPoint.inPlaceLabel`,
+  `QuotaSection.inPlaceLabelSides(plotWidth:)`). The sentence carries the counts and the hover
+  card names the rest. Windows join in a 1 pt line at 40 % opacity inside a run (see *Segments*);
+  the open window is never on the line. The short-window strip is 130 pt high. (`quotaPoint`;
+  tests `testPointCopyDistinguishesEndedLowerBoundAndSoFar`, `testHitLimitIsItsOwnFlagNotAColour`,
+  `testTheOpenWindowStandsAtItsLastReadingAndNamesItself`,
+  `testInPlaceLabelsGoWhereTheModelFindsRoom`)
 - **Date axis.** The model gives each section its ticks (`QuotaSection.ticks`): a labelled tick
   at each weekly reset of the provider inside the period, from the report's **overall** weekly
   limits (an early ending at its actual time; twins within the anchor jitter are one tick; a
@@ -552,7 +567,8 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   x: that mark is ringed, a faint cursor line stands at it, and the day strip's own card
   (`DayHoverOverlay`, never the macOS `.help` tooltip) shows the window's weekday, date, span and
   result (`QuotaPoint.hoverBody`: `**Fri Sep 18, 9:00 am – 2:00 pm**` over `Ended at 87% used`,
-  with `Hit the limit` where it did) with no delay — the day strip's peek timer does not apply.
+  with `Hit the limit` where it did; the open window's head is `**Last reading Sun Aug 16, 11:00
+  am**`, the instant its ring stands at) with no delay — the day strip's peek timer does not apply.
   Over a band the card shows the band's text and the cursor follows the pointer. What the pointer
   rests on is the model's answer to the pointer's fraction of the plot (`quotaHover`); the view
   positions the overlay. Esc drops the card (see *Keys*). (`HistoryViewModel.quotaHover`; tests
@@ -561,7 +577,8 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   `HistoryDayHoverTests.testAQuotaHoverShowsItsCardAtOnce`, `testEscDropsAQuotaCardToo`)
 - **Selecting a point** (a click anywhere over the plot selects the window nearest on x, the one
   the hover rings; or ← / → on the chart, which is one keyboard stop) pins a detail
-  below the charts: title `<provider> · <span>` (the reset alone when the start is unknown);
+  under the chart it belongs to, never under another provider's: title `<provider> · <span>`
+  (the reset alone when the start is unknown);
   rows `Width`, `Used`, `Coverage` (`Seen to the reset`, `Seen at the limit`, `Last seen <span>
   before the reset`, `Partly observed`, `Open now`, with the reading count), `Reset` (with `reset early` or
   `withdrawn by the provider` where so), and `Local work that day | those days` with the note
@@ -701,8 +718,8 @@ recorded account changes. It is context near an event, never a claimed cause.
   Monday–Sunday week here, the last ended five-hour window there.
 - **History's window outcome versus the popover's `Last window ended at N%` line.** Two ideas,
   two owners. This page owns the fold, `QuotaWindowOutcomes` and its `QuotaWindowOutcome`:
-  width, ending and completion, so a window watched only partly reads `Reached at least N% used ·
-  Partial`. [explanations](explanations.md) owns the popover's `Last window ended at N%` line, built
+  width, ending and completion, so a window watched only partly reads `Reached at least N%
+  used`. [explanations](explanations.md) owns the popover's `Last window ended at N%` line, built
   from `SQLiteStore.previousWindowOutcome`, a separate `WindowOutcome` with the high water and the
   first 100 % reading only and no coverage check. Both read `quota_series` by anchor with the same
   ±60 s rule; they can word the same window differently.

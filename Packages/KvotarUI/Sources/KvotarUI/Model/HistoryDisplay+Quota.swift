@@ -34,6 +34,10 @@ extension HistoryDisplay {
     /// What the empty detail slot says before a point is pinned (STEP_183). Selection is by
     /// click or keyboard — hover previews the same facts but is never the only route (§6.3).
     static let quotaSelectHint = "Select a window to see how it ended."
+    /// Written beside the open window's ring. The chart has no legend; the ring names itself.
+    static let quotaSoFarLabel = "So far"
+    /// The open window's reset row, where the reset has not come yet: the chart ends at now.
+    static let quotaResetAfterPeriodNote = "after the period shown"
     /// The context disclaimer under a local-activity row: correlation is all this can be.
     static let quotaLocalContextNote =
         "Local work is shown for context. It does not prove what moved the window."
@@ -134,24 +138,39 @@ extension HistoryDisplay {
     /// advice and no pattern language. The current window is not in `completed` and therefore
     /// cannot reach any figure here — the exclusion is by input, not by a filter that could be
     /// forgotten.
+    ///
+    /// The denominator is the windows **seen to the end**: a partly seen window's figure is a
+    /// floor, so it can neither hit the limit here nor end above 80 % here — it may have done
+    /// either after Kvotar stopped looking. Those windows get their own clause, counted, so the
+    /// reader knows how much of the strip the first clause does not cover.
     static func quotaSummary(_ completed: [QuotaWindowOutcome]) -> String {
-        guard !completed.isEmpty else { return "No completed window recorded yet." }
-        let blocked = completed.filter { $0.hitLimitAt != nil }
-        let noun = completed.count == 1 ? "completed window" : "completed windows"
+        let full = completed.filter { $0.completion == .completedFull }
+        let partial = completed.filter { $0.completion == .completedPartial }
         var sentence: String
-        if blocked.isEmpty {
-            sentence = completed.count == 1
-                ? "The one completed window did not hit the limit."
-                : "None of the \(completed.count) \(noun) hit the limit."
+        if full.isEmpty {
+            sentence = "No window seen to the end yet."
         } else {
-            sentence = "\(blocked.count) of \(completed.count) \(noun) hit the limit."
+            let blocked = full.filter { $0.hitLimitAt != nil }
+            let noun = full.count == 1 ? "window seen to the end" : "windows seen to the end"
+            if blocked.isEmpty {
+                sentence = full.count == 1
+                    ? "The one window seen to the end did not hit the limit."
+                    : "None of the \(full.count) \(noun) hit the limit."
+            } else {
+                sentence = "\(blocked.count) of \(full.count) \(noun) hit the limit."
+            }
+            let high = full.filter { $0.hitLimitAt == nil && $0.highWaterPct >= quotaHighEndingPct }
+            if !high.isEmpty {
+                let lead = high.count == 1 ? "One more" : "\(high.count) more"
+                sentence += " \(lead) ended at or above \(Fmt.percentNumber(quotaHighEndingPct))% used."
+            }
         }
-        let high = completed.filter {
-            $0.hitLimitAt == nil && $0.highWaterPct >= quotaHighEndingPct
+        if !partial.isEmpty {
+            sentence += partial.count == 1
+                ? " 1 window was only partly seen."
+                : " \(partial.count) windows were only partly seen."
         }
-        guard !high.isEmpty else { return sentence }
-        let lead = high.count == 1 ? "One more" : "\(high.count) more"
-        return sentence + " \(lead) ended above \(Fmt.percentNumber(quotaHighEndingPct))% used."
+        return sentence
     }
 
     // MARK: - Points
@@ -170,31 +189,43 @@ extension HistoryDisplay {
         let label: String
         switch kind {
         case .completedFull: label = "Ended at \(used)% used"
-        case .completedPartial: label = "Reached at least \(used)% used · Partial"
-        case .current: label = "So far \(used)% used"
+        case .completedPartial: label = "Reached at least \(used)% used"
+        case .current: label = "\(quotaSoFarLabel) \(used)% used"
         }
+        let hitLimit = window.hitLimitAt != nil
+        // The open window stands at its last recorded reading, never at now or at a reset that
+        // has not come: a reading is the last thing Kvotar knows about it (the fold's rule,
+        // applied to geometry). An ended window stands at its reset.
+        let placedAt = kind == .current ? window.lastObservedAt : window.resetsAt
+        let inPlaceLabel: String? = kind == .current
+            ? quotaSoFarLabel
+            : (hitLimit ? limitHitLegendLabel : nil)
         return HistoryExperience.QuotaPoint(
             id: window.id,
             provider: tool,
             at: window.resetsAt,
             kind: kind,
-            hitLimit: window.hitLimitAt != nil,
+            hitLimit: hitLimit,
             fraction: window.highWaterPct / 100,
-            x: quotaX(window.resetsAt, period: period),
+            x: quotaX(placedAt, period: period),
             label: label,
             accessibilityValue: quotaAccessibility(window, tool: tool, label: label),
-            detail: quotaDetail(window, tool: tool, report: t),
-            hoverBody: quotaHoverBody(window, label: label, calendar: calendar))
+            detail: quotaDetail(window, tool: tool, report: t, period: period),
+            hoverBody: quotaHoverBody(window, label: label, calendar: calendar),
+            inPlaceLabel: inPlaceLabel)
     }
 
     /// The hover card: the window's weekday, date and span in bold, then its result — `**Fri Sep
     /// 18, 9:00 am – 2:00 pm**` over `Ended at 87% used`, with `Hit the limit` where it did. The
-    /// same label the point carries, so the card and the mark cannot disagree. Formatted in the
-    /// report's calendar, like the axis under it.
+    /// open window's head is its last reading (`**Last reading Sun Aug 16, 11:40 am**`), the
+    /// instant its ring stands at. The same label the point carries, so the card and the mark
+    /// cannot disagree. Formatted in the report's calendar, like the axis under it.
     static func quotaHoverBody(_ window: QuotaWindowOutcome, label: String,
                                calendar: Calendar) -> String {
         let when: String
-        if let start = window.start {
+        if window.completion == .current {
+            when = "Last reading \(quotaStamp(window.lastObservedAt, calendar: calendar, weekday: true))"
+        } else if let start = window.start {
             when = quotaStampSpan(from: start, to: window.resetsAt, calendar: calendar,
                                   weekday: true)
         } else {
@@ -256,10 +287,11 @@ extension HistoryDisplay {
 
     // MARK: - Selected-point detail
 
-    /// What a selected point pins below the charts (§6.3). A fact with no defensible value is
+    /// What a selected point pins under its chart (§6.3). A fact with no defensible value is
     /// **omitted**, never printed as a dash: the row set is the evidence, not a fixed grid.
     static func quotaDetail(_ window: QuotaWindowOutcome, tool: Tool,
-                            report t: HistoryReport.ToolReport)
+                            report t: HistoryReport.ToolReport,
+                            period: HistoryReport)
         -> HistoryExperience.QuotaDetail {
         var rows: [LabeledRow] = []
         if let grain = DisplayFormatter.windowGrain(seconds: window.windowSeconds) {
@@ -275,7 +307,7 @@ extension HistoryDisplay {
             rows.append(LabeledRow(label: "Used", value: "\(used)% used so far"))
         }
         rows.append(LabeledRow(label: "Coverage", value: quotaCoverage(window)))
-        rows.append(LabeledRow(label: "Reset", value: quotaReset(window)))
+        rows.append(LabeledRow(label: "Reset", value: quotaReset(window, period: period)))
 
         let local = quotaLocalWork(window, report: t)
         if let local { rows.append(local) }
@@ -308,10 +340,16 @@ extension HistoryDisplay {
     }
 
     /// The reset instant, and what actually ended the window where that was not its own reset.
-    static func quotaReset(_ window: QuotaWindowOutcome) -> String {
+    /// The open window's reset lies beyond the chart's right edge, and the row says so, since
+    /// its ring stands at its last reading and nothing on the plot marks the reset.
+    static func quotaReset(_ window: QuotaWindowOutcome, period: HistoryReport) -> String {
         let stamp = "\(Fmt.monthDay(window.resetsAt)), \(Fmt.clock(window.resetsAt))"
         switch window.ending {
-        case .reachedReset: return stamp
+        case .reachedReset:
+            if window.completion == .current, window.resetsAt > period.periodEnd {
+                return "\(stamp) · \(quotaResetAfterPeriodNote)"
+            }
+            return stamp
         case .earlyReset, .withdrawn:
             return "\(stamp) · \(quotaEndingLabel(window.ending).lowercased())"
         }

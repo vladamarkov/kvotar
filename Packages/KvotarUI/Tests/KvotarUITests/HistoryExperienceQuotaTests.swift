@@ -73,9 +73,53 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         let points = quota([claude(windows)], .tool(.claude)).sections[0].points
         XCTAssertEqual(points.map(\.label),
                        ["Ended at 87% used",
-                        "Reached at least 62% used · Partial",
+                        "Reached at least 62% used",
                         "So far 41% used"])
         XCTAssertEqual(points.map(\.kind), [.completedFull, .completedPartial, .current])
+    }
+
+    /// The open window stands at its last recorded reading, never at now or at a reset that has
+    /// not come; an ended window stands at its reset. The ring says `So far` beside itself and
+    /// the detail says the reset is off the chart.
+    func testTheOpenWindowStandsAtItsLastReadingAndNamesItself() throws {
+        let open = HXFix.quotaWindow(.claude, daysBack: 0, hour: 15, used: 41,
+                                     lastSeenBefore: 4 * 3600, completion: .current)
+        let ended = HXFix.quotaWindow(.claude, daysBack: 1, hour: 15, used: 60)
+        let points = quota([claude([ended, open])], .tool(.claude)).sections[0].points
+        XCTAssertEqual(points[1].x, x(open.lastObservedAt))
+        XCTAssertLessThan(points[1].x, 1, "the last reading was an hour before now")
+        XCTAssertEqual(points[0].x, x(ended.resetsAt))
+        XCTAssertEqual(points[1].inPlaceLabel, "So far")
+        XCTAssertNil(points[0].inPlaceLabel, "an ordinary ended window carries no words")
+        XCTAssertEqual(points[1].hoverBody, "**Last reading Sun Aug 16, 11:00 am**\nSo far 41% used")
+        let reset = try XCTUnwrap(points[1].detail.rows.first { $0.label == "Reset" })
+        XCTAssertTrue(reset.value.hasSuffix(HistoryDisplay.quotaResetAfterPeriodNote), reset.value)
+        let endedReset = try XCTUnwrap(points[0].detail.rows.first { $0.label == "Reset" })
+        XCTAssertFalse(endedReset.value.contains(HistoryDisplay.quotaResetAfterPeriodNote))
+    }
+
+    /// A diamond names itself where there is room: to the right of the mark when no other mark
+    /// stands in the label's way, else to the left, else not at all. The open window's `So far`
+    /// always goes right, into the margin the chart reserves for it.
+    func testInPlaceLabelsGoWhereTheModelFindsRoom() {
+        let lone = HXFix.quotaWindow(.claude, daysBack: 10, hour: 12, used: 100, hitLimit: true)
+        let crowdedRight = HXFix.quotaWindow(.claude, daysBack: 3, hour: 10, used: 100,
+                                             hitLimit: true)
+        let neighbour = HXFix.quotaWindow(.claude, daysBack: 3, hour: 12, used: 50)
+        let boxedIn = HXFix.quotaWindow(.claude, daysBack: 2, hour: 10, used: 100, hitLimit: true)
+        let before = HXFix.quotaWindow(.claude, daysBack: 2, hour: 8, used: 50)
+        let after = HXFix.quotaWindow(.claude, daysBack: 2, hour: 12, used: 50)
+        let open = HXFix.quotaWindow(.claude, daysBack: 0, hour: 14, used: 20,
+                                     lastSeenBefore: 2 * 3600 + 60, completion: .current)
+        let section = quota([claude([lone, crowdedRight, neighbour, before, boxedIn, after, open])],
+                            .tool(.claude)).sections[0]
+        let sides = section.inPlaceLabelSides(plotWidth: 600)
+        XCTAssertEqual(sides[lone.id], .right)
+        XCTAssertEqual(sides[crowdedRight.id], .left, "a mark two hours later blocks the right")
+        XCTAssertNil(sides[boxedIn.id], "marks on both sides: the diamond keeps its hover and sentence")
+        XCTAssertEqual(sides[open.id], .right)
+        XCTAssertNil(sides[neighbour.id], "no words on a plain dot")
+        XCTAssertEqual(section.points.first { $0.id == lone.id }?.inPlaceLabel, "Hit the limit")
     }
 
     func testHitLimitIsItsOwnFlagNotAColour() {
@@ -99,21 +143,41 @@ final class HistoryExperienceQuotaTests: XCTestCase {
                                          completion: .current, hitLimit: true))
         let section = quota([claude(windows)], .tool(.claude)).sections[0]
         XCTAssertEqual(section.summary,
-                       "1 of 5 completed windows hit the limit. One more ended above 80% used.")
+                       "1 of 5 windows seen to the end hit the limit. "
+                       + "One more ended at or above 80% used.")
         XCTAssertEqual(section.points.count, 6, "the open window is still drawn")
+    }
+
+    /// A partly seen window's figure is a floor, so it reaches neither the limit count nor the
+    /// 80 % clause — it may have done either after Kvotar stopped looking. It is counted in its
+    /// own clause instead, so the reader knows how much of the strip the first clause covers.
+    func testPartlySeenWindowsAreCountedApartFromThoseSeenToTheEnd() {
+        var windows = contiguousFiveHour(count: 4, used: 50)
+        windows[0] = HXFix.quotaWindow(.claude, daysBack: 3, hour: 5, used: 100,
+                                       lastSeenBefore: 3600, completion: .completedPartial,
+                                       hitLimit: true)
+        windows[1] = HXFix.quotaWindow(.claude, daysBack: 3, hour: 10, used: 85,
+                                       lastSeenBefore: 3600, completion: .completedPartial)
+        XCTAssertEqual(quota([claude(windows)], .tool(.claude)).sections[0].summary,
+                       "None of the 2 windows seen to the end hit the limit. "
+                       + "2 windows were only partly seen.")
+        windows[1] = HXFix.quotaWindow(.claude, daysBack: 3, hour: 10, used: 85)
+        XCTAssertEqual(quota([claude(windows)], .tool(.claude)).sections[0].summary,
+                       "None of the 3 windows seen to the end hit the limit. "
+                       + "One more ended at or above 80% used. 1 window was only partly seen.")
     }
 
     func testNoneHitTheLimitReadsAsSuch() {
         let section = quota([claude(contiguousFiveHour(count: 4, used: 55))],
                             .tool(.claude)).sections[0]
-        XCTAssertEqual(section.summary, "None of the 4 completed windows hit the limit.")
+        XCTAssertEqual(section.summary, "None of the 4 windows seen to the end hit the limit.")
     }
 
     func testAnOpenWindowAloneHasNoCompletedFigures() {
         let section = quota([claude([HXFix.quotaWindow(.claude, daysBack: 0, used: 44,
                                                        completion: .current)])],
                             .tool(.claude)).sections[0]
-        XCTAssertEqual(section.summary, "No completed window recorded yet.")
+        XCTAssertEqual(section.summary, "No window seen to the end yet.")
         XCTAssertEqual(section.sparseNote, HistoryDisplay.quotaSparseNote)
         XCTAssertEqual(section.points.count, 1)
     }
@@ -474,8 +538,8 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         let points = quota([claude(windows)], .tool(.claude)).sections[0].points
         XCTAssertEqual(points.map(\.hoverBody), [
             "**Tue Aug 11, 1:00 am – 6:00 am**\nEnded at 87% used",
-            "**Tue Aug 11, 6:00 am – 11:00 am**\nReached at least 62% used · Partial",
-            "**Tue Aug 11, 11:00 am – 4:00 pm**\nSo far 41% used",
+            "**Tue Aug 11, 6:00 am – 11:00 am**\nReached at least 62% used",
+            "**Last reading Tue Aug 11, 4:00 pm**\nSo far 41% used",
             "**Tue Aug 11, 9:00 pm – Wed Aug 12, 2:00 am**\nEnded at 100% used · Hit the limit",
         ])
     }

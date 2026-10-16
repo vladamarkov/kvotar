@@ -8,8 +8,13 @@ import KvotarCore
 /// bar shapes. So this is a new primitive, built to the conventions those two already set —
 /// the block itself is the keyboard stop, `←`/`→` move the selection, and every drawn mark is a
 /// value the model already decided (`x`, `fraction`, `kind`, `hitLimit`, `accessibilityValue`,
-/// the axis ticks, the `Nothing recorded` bands and the hover card). The only arithmetic here is
-/// a fraction times a size, and its inverse for the pointer.
+/// the axis ticks, the `Nothing recorded` bands, the in-place labels and the hover card). The
+/// only arithmetic here is a fraction times a size, and its inverse for the pointer.
+///
+/// **No legend.** Every ended window is the same dot, a partly seen one faded; the open window
+/// is a ring labelled `So far` beside it; a limit hit is a diamond labelled `Hit the limit`
+/// where the model finds room. The sentence above carries the counts and the hover card names
+/// the rest, so a key under the chart would only repeat them.
 ///
 /// **`% used`, not `% left`.** This is the narrow retrospective exception (§6.1): the chart shows
 /// consumption ending at a limit, so 100 % sits at the top. Every live surface in the app stays
@@ -20,18 +25,16 @@ struct QuotaChartView: View {
     /// A week-scoped arrival dims what it is not about. The points themselves are unchanged —
     /// the section's factual sentence still describes all thirty days, which is what it says.
     let scope: HistoryViewModel.Scope?
-    /// The report period, from the window's own header — the axis runs across exactly this span,
-    /// and printing it is what gives the horizontal dimension a meaning. The string is the
-    /// model's; nothing here formats a date.
-    let periodLabel: String
     @ObservedObject var vm: HistoryViewModel
 
-    private let plotHeight: CGFloat = 180
+    /// The short-window strip: dense, so low. The dates under it carry the horizontal meaning.
+    private let plotHeight: CGFloat = 130
     /// Room under the plot for the tick marks and their labels.
     private let axisHeight: CGFloat = 26
     private let gutter: CGFloat = 34
-    /// Room for a mark sitting exactly at the end of the period (the open window usually does).
-    private let rightPad: CGFloat = 8
+    /// The margin the model reserves to the right of the period's end for the open window's
+    /// label (`QuotaSection.rightMargin`).
+    private var rightPad: CGFloat { HistoryExperience.QuotaSection.rightMargin }
     private let markSize: CGFloat = 9
     private var tickLabelWidth: CGFloat { HistoryExperience.QuotaSection.tickLabelWidth }
 
@@ -39,14 +42,6 @@ struct QuotaChartView: View {
         VStack(alignment: .leading, spacing: 9) {
             HistoryEyebrow(text: "% used")
             plot
-            HStack(spacing: 8) {
-                QuotaChartLegend()
-                Spacer(minLength: 8)
-                Text(periodLabel)
-                    .font(HistoryTheme.note)
-                    .monospacedDigit()
-                    .foregroundStyle(HistoryTheme.tertiary)
-            }
             // The unjoined-run sentence is the same one for every such run, so it is stated once
             // under the chart rather than per segment — three copies of one caveat is noise, not
             // three facts.
@@ -65,6 +60,7 @@ struct QuotaChartView: View {
     private var plot: some View {
         GeometryReader { geo in
             let width = max(geo.size.width - gutter - rightPad, 1)
+            let labelSides = section.inPlaceLabelSides(plotWidth: width)
             ZStack(alignment: .topLeading) {
                 ForEach(section.bands) { band in
                     self.band(band, width: width)
@@ -76,6 +72,9 @@ struct QuotaChartView: View {
                 }
                 ForEach(section.points) { point in
                     mark(point, width: width)
+                    if let text = point.inPlaceLabel, let side = labelSides[point.id] {
+                        inPlaceLabel(text, for: point, side: side, width: width)
+                    }
                 }
                 if let hover { cursor(hover, width: width) }
             }
@@ -210,11 +209,14 @@ struct QuotaChartView: View {
     }
 
     /// The connecting line, drawn only where the model says these windows abut
-    /// (`QuotaSegment.connects`). A run whose widths were never recorded has no defensible start,
-    /// so it stays a group of separate points.
+    /// (`QuotaSegment.connects`), and only through ended windows — the open one stands at its
+    /// last reading, not at a reset, so a line to it would join unlike instants. Thin and faint:
+    /// on a strip of ninety windows the line is the eye's guide through the run, not the figure.
+    /// A run whose widths were never recorded has no defensible start, so it stays a group of
+    /// separate points.
     private func line(_ segment: HistoryExperience.QuotaSegment, width: CGFloat) -> some View {
         let points = segment.pointIDs.compactMap { id in
-            section.points.first { $0.id == id }
+            section.points.first { $0.id == id && $0.kind != .current }
         }
         return Path { path in
             for (index, point) in points.enumerated() {
@@ -223,8 +225,8 @@ struct QuotaChartView: View {
                 if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
             }
         }
-        .stroke(HistoryTheme.accent(section.provider).opacity(0.72),
-                style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+        .stroke(HistoryTheme.accent(section.provider).opacity(0.4),
+                style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round))
         .allowsHitTesting(false)
     }
 
@@ -245,6 +247,25 @@ struct QuotaChartView: View {
             .accessibilityValue(point.accessibilityValue)
             .accessibilityAddTraits(traits)
             .accessibilityAction { vm.selectQuotaPoint(point.id) }
+    }
+
+    /// The words beside a mark, on the side the model chose. The mark's own accessibility value
+    /// already says the same thing, so the label is decoration to VoiceOver.
+    private func inPlaceLabel(_ text: String, for point: HistoryExperience.QuotaPoint,
+                              side: HistoryExperience.QuotaSection.LabelSide,
+                              width: CGFloat) -> some View {
+        let gap = HistoryExperience.QuotaSection.inPlaceLabelGap
+        let labelWidth = HistoryExperience.QuotaSection.inPlaceLabelWidth
+        let markX = gutter + width * point.x
+        let center = side == .right ? markX + gap + labelWidth / 2 : markX - gap - labelWidth / 2
+        return Text(text)
+            .font(HistoryTheme.note)
+            .foregroundStyle(HistoryTheme.secondary)
+            .fixedSize()
+            .frame(width: labelWidth, alignment: side == .right ? .leading : .trailing)
+            .position(x: center, y: plotHeight * (1 - point.fraction))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     /// The hover: a faint cursor line through the plot and the axis, a ring on the nearest mark,
@@ -272,9 +293,11 @@ struct QuotaChartView: View {
     }
 }
 
-/// One drawn window. **Shape carries the state and colour only supplements it** (§6.3): a filled
-/// dot completed and fully observed, a hollow ring where the figure is a lower bound, a dashed
-/// ring for the window still open, and a diamond wherever the limit was reached.
+/// One drawn window. **One shape for every ended window** (§6.3 as redrawn): a filled dot in
+/// the provider's colour; a window Kvotar saw only part of is the same dot faded, with the fact
+/// in the hover, the detail and the sentence; the open window is a hollow ring; and a window
+/// seen at the limit is a red diamond whatever else it is. Shape and colour carry the state
+/// together, and the labels beside the ring and the diamond say what they are.
 private struct QuotaMark: View {
     let point: HistoryExperience.QuotaPoint
     let accent: Color
@@ -294,70 +317,21 @@ private struct QuotaMark: View {
     }
 
     @ViewBuilder private var shape: some View {
-        let stateColor = point.hitLimit
-            ? HistoryTheme.redAccent
-            : (point.kind == .completedPartial ? HistoryTheme.warn : accent)
-        switch point.kind {
-        case .completedFull:
-            outline.fill(stateColor)
-        case .completedPartial:
-            ZStack {
-                outline.fill(HistoryTheme.surface)
-                outline.stroke(stateColor,
-                               style: StrokeStyle(lineWidth: 2.5, dash: [2, 2]))
-            }
-        case .current:
-            ZStack {
-                outline.fill(HistoryTheme.surface)
-                outline.stroke(accent, style: StrokeStyle(lineWidth: 1.5, dash: [2.5, 2]))
-            }
-        }
-    }
-
-    /// The limit mark is a diamond, so a blocked window is distinguishable from a busy one with
-    /// the colour switched off — and it composes with the fill rules above rather than replacing
-    /// them.
-    private var outline: AnyShape {
-        point.hitLimit
-            ? AnyShape(Rectangle().rotation(.degrees(45)))
-            : AnyShape(Circle())
-    }
-}
-
-/// The shape key. Static copy — it names what the marks mean, and says nothing about the data.
-private struct QuotaChartLegend: View {
-    var body: some View {
-        HStack(spacing: 14) {
-            entry("Hit the limit", filled: true, dashed: false, diamond: true,
-                  color: HistoryTheme.redAccent)
-            entry("Partial", filled: false, dashed: true, diamond: false,
-                  color: HistoryTheme.warn)
-            entry("Completed", filled: false, dashed: false, diamond: false,
-                  color: HistoryTheme.claudeAccent)
-            entry("So far", filled: false, dashed: true, diamond: false,
-                  color: HistoryTheme.secondary)
-        }
-    }
-
-    private func entry(_ label: String, filled: Bool, dashed: Bool,
-                       diamond: Bool, color: Color) -> some View {
-        HStack(spacing: 5) {
-            Group {
-                if diamond {
-                    Rectangle().rotation(.degrees(45)).fill(color)
-                } else if filled {
-                    Circle().fill(color)
-                } else if dashed {
-                    Circle().stroke(color,
-                                    style: StrokeStyle(lineWidth: 1.5, dash: [2.5, 2]))
-                } else {
-                    Circle().stroke(color, lineWidth: 1.5)
+        if point.hitLimit {
+            Rectangle().rotation(.degrees(45)).fill(HistoryTheme.redAccent)
+                .opacity(point.kind == .completedPartial ? 0.4 : 1)
+        } else {
+            switch point.kind {
+            case .completedFull:
+                Circle().fill(accent)
+            case .completedPartial:
+                Circle().fill(accent).opacity(0.4)
+            case .current:
+                ZStack {
+                    Circle().fill(HistoryTheme.surface)
+                    Circle().strokeBorder(accent, lineWidth: 1.5)
                 }
             }
-            .frame(width: 8, height: 8)
-            Text(label)
-                .font(HistoryTheme.note)
-                .foregroundStyle(HistoryTheme.tertiary)
         }
     }
 }

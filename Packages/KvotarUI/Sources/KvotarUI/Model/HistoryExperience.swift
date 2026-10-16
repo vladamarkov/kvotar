@@ -373,12 +373,14 @@ public struct HistoryExperience: Sendable {
     public struct QuotaPoint: Sendable, Equatable, Identifiable {
         /// How much of the window Kvotar watched — the shape's meaning, not a quality score.
         public enum Kind: String, Sendable, Equatable {
-            /// Seen to its end: `Ended at N% used` is an outcome.
+            /// Seen to its end: `Ended at N% used` is an outcome. A filled dot.
             case completedFull
-            /// Abandoned before its reset: `N%` is a **lower bound**, drawn hollow.
+            /// Abandoned before its reset: `N%` is a **lower bound**. The same dot, faded; the
+            /// hover and the detail say why.
             case completedPartial
-            /// The window still open, drawn dashed as `So far`. Excluded from every completed
-            /// count, median, comparison and conclusion (§6.3).
+            /// The window still open: a hollow ring at its last recorded reading, labelled `So
+            /// far` in place. Excluded from every completed count, median, comparison and
+            /// conclusion (§6.3).
             case current
         }
 
@@ -395,10 +397,17 @@ public struct HistoryExperience: Sendable {
         public let hitLimit: Bool
         /// Geometry: utilization ÷ 100, clamped 0…1. The view multiplies it by a height.
         public let fraction: Double
-        /// Geometry: where the window's reset sits across the report period, clamped 0…1.
+        /// Geometry: where the window's reset sits across the report period, clamped 0…1 — or,
+        /// for the open window, where its last recorded reading sits. Nothing is drawn at now:
+        /// the reading is the last thing Kvotar knows.
         public let x: Double
-        /// `Ended at 87% used` / `Reached at least 62% used · Partial` / `So far 41% used`.
+        /// `Ended at 87% used` / `Reached at least 62% used` / `So far 41% used`.
         public let label: String
+        /// The words written beside the mark where the chart finds room: `So far` on the open
+        /// window, `Hit the limit` on a diamond, nil otherwise. There is no legend; a mark that
+        /// means something names itself. Which side, or whether at all, is
+        /// `QuotaSection.inPlaceLabelSides(plotWidth:)`'s answer.
+        public let inPlaceLabel: String?
         /// Provider, span, width, ending/lower-bound utilization, completion and block state as
         /// plain text (§6.0 accessibility) — no markdown, so VoiceOver never reads punctuation.
         public let accessibilityValue: String
@@ -410,7 +419,7 @@ public struct HistoryExperience: Sendable {
 
         public init(id: String, provider: Tool, at: Date, kind: Kind, hitLimit: Bool,
                     fraction: Double, x: Double, label: String, accessibilityValue: String,
-                    detail: QuotaDetail, hoverBody: String = "") {
+                    detail: QuotaDetail, hoverBody: String = "", inPlaceLabel: String? = nil) {
             self.id = id
             self.provider = provider
             self.at = at
@@ -422,10 +431,11 @@ public struct HistoryExperience: Sendable {
             self.accessibilityValue = accessibilityValue
             self.detail = detail
             self.hoverBody = hoverBody
+            self.inPlaceLabel = inPlaceLabel
         }
     }
 
-    /// What is pinned below the charts when a point is selected (§6.3): the window's own facts,
+    /// What is pinned under the chart when a point is selected (§6.3): the window's own facts,
     /// then the local work that happened alongside it — labelled context, never cause.
     public struct QuotaDetail: Sendable, Equatable {
         /// `Claude · Sep 3, 2 pm – 7 pm`, or the reset alone where the width was never recorded.
@@ -611,6 +621,53 @@ public struct HistoryExperience: Sendable {
         public let bands: [QuotaBand]
 
         public var id: Tool { provider }
+
+        /// Which side of its mark an in-place label is written on.
+        public enum LabelSide: Sendable, Equatable {
+            case right, left
+        }
+
+        /// The margin the chart keeps free to the right of the period's end, so the open
+        /// window's `So far` always has room beside its ring, however late its last reading.
+        public static let rightMargin: CGFloat = 84
+        /// The room an in-place label needs: the gap from the mark, the longest label (`Hit the
+        /// limit`) and the clearance before the next mark.
+        public static let inPlaceLabelGap: CGFloat = 9
+        public static let inPlaceLabelWidth: CGFloat = 68
+        public static let inPlaceLabelClearance: CGFloat = 8
+
+        /// Where each labelled mark writes its words at the chart's own scale, by point id. The
+        /// open window's label always goes to the right: that is what the margin is for. Any
+        /// other label goes to the right of its mark when no other mark stands within the
+        /// clearance of the box the words would fill, else to the left on the same condition,
+        /// else nowhere — a dense strip drops the words and keeps the diamond, which the hover
+        /// and the sentence still name. Judged on x alone: a mark far above or below the words
+        /// still counts as in the way, which drops a label it might have kept, never the reverse.
+        public func inPlaceLabelSides(plotWidth: CGFloat) -> [String: LabelSide] {
+            let gap = Self.inPlaceLabelGap, width = Self.inPlaceLabelWidth
+            let clearance = Self.inPlaceLabelClearance
+            var sides: [String: LabelSide] = [:]
+            for point in points where point.inPlaceLabel != nil {
+                if point.kind == .current {
+                    sides[point.id] = .right
+                    continue
+                }
+                let px = CGFloat(point.x) * plotWidth
+                let others = points.filter { $0.id != point.id }.map { CGFloat($0.x) * plotWidth }
+                let rightBox = (px + gap - clearance)...(px + gap + width + clearance)
+                let leftBox = (px - gap - width - clearance)...(px - gap + clearance)
+                let rightClear = rightBox.upperBound <= plotWidth + Self.rightMargin
+                    && !others.contains { rightBox.contains($0) }
+                let leftClear = leftBox.lowerBound >= 0
+                    && !others.contains { leftBox.contains($0) }
+                if rightClear {
+                    sides[point.id] = .right
+                } else if leftClear {
+                    sides[point.id] = .left
+                }
+            }
+            return sides
+        }
 
         /// The room one tick label needs on the chart. Two resets closer than this (an early
         /// ending beside a scheduled one) would print over each other.
