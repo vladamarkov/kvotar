@@ -385,6 +385,19 @@ final class QuotaWindowOutcomesTests: XCTestCase {
                           "two providers observing the same instant are two windows")
     }
 
+    /// A five-hour window and a weekly one routinely reset at the same instant, and History
+    /// lists both; the id tells them apart by width.
+    func testIdentityIsWidthScoped() {
+        let short = QuotaWindowOutcomes.compute(
+            tool: .claude, points: [point(0, 10, resetsAt: resetsAt)],
+            now: resetsAt.addingTimeInterval(600))
+        let weekly = QuotaWindowOutcomes.compute(
+            tool: .claude, points: [point(0, 10, resetsAt: resetsAt, width: 604_800)],
+            now: resetsAt.addingTimeInterval(600))
+        XCTAssertNotEqual(short[0].id, weekly[0].id,
+                          "same provider, same reset, two widths, two windows")
+    }
+
     // MARK: - Provider-contract width (STEP_227)
 
     /// Claude's `seven_day` states no width, so its weekly rows store none; the weekly fold passes

@@ -480,15 +480,20 @@ public struct HistoryExperience: Sendable {
         public let widthNote: String?
         /// Point ids in time order. The points themselves live once, on the section.
         public let pointIDs: [String]
+        /// The points the line runs through, in time order: the run's ended windows where
+        /// `connects`, else none. The open window stands at its last reading, not at a reset,
+        /// so it is never on the line.
+        public let joinedIDs: [String]
 
         public init(id: String, widthLabel: String?, connects: Bool, boundaryNote: String?,
-                    widthNote: String? = nil, pointIDs: [String]) {
+                    widthNote: String? = nil, pointIDs: [String], joinedIDs: [String] = []) {
             self.id = id
             self.widthLabel = widthLabel
             self.connects = connects
             self.boundaryNote = boundaryNote
             self.widthNote = widthNote
             self.pointIDs = pointIDs
+            self.joinedIDs = joinedIDs
         }
     }
 
@@ -652,9 +657,12 @@ public struct HistoryExperience: Sendable {
         public let periodRange: ClosedRange<Double>
         /// The window the lens is open on, ringed. Set by `QuotaSection.dayLens(selecting:)`.
         public let selectedID: String?
+        /// What VoiceOver calls the lens: `Claude · Aug 11 · 5 windows`.
+        public let accessibilityLabel: String
 
         public init(id: String, title: String, marks: [Mark], ticks: [QuotaAxisTick],
-                    periodRange: ClosedRange<Double>, selectedID: String? = nil) {
+                    periodRange: ClosedRange<Double>, selectedID: String? = nil,
+                    accessibilityLabel: String? = nil) {
             self.id = id
             self.title = title
             self.marks = marks
@@ -662,12 +670,20 @@ public struct HistoryExperience: Sendable {
             let lower = min(max(periodRange.lowerBound, 0), 1)
             self.periodRange = lower...max(lower, min(periodRange.upperBound, 1))
             self.selectedID = selectedID
+            self.accessibilityLabel = accessibilityLabel ?? title
         }
 
         /// The same lens, open on `id`.
         public func selecting(_ id: String) -> QuotaDayLens {
             QuotaDayLens(id: self.id, title: title, marks: marks, ticks: ticks,
-                         periodRange: periodRange, selectedID: id)
+                         periodRange: periodRange, selectedID: id,
+                         accessibilityLabel: accessibilityLabel)
+        }
+
+        /// Whether `x` falls in the day: from its midnight up to, not including, the next — an
+        /// instant exactly at midnight belongs to the day that starts there.
+        func holds(x: Double) -> Bool {
+            x >= periodRange.lowerBound && x < periodRange.upperBound
         }
 
         /// The mark nearest on x — what a click on the lens selects. A tie goes to the later one.
@@ -723,6 +739,9 @@ public struct HistoryExperience: Sendable {
         public let valueLabels: [QuotaValueLabel]
         /// One lens per local day with a short window on the strip, oldest first.
         public let dayLenses: [QuotaDayLens]
+        /// What VoiceOver calls each plot: `Claude weekly chart`, `Claude window chart`.
+        public let weeklyChartLabel: String
+        public let stripChartLabel: String
 
         public var id: Tool { provider }
 
@@ -733,10 +752,12 @@ public struct HistoryExperience: Sendable {
         }
 
         /// The lens for the day under fraction `x` of the strip's axis — the day whose span
-        /// holds `x`, else the nearest day that has one, so a click on a quiet day still opens
-        /// something. Nil only where the section has no lens at all.
+        /// holds `x` (midnight belongs to the day it starts), else the nearest day that has one,
+        /// so a click on a quiet day still opens something. Nil only where the section has no
+        /// lens at all.
         public func dayLens(atX x: Double) -> QuotaDayLens? {
-            dayLenses.min { $0.distance(toX: x) < $1.distance(toX: x) }
+            if let held = dayLenses.first(where: { $0.holds(x: x) }) { return held }
+            return dayLenses.min { $0.distance(toX: x) < $1.distance(toX: x) }
         }
 
         /// Which side of its mark an in-place label is written on.
@@ -819,9 +840,12 @@ public struct HistoryExperience: Sendable {
                     segments: [QuotaSegment] = [], points: [QuotaPoint] = [],
                     weeklyPoints: [QuotaPoint] = [], curves: [QuotaCurve] = [],
                     ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = [],
-                    dayLenses: [QuotaDayLens] = []) {
+                    dayLenses: [QuotaDayLens] = [],
+                    weeklyChartLabel: String? = nil, stripChartLabel: String? = nil) {
             self.provider = provider
             self.title = title
+            self.weeklyChartLabel = weeklyChartLabel ?? "\(title) weekly chart"
+            self.stripChartLabel = stripChartLabel ?? "\(title) window chart"
             self.weeklyTitle = weeklyTitle
             self.stripTitle = stripTitle
             self.summary = summary

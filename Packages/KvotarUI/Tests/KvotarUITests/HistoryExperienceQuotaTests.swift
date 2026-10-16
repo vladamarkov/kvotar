@@ -96,6 +96,9 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(points[0].x, x(ended.resetsAt))
         XCTAssertEqual(points[1].inPlaceLabel, "So far")
         XCTAssertNil(points[0].inPlaceLabel, "an ordinary ended window carries no words")
+        let section = quota([claude([ended, open])], .tool(.claude)).sections[0]
+        XCTAssertEqual(section.segments.map(\.joinedIDs), [[ended.id], []],
+                       "the open window is never on a line; the model says which points are")
         XCTAssertEqual(points[1].hoverBody, "**Last reading Sun Aug 16, 11:00 am**\nSo far 41% used")
         let reset = try XCTUnwrap(points[1].detail.rows.first { $0.label == "Reset" })
         XCTAssertTrue(reset.value.hasSuffix(HistoryDisplay.quotaResetAfterPeriodNote), reset.value)
@@ -223,6 +226,8 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertNil(section.segments[0].boundaryNote)
         XCTAssertNil(section.segments[0].widthNote)
         XCTAssertEqual(section.segments[0].pointIDs.count, 4)
+        XCTAssertEqual(section.segments[0].joinedIDs, section.segments[0].pointIDs,
+                       "all ended, all on the line")
     }
 
     /// The legacy corpus: rows written before migration `v23` carry no width, so nothing can
@@ -236,6 +241,7 @@ final class HistoryExperienceQuotaTests: XCTestCase {
                             .tool(.claude)).sections[0]
         XCTAssertEqual(section.segments.count, 1, "alike in having no shape — one group")
         XCTAssertFalse(section.segments[0].connects)
+        XCTAssertTrue(section.segments[0].joinedIDs.isEmpty, "no line through unknown widths")
         XCTAssertNil(section.segments[0].widthLabel)
         XCTAssertEqual(section.segments[0].widthNote, HistoryDisplay.quotaUnrecordedWidthNote)
         XCTAssertEqual(section.segments[0].pointIDs.count, 3)
@@ -539,17 +545,37 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertTrue(curves[2].samples[1].hoverBody.hasSuffix("· Reset early"))
     }
 
-    /// Readings that repeat the one before are not drawn: the first, the last and every change
-    /// of value are, so the step line and the mark are unchanged and the chart stays light.
-    func testRepeatedReadingsAreThinnedToTheOnesThatMoved() throws {
-        let readings = HXFix.readings(endingAt: weekEnd, pcts: [10, 10, 10, 20, 20, 30, 30],
+    /// Readings inside a flat run are not drawn, but both ends of the run are, so the line stays
+    /// flat until the value moved rather than ramping across the run; the mark is unchanged.
+    /// The hover rests on the nearest kept reading.
+    func testRepeatedReadingsAreThinnedToTheEndsOfEachFlatRun() throws {
+        let readings = HXFix.readings(endingAt: weekEnd, pcts: [10, 10, 10, 10, 20, 20, 30, 30],
                                       every: 600)
-        let curve = try XCTUnwrap(
-            weeklySection([HXFix.weeklyLimit(endedAt: weekEnd, used: 30, readings: readings)])
-                .curves.first)
-        XCTAssertEqual(curve.samples.map(\.fraction), [0.1, 0.2, 0.3, 0.3])
-        XCTAssertEqual(curve.samples.map(\.x), [0, 3, 5, 6].map { x(readings[$0].at) })
-        XCTAssertEqual(curve.markIndex, 3, "the mark is still the last reading")
+        let section = weeklySection([HXFix.weeklyLimit(endedAt: weekEnd, used: 30,
+                                                       readings: readings)])
+        let curve = try XCTUnwrap(section.curves.first)
+        XCTAssertEqual(curve.samples.map(\.fraction), [0.1, 0.1, 0.2, 0.2, 0.3, 0.3])
+        XCTAssertEqual(curve.samples.map(\.x), [0, 3, 4, 5, 6, 7].map { x(readings[$0].at) },
+                       "the run of 10s keeps its first and last reading, not the ones between")
+        XCTAssertEqual(curve.markIndex, 5, "the mark is still the last reading")
+        let inside = try XCTUnwrap(
+            HistoryDisplay.quotaHover(section, atX: x(readings[2].at), chart: .weekly))
+        XCTAssertEqual(inside.ringFraction, 0.1, "a hover inside the run reads the run's value")
+        XCTAssertEqual(inside.cursorX, x(readings[3].at), "at the nearest kept reading")
+    }
+
+    /// A five-hour window that resets at the same instant as the weekly is still a dot on the
+    /// strip, and selecting one never selects the other.
+    func testAShortWindowThatSharesTheWeeklyResetStaysOnTheStrip() throws {
+        let short = HXFix.quotaWindow(.claude, daysBack: 5, hour: 12, used: 70)
+        let week = HXFix.weeklyLimit(endedAt: short.resetsAt, used: 40)
+        let section = quota([HXFix.tool(.claude, quotaWindows: [short], weeklyLimits: [week])],
+                            .tool(.claude)).sections[0]
+        XCTAssertEqual(section.points.map(\.id), [short.id])
+        XCTAssertEqual(section.weeklyPoints.map(\.id), [week.outcome.id])
+        XCTAssertNotEqual(short.id, week.outcome.id)
+        XCTAssertEqual(section.dayLens(selecting: short.id)?.marks.map(\.id), [short.id])
+        XCTAssertNil(section.dayLens(selecting: week.outcome.id))
     }
 
     /// A model allowance's weekly is not the provider's weekly and draws no curve; a week whose
@@ -664,6 +690,37 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(section.dayLenses.count, 1)
     }
 
+    /// On the day the clocks change the hour ticks still stand at the clock's own hours: 6 am is
+    /// five hours after midnight when the clocks go forward and seven when they go back, and the
+    /// label says `6 am` either way. Belgrade changes on 2026-03-29 and 2026-10-25.
+    func testTheLensHoursFollowTheClockAcrossADSTChange() throws {
+        var belgrade = Calendar(identifier: .gregorian)
+        belgrade.timeZone = try XCTUnwrap(TimeZone(identifier: "Europe/Belgrade"))
+        func lens(daysBack: Double) throws -> HistoryExperience.QuotaDayLens {
+            let window = HXFix.quotaWindow(.claude, daysBack: daysBack, hour: 12, used: 50)
+            return try XCTUnwrap(HistoryDisplay.quotaDayLenses(
+                [window], tool: .claude, period: HXFix.report([]), calendar: belgrade).first)
+        }
+        let forward = try lens(daysBack: 140) // 2026-03-29, a 23-hour day
+        XCTAssertEqual(forward.id, "2026-03-29")
+        XCTAssertEqual(forward.ticks.compactMap(\.label), ["12 am", "6 am", "12 pm", "6 pm", "12 am"])
+        let forwardLabelled = forward.ticks.filter { $0.label != nil }.map(\.x)
+        for (tick, hours) in zip(forwardLabelled, [0.0, 5, 11, 17, 23]) {
+            XCTAssertEqual(tick, hours / 23, accuracy: 1e-9)
+        }
+        XCTAssertEqual(forward.marks[0].x, 13.0 / 23, accuracy: 1e-9,
+                       "noon UTC is 2 pm in Belgrade, thirteen hours after that midnight")
+
+        let back = try lens(daysBack: -70) // 2026-10-25, a 25-hour day
+        XCTAssertEqual(back.id, "2026-10-25")
+        XCTAssertEqual(back.ticks.compactMap(\.label), ["12 am", "6 am", "12 pm", "6 pm", "12 am"])
+        let backLabelled = back.ticks.filter { $0.label != nil }.map(\.x)
+        for (tick, hours) in zip(backLabelled, [0.0, 7, 13, 19, 25]) {
+            XCTAssertEqual(tick, hours / 25, accuracy: 1e-9)
+        }
+        XCTAssertEqual(back.ticks.count, 9, "every third hour exists on both days")
+    }
+
     /// A click on the strip's axis band finds the day under the pointer and opens it on its
     /// first window; a quiet day opens the nearest day that has one. On the lens itself a click
     /// selects the mark nearest on x.
@@ -676,6 +733,9 @@ final class HistoryExperienceQuotaTests: XCTestCase {
         XCTAssertEqual(section.dayLens(atX: x(noon))?.marks.first?.id, day[0].id)
         XCTAssertEqual(section.dayLens(atX: 0)?.id, "2026-08-13", "a quiet day opens the nearest")
         XCTAssertEqual(section.dayLens(atX: 1)?.id, "2026-08-14")
+        let midnight = HXFix.quotaWindow(.claude, daysBack: 2, hour: 0).resetsAt
+        XCTAssertEqual(section.dayLens(atX: x(midnight))?.id, "2026-08-14",
+                       "midnight belongs to the day it starts")
 
         let lens = try XCTUnwrap(section.dayLens(selecting: day[0].id))
         XCTAssertEqual(lens.nearestMark(atX: 0.4)?.id, day[1].id, "9:36 am is nearest the 10 am reset")

@@ -110,8 +110,13 @@ extension HistoryDisplay {
             .filter { $0.limit == .overall }
             .map(\.outcome)
             .sorted { $0.resetsAt < $1.resetsAt }
+        // A main window is a curve, not a dot, only when it is itself the weekly: a five-hour
+        // window that shares a reset with the weekly stays on the strip.
         let weeklyIDs = Set(weekly.map(\.id))
-        let strip = windows.filter { !weeklyIDs.contains($0.id) }
+        let strip = windows.filter {
+            !(weeklyIDs.contains($0.id)
+                && $0.windowSeconds == QuotaWindowOutcomes.weeklyContractSeconds)
+        }
         let points = strip.map {
             quotaPoint($0, tool: t.tool, report: t, period: report, calendar: calendar)
         }
@@ -137,7 +142,9 @@ extension HistoryDisplay {
             curves: curves,
             ticks: quotaTicks(t, period: report, calendar: calendar),
             valueLabels: quotaValueLabels,
-            dayLenses: quotaDayLenses(strip, period: report, calendar: calendar))
+            dayLenses: quotaDayLenses(strip, tool: t.tool, period: report, calendar: calendar),
+            weeklyChartLabel: "\(t.tool.tabLabel) weekly chart",
+            stripChartLabel: "\(t.tool.tabLabel) window chart")
     }
 
     /// `5-hour windows` where every window on the strip reported the same width, else the
@@ -533,12 +540,15 @@ extension HistoryDisplay {
     /// always has at least one, but a fixture may not) stands as one sample at its last reading.
     /// Nil only where even that falls outside the period.
     ///
-    /// **Thinned to the readings that moved.** Kvotar polls every few minutes and the weekly
+    /// **Thinned to the ends of every flat run.** Kvotar polls every few minutes and the weekly
     /// figure changes slowly, so most of a week's thousands of readings repeat the one before.
-    /// A reading is kept when it is the first, the last, or reads differently from the last one
-    /// kept — the step line is the same, the mark lands on the same reading, and the chart
-    /// carries hundreds of samples instead of tens of thousands. The formatters are built once
-    /// per curve for the same reason.
+    /// A reading is kept when it is the first, the last, or reads differently from the reading
+    /// before it or the one after it — both ends of a plateau stay, so a line through the kept
+    /// readings runs flat until the value actually moved and never ramps across a stretch where
+    /// nothing changed. The mark lands on the same reading, and the chart carries hundreds of
+    /// samples instead of tens of thousands. The hover rests on the nearest kept reading: a
+    /// reading inside a flat run is not drawn, and the run's ends stand for it. The formatters
+    /// are built once per curve for the same reason.
     static func quotaCurve(_ window: QuotaWindowOutcome, period: HistoryReport,
                            calendar: Calendar)
         -> (curve: HistoryExperience.QuotaCurve, sample: HistoryExperience.QuotaSample)? {
@@ -547,7 +557,9 @@ extension HistoryDisplay {
             .sorted { $0.at < $1.at }
         var readings: [QuotaWindowOutcome.Reading] = []
         for (index, reading) in inPeriod.enumerated()
-        where index == 0 || index == inPeriod.count - 1 || reading.usedPct != readings.last?.usedPct {
+        where index == 0 || index == inPeriod.count - 1
+            || reading.usedPct != inPeriod[index - 1].usedPct
+            || reading.usedPct != inPeriod[index + 1].usedPct {
             readings.append(reading)
         }
         if readings.isEmpty,
@@ -604,7 +616,11 @@ extension HistoryDisplay {
     /// The figure above a mark is the simplified style the weekly chart uses: the number alone,
     /// `So far` only on the open window, because the dot, its fading, the ring and the diamond
     /// already say what kind of window it was and the detail says it in words.
-    static func quotaDayLenses(_ windows: [QuotaWindowOutcome], period: HistoryReport,
+    ///
+    /// The hour ticks stand at the day's own clock hours (`calendar.date(bySettingHour:)`), not
+    /// at midnight plus so many hours: on the day the clocks change, 6 am is five or seven hours
+    /// after midnight, and the label has to say what the clock said.
+    static func quotaDayLenses(_ windows: [QuotaWindowOutcome], tool: Tool, period: HistoryReport,
                                calendar: Calendar) -> [HistoryExperience.QuotaDayLens] {
         let short = windows.filter { ($0.windowSeconds ?? quotaDayLensMaxWidth) < quotaDayLensMaxWidth }
         var days: [Date: [QuotaWindowOutcome]] = [:]
@@ -631,8 +647,9 @@ extension HistoryDisplay {
             }
             var ticks: [HistoryExperience.QuotaAxisTick] = []
             for hour in stride(from: 0, to: 24, by: 3) {
-                guard let at = calendar.date(byAdding: .hour, value: hour, to: dayStart),
-                      at < dayEnd else { continue }
+                guard let at = calendar.date(bySettingHour: hour, minute: 0, second: 0,
+                                             of: dayStart),
+                      at >= dayStart, at < dayEnd else { continue }
                 ticks.append(.init(
                     id: "\(Int(at.timeIntervalSince1970))",
                     x: at.timeIntervalSince(dayStart) / span,
@@ -641,12 +658,14 @@ extension HistoryDisplay {
             ticks.append(.init(id: "\(Int(dayEnd.timeIntervalSince1970))", x: 1,
                                label: hourLabel.string(from: dayEnd).lowercased()))
             let noun = members.count == 1 ? "window" : "windows"
+            let title = "\(dayLabel.string(from: dayStart)) · \(members.count) \(noun)"
             return HistoryExperience.QuotaDayLens(
                 id: dayID.string(from: dayStart),
-                title: "\(dayLabel.string(from: dayStart)) · \(members.count) \(noun)",
+                title: title,
                 marks: marks,
                 ticks: ticks,
-                periodRange: quotaX(dayStart, period: period)...quotaX(dayEnd, period: period))
+                periodRange: quotaX(dayStart, period: period)...quotaX(dayEnd, period: period),
+                accessibilityLabel: "\(tool.tabLabel) · \(title)")
         }
     }
 
@@ -747,13 +766,17 @@ extension HistoryDisplay {
         func close() {
             guard let first = run.first else { return }
             let width = DisplayFormatter.windowGrain(seconds: first.windowSeconds)
+            let connects = first.windowSeconds != nil
             segments.append(HistoryExperience.QuotaSegment(
                 id: "\(tool.rawValue)-seg-\(segments.count)",
                 widthLabel: width.map { "\($0) windows" },
-                connects: first.windowSeconds != nil,
+                connects: connects,
                 boundaryNote: boundary,
                 widthNote: segments.isEmpty ? evidenceNote : nil,
-                pointIDs: run.map(\.id)))
+                pointIDs: run.map(\.id),
+                // The open window stands at its last reading, not at a reset, so a line to it
+                // would join unlike instants; it is never on the line.
+                joinedIDs: connects ? run.filter { $0.completion != .current }.map(\.id) : []))
         }
 
         for window in windows {

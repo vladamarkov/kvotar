@@ -102,7 +102,7 @@ private struct QuotaPlot: View {
                     let labelSides = section.inPlaceLabelSides(plotWidth: width)
                     ForEach(Array(section.segments.enumerated()), id: \.offset) { index, segment in
                         boundary(segment, isFirst: index == 0, width: width)
-                        if segment.connects { line(segment, width: width) }
+                        if !segment.joinedIDs.isEmpty { line(segment, width: width) }
                     }
                     ForEach(section.points) { point in
                         mark(point, width: width)
@@ -150,7 +150,7 @@ private struct QuotaPlot: View {
             default: break
             }
         }
-        .accessibilityLabel("\(section.title) \(chart == .weekly ? "weekly" : "window") chart")
+        .accessibilityLabel(chart == .weekly ? section.weeklyChartLabel : section.stripChartLabel)
     }
 
     /// The inverse of `gutter + width × x`: where the pointer is across the period, 0…1.
@@ -289,15 +289,12 @@ private struct QuotaPlot: View {
         }
     }
 
-    /// The connecting line, drawn only where the model says these windows abut
-    /// (`QuotaSegment.connects`), and only through ended windows — the open one stands at its
-    /// last reading, not at a reset, so a line to it would join unlike instants. Thin and faint:
+    /// The connecting line, through the points the model joined (`QuotaSegment.joinedIDs`: the
+    /// run's ended windows where the windows abut; the open one is never on it). Thin and faint:
     /// on a strip of ninety windows the line is the eye's guide through the run, not the figure.
-    /// A run whose widths were never recorded has no defensible start, so it stays a group of
-    /// separate points.
     private func line(_ segment: HistoryExperience.QuotaSegment, width: CGFloat) -> some View {
-        let points = segment.pointIDs.compactMap { id in
-            section.points.first { $0.id == id && $0.kind != .current }
+        let points = segment.joinedIDs.compactMap { id in
+            section.points.first { $0.id == id }
         }
         return Path { path in
             for (index, point) in points.enumerated() {
@@ -431,7 +428,7 @@ private struct QuotaDayLensView: View {
             Rectangle().fill(HistoryTheme.line).frame(height: 1)
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(section.title) · \(lens.title)")
+        .accessibilityLabel(lens.accessibilityLabel)
     }
 
     /// The baseline and the hour ticks the model named: a 6 pt tick and a label every six hours,

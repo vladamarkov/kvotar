@@ -185,7 +185,7 @@ enum HXFix {
         let resetsAt = scheduled ?? endedAt
         let last = readings.last?.at ?? endedAt.addingTimeInterval(-gap)
         let outcome = QuotaWindowOutcome(
-            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))",
+            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))-604800",
             tool: tool, resetsAt: resetsAt, windowSeconds: 604_800, widthEvidence: .recorded,
             start: resetsAt.addingTimeInterval(-604_800),
             firstObservedAt: resetsAt.addingTimeInterval(-604_800), lastObservedAt: last,
@@ -226,7 +226,9 @@ enum HXFix {
         let start = width.map { resetsAt.addingTimeInterval(-TimeInterval($0)) }
         let last = resetsAt.addingTimeInterval(-lastSeenBefore)
         return QuotaWindowOutcome(
-            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))",
+            // Core's own shape: provider, reset and width.
+            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))"
+                + (width.map { "-\($0)" } ?? ""),
             tool: tool, resetsAt: resetsAt, windowSeconds: width,
             widthEvidence: widthEvidence ?? (width == nil ? .unknown : .recorded), start: start,
             firstObservedAt: start ?? last.addingTimeInterval(-3600), lastObservedAt: last,

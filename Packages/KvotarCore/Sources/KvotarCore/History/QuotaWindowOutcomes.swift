@@ -279,8 +279,12 @@ public enum QuotaWindowOutcomes {
             completion = .completedPartial
         }
 
+        // Provider, reset and width: a five-hour window and a weekly one routinely share a
+        // reset, and the History page lists both, so the instant alone does not identify a
+        // window. A width that was never recorded contributes nothing.
         return QuotaWindowOutcome(
-            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))",
+            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))"
+                + (windowSeconds.map { "-\($0)" } ?? ""),
             tool: tool,
             resetsAt: resetsAt,
             windowSeconds: windowSeconds,

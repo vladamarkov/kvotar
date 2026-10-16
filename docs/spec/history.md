@@ -526,9 +526,11 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
 - **The weekly chart: one curve per week.** Each overall weekly limit is drawn from the readings
   it was folded from (`QuotaWindowOutcome.readings`), those inside the period only: a line
   through them from the first to the last with a light area under it, placed by each reading's
-  own time and value (`QuotaSection.curves`, `QuotaCurve.samples`). Readings that repeat the one
-  before are thinned out: the first, the last and every change of value are kept, so the step
-  line is the same and a week carries hundreds of samples, not tens of thousands. Nothing joins
+  own time and value (`QuotaSection.curves`, `QuotaCurve.samples`). Readings inside a flat run
+  are thinned out: the first, the last and both ends of every run of one value are kept, so the
+  line runs flat until the value moved, never ramps across a stretch where nothing changed, and a
+  week carries hundreds of samples, not tens of thousands. The hover rests on the nearest kept
+  reading; a reading inside a flat run is not drawn and the run's ends stand for it. Nothing joins
   one week to the next, and a curve is never extended past its last reading — not to now and
   not to the scheduled reset. The week's mark (`QuotaSection.weeklyPoints`, the same point type
   the strip uses) stands on the first reading at the limit where it hit, else on the last
@@ -538,8 +540,9 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   detail say it in words. A week that hit the limit runs flat at 100 only across readings
   recorded there. A week with no reading inside the period but a last reading in it stands as
   one mark. (`quotaCurve`; tests `testAWeekIsACurveThroughItsOwnReadingsInsidePeriod`,
-  `testTheEndOfEachKindOfWeekIsNamed`, `testRepeatedReadingsAreThinnedToTheOnesThatMoved`,
-  `testOnlyTheOverallWeeklyIsDrawnAndABareWeekIsOneMark`)
+  `testTheEndOfEachKindOfWeekIsNamed`, `testRepeatedReadingsAreThinnedToTheEndsOfEachFlatRun`,
+  `testOnlyTheOverallWeeklyIsDrawnAndABareWeekIsOneMark`,
+  `testAShortWindowThatSharesTheWeeklyResetStaysOnTheStrip`)
 - **Date axis.** The model gives each section its ticks (`QuotaSection.ticks`): a labelled tick
   at each weekly reset of the provider inside the period, from the report's **overall** weekly
   limits (an early ending at its actual time; twins within the anchor jitter are one tick; a
@@ -605,9 +608,11 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   its figure above it in the weekly chart's style — `49%`, `So far 13%` on the open window, the
   figure alone otherwise, because the shape already says what kind of window it was — and the
   selected one ringed. The hour axis is a labelled tick every six hours (`12 am`, `6 am`, `12 pm`,
-  `6 pm`, `12 am`) and an unlabelled one every three. A click anywhere over the lens selects the
-  window nearest on x, as on the strip; a click on the strip's **axis band** opens the day under
-  the pointer on its first window, or the nearest day that has a lens when that day has no short
+  `6 pm`, `12 am`) and an unlabelled one every three, each at the day's own clock hour, so on
+  the day the clocks change `6 am` stands five or seven hours after midnight and still reads `6
+  am`. A click anywhere over the lens selects the window nearest on x, as on the strip; a click on
+  the strip's **axis band** opens the day under the pointer on its first window (midnight belongs
+  to the day it starts), or the nearest day that has a lens when that day has no short
   window. The lens is absent for a window a day wide or wider and for one of unknown width
   (nothing shows it is not a week); such windows are not counted in a day's lens either. The
   30-day plot does not change. The local day is cut on the report's injected calendar, the same
@@ -618,7 +623,7 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   `testTheDayLensLaysOutTheSelectedWindowsLocalDayByResetTime`,
   `testTheLensWritesTheFigureAloneAndSoFarOnTheOpenWindow`,
   `testTheLensIsAbsentForAWeekAndForAnUnknownWidth`,
-  `testAClickOnTheAxisBandOpensThatDayOnItsFirstWindow`,
+  `testAClickOnTheAxisBandOpensThatDayOnItsFirstWindow`, `testTheLensHoursFollowTheClockAcrossADSTChange`,
   `HistoryDayHoverTests.testAClickOnTheAxisBandOpensTheDayOnItsFirstWindow`)
 - **Spoken values** name provider, width, span, outcome, a hit limit and an early ending, as plain
   text. (`quotaAccessibility`)
