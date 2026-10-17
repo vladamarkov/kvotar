@@ -575,7 +575,7 @@ money or ids.
 |---|---|
 | Use `poll_health_events` for Kvotar's own poll 429s | Mix poll 429 and quota 429 handling or storage |
 | Use `quota_limit_events` for user session 429s observed in JSONL | Use JSONL `payload.rate_limits` for quota state (D-12) |
-| Compute est. token value from JSONL × pricing table internally | Use ccusage as a runtime dependency |
+| Compute est. token value from JSONL × pricing table internally | Use a third-party usage tool as a runtime dependency |
 | Price a Claude cache write by tier — 1-hour at 2× input, 5-minute (the remainder) at 1.25× | Add `cache_creation_1h_tokens` to any token count or cache-hit ratio — it is a subset of `cache_creation_tokens`, not a fifth column |
 | Count Codex tokens as `input + output`, and read its cached slice as the union of both cache columns | Reuse Claude's four-column sum on Codex, or read one cache column (both count the same tokens twice / miss most of the history) |
 | Check the matched pricing row's `provider` before using it | Trust an exact model-string match across providers |

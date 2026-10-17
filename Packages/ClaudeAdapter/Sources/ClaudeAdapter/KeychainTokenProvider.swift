@@ -10,8 +10,8 @@ import KvotarCore
 /// is therefore *not* the trusted accessor: it hits the ACL confirmation, and with
 /// `kSecUseAuthenticationUIFail` that returns `errSecUserCanceled` (-128) — no token, regardless of
 /// how Kvotar is signed. Invoking `/usr/bin/security` instead makes the trusted Apple tool the
-/// accessor, so macOS grants the read **silently** — no dialog, no one-time authorization. This is
-/// the same mechanism CodexBar uses (verified on-machine, 2026-07-03).
+/// accessor, so macOS grants the read **silently** — no dialog, no one-time authorization
+/// (verified on-machine, 2026-07-03).
 ///
 /// - Command: `/usr/bin/security find-generic-password -s "Claude Code-credentials" -w`
 ///   (`-w` prints only the password — the credential JSON — to stdout).

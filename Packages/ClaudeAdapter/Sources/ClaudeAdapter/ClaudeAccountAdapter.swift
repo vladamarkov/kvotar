@@ -175,7 +175,7 @@ public actor ClaudeAccountAdapter: AccountAdapter {
             headers: ["Authorization": "Bearer \(token)"]
         )
 
-        // Change C (REV-37, §8.0.1): a concurrent client (Claude Code / CodexBar, §20 P1-12) may
+        // Change C (REV-37, §8.0.1): a concurrent client (Claude Code or another app, §20 P1-12) may
         // rotate the shared credential between our Keychain read and this GET, yielding a transient
         // 401/403. Re-read once; if the token actually changed, retry the usage GET a single time
         // before declaring re-auth. Same token, a failed re-read, or a second 401/403 → genuine

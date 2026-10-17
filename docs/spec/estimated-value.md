@@ -65,7 +65,7 @@ stated yardstick is read against the monthly plan fee.
   (`ExplanationRegistry`, `.estTokenValue`). The maintainer confirmed this rule on 2026-10-04.
   Real money a provider reports is a different thing with its own form (`Fmt.money`) and its own
   page ([credits and monthly limits](credits-and-monthly-limits.md)).
-- **Computed locally.** Prices come from the bundled table; no tool such as ccusage runs at
+- **Computed locally.** Prices come from the bundled table; no third-party tool runs at
   runtime ([PATTERNS.md](../../PATTERNS.md) Do / don't table).
 
 ## The price table
@@ -316,7 +316,7 @@ bill.` (`HistoryDisplay.pricingNote`, `HistoryDisplay.recapNotABill`); its layou
   always detectable and the maintainer ruled the question out; the note names the yardstick instead.
 - **Calling the figure `API-equivalent`, or `Cost`.** Interpretation the figure cannot support;
   `Est. token value` is the one label.
-- **A runtime dependency on ccusage.** Prices are computed locally from the bundled table.
+- **A runtime dependency on a third-party usage tool.** Prices are computed locally from the bundled table.
 - **Backfilling the cache-write split on older rows.** Declined; they keep the 5-minute price.
 
 ## Known gaps
