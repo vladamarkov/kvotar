@@ -56,6 +56,11 @@ extension HistoryDisplay {
     static let byWeekTitle = "By week"
     static let recordedIncidentsTitle = "Recorded incidents"
     static let activityAroundBlocksTitle = "Activity around blocks"
+    /// The hour chart's one-line cue: what a bar is and what a dot is. The dots are only the
+    /// blocks the chart is for — the short windows (`shortWindowSeconds`) — so the line says so.
+    static let hourChartCue = "Bars: local tokens by hour over the last "
+        + "\(HistoryReport.periodDays) days. Dots: recorded blocks on windows of "
+        + "\(shortWindowSeconds / 3600) hours or less."
     static let possiblePatternTitle = "Possible pattern"
     static let whatHappenedTitle = "What happened"
     static let selectedQuotaWindowEyebrow = "Selected quota window"
@@ -98,8 +103,11 @@ extension HistoryDisplay {
     /// and a test must be able to pin a zone without touching `Calendar.current`.
     public static func experience(_ report: HistoryReport, now: Date,
                                   calendar: Calendar = .current) -> HistoryExperience {
-        var pages = [providerPages(.all, scope: report.tools, report: report)]
-        pages += report.tools.map { providerPages(.tool($0.tool), scope: [$0], report: report) }
+        var pages = [providerPages(.all, scope: report.tools, report: report,
+                                   calendar: calendar)]
+        pages += report.tools.map {
+            providerPages(.tool($0.tool), scope: [$0], report: report, calendar: calendar)
+        }
         return HistoryExperience(
             header: HistoryScreen.Header(
                 title: "History",
@@ -113,7 +121,8 @@ extension HistoryDisplay {
 
     static func providerPages(_ provider: HistoryExperience.Provider,
                               scope: [HistoryReport.ToolReport],
-                              report: HistoryReport) -> HistoryExperience.ProviderPages {
+                              report: HistoryReport,
+                              calendar: Calendar = .current) -> HistoryExperience.ProviderPages {
         let active = scope.filter { !$0.isEmpty }
         // Two token-active providers means every figure has to say whose it is — the same rule
         // the legacy tabs used, page-wide so a day detail and its strip cannot disagree.
@@ -122,10 +131,11 @@ extension HistoryDisplay {
         let strip = experienceDayStrip(scope, weeks: scope.first?.weeks ?? [])
         return HistoryExperience.ProviderPages(
             provider: provider,
-            quota: quotaPage(provider, scope: scope, report: report),
+            quota: quotaPage(provider, scope: scope, report: report, calendar: calendar),
             explore: explorePage(provider, scope: scope, tagged: tagged, strip: strip,
                                  report: report),
-            hardBlocks: hardBlocksPage(provider, scope: scope, tagged: tagged))
+            hardBlocks: hardBlocksPage(provider, scope: scope, tagged: tagged, report: report,
+                                       calendar: calendar))
     }
 
     /// The body-replacing empty state for one filter position — same copy the legacy tabs used.
@@ -244,7 +254,8 @@ extension HistoryDisplay {
                             scope: [HistoryReport.ToolReport], tagged: Bool,
                             strip: HistoryScreen.DayStrip?,
                             report: HistoryReport) -> HistoryExperience.ExplorePage {
-        let breakdown = breakdown(scope, merged: isAll(provider), tagged: tagged)
+        let breakdown = breakdown(scope, rowLimit: isAll(provider) ? allRankedRowLimit : nil,
+                                  tagged: tagged)
         guard scope.contains(where: { !$0.isEmpty }) else {
             return HistoryExperience.ExplorePage(breakdown: breakdown,
                                                  emptyMessage: pageEmptyMessage(provider))
@@ -277,6 +288,7 @@ extension HistoryDisplay {
             initialSelection: initial,
             legend: strip?.legend ?? [],
             stripFooter: strip?.footer ?? "",
+            stripScaleHints: strip?.scaleHints ?? [:],
             totals: providerTotals(scope),
             combinedValue: tagged && active.count >= 2
                 ? Fmt.dollarValue(active.reduce(0) { $0 + $1.value }) : nil,
@@ -452,48 +464,39 @@ extension HistoryDisplay {
     }
 
     /// The 30-day breakdown (REV-84 §5.3): projects and largest work ranked as the legacy
-    /// window ranked them, models grouped per provider with tokens and value.
-    static func breakdown(_ scope: [HistoryReport.ToolReport], merged: Bool,
+    /// window ranked them, models grouped per provider with tokens and value. `rowLimit` is
+    /// each provider's cap on `All`, where two providers share a list; nil keeps the reader's
+    /// own top rows on a provider filter.
+    static func breakdown(_ scope: [HistoryReport.ToolReport], rowLimit: Int?,
                           tagged: Bool) -> HistoryExperience.Breakdown {
         HistoryExperience.Breakdown(
             title: breakdownTitle,
-            projects: breakdownProjects(scope, merged: merged, tagged: tagged),
+            projects: breakdownProjects(scope, rowLimit: rowLimit, tagged: tagged),
             models: scope.compactMap { t in
                 let rows = modelValueRows(totals: t.modelTotals, values: t.modelValues,
                                           tool: t.tool)
                 return rows.isEmpty
                     ? nil : HistoryExperience.ModelGroup(provider: t.tool, rows: rows)
             },
-            largestWork: largestWorkRows(scope, merged: merged, tagged: tagged))
+            largestWork: largestWorkRows(scope, rowLimit: rowLimit, tagged: tagged))
     }
 
-    /// The corrected `ProjectGrouping` ranking (STEP_157 preserved): merged and capped on
-    /// `All`, the reader's own top rows on a provider filter.
-    static func breakdownProjects(_ scope: [HistoryReport.ToolReport], merged: Bool,
+    /// The corrected `ProjectGrouping` ranking (STEP_157 preserved), **grouped by provider**
+    /// in scope order on `All` — Claude rows, then Codex rows — each group capped at
+    /// `rowLimit` and on its own scale. The two groups are never sorted into one list: each
+    /// bar is against its own provider's top row, so a cross-provider order would put a
+    /// shorter bar above a longer one and imply the token comparison REV-70 §4.6 forbids.
+    static func breakdownProjects(_ scope: [HistoryReport.ToolReport], rowLimit: Int?,
                                   tagged: Bool) -> [HistoryScreen.RankedRow] {
-        guard merged else {
-            return scope.flatMap { t -> [HistoryScreen.RankedRow] in
-                let top = t.projects.map(\.tokens).max() ?? 0
-                return t.projects.map {
-                    HistoryScreen.RankedRow(row: projectRow($0, tool: t.tool),
-                                            fraction: fraction($0.tokens, of: top),
-                                            accent: t.tool)
-                }
-            }
-        }
-        return scope.flatMap { t -> [(tokens: Int, row: HistoryScreen.RankedRow)] in
+        scope.flatMap { t -> [HistoryScreen.RankedRow] in
             let top = t.projects.map(\.tokens).max() ?? 0
-            return t.projects.map { project in
-                (tokens: project.tokens,
-                 row: HistoryScreen.RankedRow(row: projectRow(project, tool: t.tool),
-                                              tag: tagged ? t.tool.tabLabel : nil,
-                                              fraction: fraction(project.tokens, of: top),
-                                              accent: t.tool))
+            return t.projects.prefix(rowLimit ?? t.projects.count).map {
+                HistoryScreen.RankedRow(row: projectRow($0, tool: t.tool),
+                                        tag: tagged ? t.tool.tabLabel : nil,
+                                        fraction: fraction($0.tokens, of: top),
+                                        accent: t.tool)
             }
         }
-        .sorted { $0.tokens > $1.tokens }
-        .prefix(allRankedRowLimit)
-        .map(\.row)
     }
 
     /// Track geometry for a ranked row (STEP_162): this row's share of the same provider's
@@ -502,38 +505,27 @@ extension HistoryDisplay {
         top > 0 ? Double(tokens) / Double(top) : nil
     }
 
-    static func largestWorkRows(_ scope: [HistoryReport.ToolReport], merged: Bool,
+    /// Sessions and threads, grouped and capped the same way as `breakdownProjects`.
+    static func largestWorkRows(_ scope: [HistoryReport.ToolReport], rowLimit: Int?,
                                 tagged: Bool) -> [HistoryScreen.RankedRow] {
-        guard merged else {
-            return scope.flatMap { t -> [HistoryScreen.RankedRow] in
-                let top = t.topSessions.map(\.tokens).max() ?? 0
-                return t.topSessions.map {
-                    HistoryScreen.RankedRow(row: sessionRow($0),
-                                            fraction: fraction($0.tokens, of: top),
-                                            accent: t.tool)
-                }
-            }
-        }
-        return scope.flatMap { t -> [(tokens: Int, row: HistoryScreen.RankedRow)] in
+        scope.flatMap { t -> [HistoryScreen.RankedRow] in
             let top = t.topSessions.map(\.tokens).max() ?? 0
-            return t.topSessions.map { session in
-                (tokens: session.tokens,
-                 row: HistoryScreen.RankedRow(row: sessionRow(session),
-                                              tag: tagged ? t.tool.tabLabel : nil,
-                                              fraction: fraction(session.tokens, of: top),
-                                              accent: t.tool))
+            return t.topSessions.prefix(rowLimit ?? t.topSessions.count).map {
+                HistoryScreen.RankedRow(row: sessionRow($0),
+                                        tag: tagged ? t.tool.tabLabel : nil,
+                                        fraction: fraction($0.tokens, of: top),
+                                        accent: t.tool)
             }
         }
-        .sorted { $0.tokens > $1.tokens }
-        .prefix(allRankedRowLimit)
-        .map(\.row)
     }
 
     // MARK: - Hard blocks (REV-84 §6)
 
     static func hardBlocksPage(_ provider: HistoryExperience.Provider,
                                scope: [HistoryReport.ToolReport],
-                               tagged: Bool) -> HistoryExperience.HardBlocksPage {
+                               tagged: Bool,
+                               report: HistoryReport,
+                               calendar: Calendar = .current) -> HistoryExperience.HardBlocksPage {
         let eyebrow = "\(providerDisplayName(provider)) · hard blocks"
         guard !scope.allSatisfy({ isBlank($0) }) else {
             return HistoryExperience.HardBlocksPage(eyebrow: eyebrow, conclusion: "",
@@ -547,9 +539,15 @@ extension HistoryDisplay {
                                  row: HistoryScreen.RankedRow(
                                     row: blockRow($0),
                                     tag: tagged ? t.tool.tabLabel : nil,
+                                    accent: t.tool,
                                     // Unknown lockout → the `—` in warn (STEP_163).
                                     warn: $0.lockoutSeconds == nil,
-                                    at: $0.firedAt)) }
+                                    at: $0.firedAt,
+                                    // The way back to the window on Explore quota, where
+                                    // that page draws it.
+                                    link: blockWindowLink($0, tool: t.tool, report: t,
+                                                          period: report,
+                                                          calendar: calendar))) }
         }
         .sorted { $0.at > $1.at }
         .map(\.row)
@@ -558,8 +556,8 @@ extension HistoryDisplay {
             conclusion: blocksConclusion(scope, named: tagged),
             consequence: blockConsequence(scope),
             rows: rows,
-            chart: experienceHourChart(scope),
-            patternNote: patternNote(scope, named: tagged),
+            chart: experienceHourChart(scope, calendar: calendar),
+            patternNote: patternNote(scope, named: tagged, calendar: calendar),
             coverageNote: coverageNote(scope),
             allowance: allowancePanel(scope, named: tagged, title: allowanceHistoryTitle))
     }
@@ -622,39 +620,50 @@ extension HistoryDisplay {
     }
 
     /// Provider-scoped pattern claim, still behind `claimedRhythmFloor` (REV-73). Below the
-    /// floor the investigative note states the sample honestly — here and only here.
-    static func patternNote(_ scope: [HistoryReport.ToolReport], named: Bool) -> String? {
+    /// floor the investigative note states the sample honestly — here and only here — and
+    /// says so in its state, so the view draws it as a note rather than a finding.
+    static func patternNote(_ scope: [HistoryReport.ToolReport], named: Bool,
+                            calendar: Calendar = .current) -> HistoryExperience.PatternNote? {
         let withBlocks = scope.filter { !$0.limitBlocks.isEmpty }
         guard !withBlocks.isEmpty else { return nil }
         let claims = withBlocks.compactMap { t in
-            claimedRhythm(t.limitBlocks).map { (tool: t.tool, band: $0) }
+            claimedRhythm(t.limitBlocks, calendar: calendar).map { (tool: t.tool, band: $0) }
         }
-        guard !claims.isEmpty else { return blockSampleNote }
-        return claims.map { claim in
+        guard !claims.isEmpty else {
+            return HistoryExperience.PatternNote(state: .belowFloor, text: blockSampleNote)
+        }
+        let text = claims.map { claim in
             named
                 ? "\(claim.tool.tabLabel) · \(mostOftenLabel) \(claim.band)"
                 : "\(mostOftenLabel) \(claim.band)"
         }
         .joined(separator: " · ")
+        return HistoryExperience.PatternNote(state: .claimed, text: text)
     }
 
-    /// Coverage, honestly (REV-84 §6 item 5): the watching horizon, the weekly-only gap
-    /// (STEP_120 / P1-18) and the unknown-reset rule, in one plain sentence pair.
+    /// Coverage, honestly (REV-84 §6 item 5): the watching horizon, the one switch a recorded
+    /// block depends on (a block is an `over_quota` notification row, and a switched-off group
+    /// writes none), and the unknown-reset rule. The old weekly-only clause is gone: a spent
+    /// weekly enters Over quota like a spent five-hour window does (`StateEngine`).
     static func coverageNote(_ scope: [HistoryReport.ToolReport]) -> String {
         let horizon = scope.compactMap(\.watchingSince).min()
             .map { "Recorded since \(Fmt.monthDay($0)), when Kvotar began watching." }
             ?? "Recorded from the day Kvotar starts watching — nothing yet."
-        return horizon + " Weekly-only exhaustion may not appear, and an unknown reset means "
-            + "an unknown lockout, not zero."
+        return horizon + " " + blocksNeedNotificationsSentence
+            + " An unknown reset means an unknown lockout, not zero."
     }
+
+    static let blocksNeedNotificationsSentence =
+        "Blocks are recorded only while Notify me ▸ Over quota is on."
 
     // MARK: - Provider-safe charts (REV-84 §3.1 — independent scales)
 
     /// The day strip with **per-provider normalisation**: each bar's fraction is against that
     /// provider's own busiest day, so on `All` the two lanes never share a scale and no drawn
     /// height implies a token comparison. Markers, ticks, hover grammar and footer are the
-    /// legacy strip's, unchanged. (The legacy `dayStrip` keeps its stacked shared axis for the
-    /// old view until STEP_160 deletes it.)
+    /// legacy strip's, unchanged; each lane also carries its scale, the busiest-day figure the
+    /// footer names, so the figure sits beside the bar it measures. (The legacy `dayStrip`
+    /// keeps its stacked shared axis for the old view until STEP_160 deletes it.)
     static func experienceDayStrip(_ tools: [HistoryReport.ToolReport],
                                    weeks: [HistoryReport.Week]) -> HistoryScreen.DayStrip? {
         let active = tools.filter { t in t.days.contains { $0.tokens > 0 } }
@@ -740,36 +749,55 @@ extension HistoryDisplay {
             legend.append(HistoryScreen.DayLegendEntry(label: accountChangeLegendLabel, tool: nil,
                                                        marker: .accountChange))
         }
+        var scaleHints: [Tool: String] = [:]
+        for t in active {
+            if let day = busiestDay(t) { scaleHints[t.tool] = Fmt.tokens(day.tokens) }
+        }
         return HistoryScreen.DayStrip(points: points, legend: legend,
-                                      footer: busiestDayFooter(active, named: named))
+                                      footer: busiestDayFooter(active, named: named),
+                                      scaleHints: scaleHints)
     }
 
     /// The hour-of-day chart with per-provider normalisation — same gates, marks, hover and
     /// caption as the legacy chart, but each bar's fraction is against that provider's own
-    /// busiest hour (REV-84 §6 item 3).
-    static func experienceHourChart(_ tools: [HistoryReport.ToolReport])
+    /// busiest hour (REV-84 §6 item 3). Only the blocks the chart is for are drawn: those on a
+    /// window `shortWindowSeconds` wide or less (an unknown width is not a short one), so a
+    /// weekly block never lands on a chart whose stated reason excludes it. A lane is a
+    /// provider with bars or marks, so a provider blocked with no local work still has a lane
+    /// for its dot. Hours are the report's calendar's, like its local days.
+    static func experienceHourChart(_ tools: [HistoryReport.ToolReport],
+                                    calendar: Calendar = .current)
         -> HistoryScreen.HourChart? {
-        guard tools.contains(where: { t in
-            t.limitBlocks.contains { ($0.windowSeconds ?? .max) <= shortWindowSeconds }
-        }) else { return nil }
+        let plotted = tools.map { t in
+            (tool: t.tool, blocks: t.limitBlocks.filter {
+                ($0.windowSeconds ?? .max) <= shortWindowSeconds
+            })
+        }
+        guard plotted.contains(where: { !$0.blocks.isEmpty }) else { return nil }
         let working = tools.filter { $0.workByHour.contains { $0 > 0 } }
         guard !working.isEmpty else { return nil }
 
         var ownMax: [Tool: Int] = [:]
         for t in tools { ownMax[t.tool] = t.workByHour.max() ?? 0 }
-        var combined = [Int](repeating: 0, count: 24)
-        for t in tools {
-            for hour in 0..<24 { combined[hour] += hourWork(t, hour) }
+        let lanes = tools.map(\.tool).filter { tool in
+            working.contains { $0.tool == tool }
+                || plotted.contains { $0.tool == tool && !$0.blocks.isEmpty }
         }
-        guard combined.contains(where: { $0 > 0 }) else { return nil }
-        let named = working.count >= 2
+        let named = lanes.count >= 2
 
         var marks: [Int: [Tool]] = [:]
-        for t in tools {
-            for block in t.limitBlocks {
-                marks[Calendar.current.component(.hour, from: block.firedAt), default: []]
-                    .append(t.tool)
+        var counts: [Int: [Tool: Int]] = [:]
+        for lane in plotted {
+            for block in lane.blocks {
+                let hour = calendar.component(.hour, from: block.firedAt)
+                marks[hour, default: []].append(lane.tool)
+                counts[hour, default: [:]][lane.tool, default: 0] += 1
             }
+        }
+        // Each blocked provider's busiest band from its own bars, never from a sum across lanes.
+        var busiest: [Tool: DayBand] = [:]
+        for t in working where marks.values.contains(where: { $0.contains(t.tool) }) {
+            busiest[t.tool] = busiestBand(t.workByHour)
         }
 
         var points: [HistoryScreen.HourPoint] = []
@@ -788,23 +816,28 @@ extension HistoryDisplay {
             var hover = figures.isEmpty
                 ? "\(head) · \(noActivityDayValue)"
                 : (named ? ([head] + figures).joined(separator: "\n") : "\(head) · \(figures[0])")
-            let blocks = marks[hour]?.count ?? 0
-            if blocks > 0 { hover += "\n\(blocks) block\(blocks == 1 ? "" : "s")" }
+            // The block line names its provider on a two-lane chart, as the figures do.
+            for tool in lanes {
+                guard let blocks = counts[hour]?[tool], blocks > 0 else { continue }
+                let fact = "\(blocks) block\(blocks == 1 ? "" : "s")"
+                hover += "\n" + (named ? "\(tool.tabLabel) \(fact)" : fact)
+            }
             points.append(HistoryScreen.HourPoint(
-                bars: bars, blockTools: marks[hour] ?? [],
+                bars: bars, blockCounts: counts[hour] ?? [:],
                 tickLabel: hour % 6 == 0 ? shortHourLabel(hour) : nil,
                 hoverBody: hover))
         }
 
         var legend: [HistoryScreen.DayLegendEntry] = []
         if named {
-            legend = working.map { HistoryScreen.DayLegendEntry(label: $0.tool.tabLabel,
-                                                                tool: $0.tool) }
+            legend = lanes.map { HistoryScreen.DayLegendEntry(label: $0.tabLabel, tool: $0) }
         }
         legend.append(HistoryScreen.DayLegendEntry(label: limitHitLegendLabel, tool: nil,
                                                    marker: .limitHit))
-        return HistoryScreen.HourChart(points: points, legend: legend,
-                                       caption: hourCaption(marks: marks, work: combined))
+        return HistoryScreen.HourChart(points: points, lanes: lanes, legend: legend,
+                                       cue: hourChartCue,
+                                       caption: hourCaption(marks: marks, busiest: busiest,
+                                                            named: named))
     }
 
     private static func hourWork(_ t: HistoryReport.ToolReport, _ hour: Int) -> Int {

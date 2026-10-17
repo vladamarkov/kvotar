@@ -275,10 +275,10 @@ public struct HistoryReport: Sendable, Equatable {
         public let accountChanges: [AccountChange]
         /// Every window blocked in the period, **oldest first** (STEP_120). The count and the last
         /// date the facts tile shows are read off this list, so a tally and a row can never
-        /// disagree. **Weekly-only exhaustion is not in here and cannot be** — `StateEngine`
-        /// rank 3 declares over-quota from the primary window and the provider's hard-block flag
-        /// and never reads the secondary, so a spent weekly allowance that leaves the five-hour
-        /// window under 100 writes no row at all (REV-73 §5 / P1-18, answered 2026-08-18).
+        /// disagree. A block is an `over_quota` notification row, so it exists only while that
+        /// notification group is on. A spent weekly allowance reaches the same path since
+        /// `StateEngine` rank 3 reads the secondary window too (STEP_193); whether such a block
+        /// shows the right reset is an open gap (history spec, Known gaps).
         public let limitBlocks: [LimitBlock]
         /// Displayed tokens per **local** clock hour, 24 entries, hour 0 first (STEP_120). Bucketed
         /// by the hour's start, the STEP_114/STEP_116 convention — exact in a whole-hour zone, up

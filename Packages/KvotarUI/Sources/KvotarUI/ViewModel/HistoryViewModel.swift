@@ -72,17 +72,18 @@ public final class HistoryViewModel: ObservableObject {
     /// With a `destination` the open is explicit instead: the mode the destination names, its
     /// provider, and — for the popover's projects hand-off — that local day. `provider` is set
     /// **before** the day because its `didSet` clears the selection, and the day is held pending
-    /// until a page exists to resolve it against.
+    /// until a page exists to resolve it against. A quota window the destination names is
+    /// pinned last, for the same reason: the mode and provider setters both drop the pin.
     public func prepareForOpen(destination: HistoryDestination? = nil,
                                calendar: Calendar = .current) {
         self.calendar = calendar
         providerByMode = [:]
         recapWeekIndex = 0
         scope = nil
-        selectedQuotaPoint = nil
         mode = destination?.mode ?? .weeklyRecap
         provider = destination?.provider.map { .tool($0) } ?? .all
         selectedDay = nil
+        selectedQuotaPoint = destination?.quotaWindowID
         pendingDay = destination?.day
         applyScope(of: destination, returningTo: nil)
         releaseDayPeek()
@@ -135,7 +136,7 @@ public final class HistoryViewModel: ObservableObject {
         mode = destination.mode
         provider = destination.provider.map { .tool($0) } ?? .all
         selectedDay = nil
-        selectedQuotaPoint = nil
+        selectedQuotaPoint = destination.quotaWindowID
         pendingDay = destination.day
         applyScope(of: destination, returningTo: returnWeek)
         releaseDayPeek()
@@ -224,7 +225,7 @@ public final class HistoryViewModel: ObservableObject {
     /// the first point of a scoped week, else nothing pinned.
     public func resolvedQuotaPoint(in page: HistoryExperience.QuotaPage)
         -> HistoryExperience.QuotaPoint? {
-        let points = page.sections.flatMap(\.points)
+        let points = page.sections.flatMap { $0.points + $0.weeklyPoints }
         if let selectedQuotaPoint,
            let match = points.first(where: { $0.id == selectedQuotaPoint }) {
             return match
@@ -286,6 +287,8 @@ public final class HistoryViewModel: ObservableObject {
     public enum HoverColumn: Sendable, Hashable {
         case day(Int)
         case hour(Int)
+        /// A quota chart's hover: the window, or the window and reading, the card is keyed by.
+        case quota(String)
     }
 
     /// The column the pointer is resting on.
@@ -384,5 +387,59 @@ public final class HistoryViewModel: ObservableObject {
         dayTimer = nil
         if hoveredDay != nil { hoveredDay = nil }
         if peekedDay != nil { peekedDay = nil }
+        if quotaHover != nil { quotaHover = nil }
+    }
+
+    // MARK: Explore quota hover
+
+    /// What the pointer over a quota chart rests on. Unlike the day strip there is no peek delay:
+    /// the pointer is anywhere over a plot of ninety marks, and a card that waits reads as a card
+    /// that failed. Same overlay, same card, same Esc.
+    @Published public private(set) var quotaHover: HistoryExperience.QuotaHover?
+
+    /// The pointer moved to fraction `x` of one of a section's charts.
+    public func quotaHover(_ section: HistoryExperience.QuotaSection, atX x: Double,
+                           chart: HistoryExperience.QuotaChart = .strip) {
+        let hover = HistoryDisplay.quotaHover(section, atX: x, chart: chart)
+        if hover != quotaHover { quotaHover = hover }
+        dayTimer?.cancel()
+        dayTimer = nil
+        let column = hover.map { HoverColumn.quota($0.id) }
+        if hoveredDay != column { hoveredDay = column }
+        if peekedDay != column { peekedDay = column }
+    }
+
+    /// The pointer left the plot.
+    public func quotaHoverEnded() {
+        if quotaHover != nil { quotaHover = nil }
+        if case .quota = hoveredDay { hoveredDay = nil }
+        if case .quota = peekedDay { peekedDay = nil }
+    }
+
+    /// A click anywhere over a plot selects the window nearest on x — the same window the
+    /// hover rings, or on the weekly chart the week of the reading it rings — as ← and →
+    /// already select by stepping.
+    public func selectQuotaPoint(nearestTo section: HistoryExperience.QuotaSection,
+                                 atX x: Double,
+                                 chart: HistoryExperience.QuotaChart = .strip) {
+        guard let point = HistoryDisplay.quotaNearestPoint(section, atX: x, chart: chart) else {
+            return
+        }
+        selectQuotaPoint(point.id)
+    }
+
+    /// A click on the day lens selects the window nearest on x across the day, as a click on
+    /// the strip does across the period.
+    public func selectQuotaPoint(nearestTo lens: HistoryExperience.QuotaDayLens, atX x: Double) {
+        guard let mark = lens.nearestMark(atX: x) else { return }
+        selectQuotaPoint(mark.id)
+    }
+
+    /// A click on the strip's axis band opens the day under the pointer on its first window —
+    /// the lens then lays that day out. A day with no short window opens the nearest one that
+    /// has; a section with no lens at all does nothing.
+    public func selectQuotaDay(in section: HistoryExperience.QuotaSection, atX x: Double) {
+        guard let first = section.dayLens(atX: x)?.marks.first else { return }
+        selectQuotaPoint(first.id)
     }
 }

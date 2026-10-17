@@ -171,6 +171,29 @@ final class HistoryViewModelNavigationTests: XCTestCase {
         XCTAssertEqual(vm.resolvedQuotaPoint(in: page)?.id, last.id)
     }
 
+    /// A hard block row's link arrives on Explore quota with its window pinned by the window's
+    /// own id — applied after the mode and provider setters, which would drop it. Clearing the
+    /// scope drops the pin and keeps the provider, as for any scope.
+    func testABlockRowsLinkPinsItsWindowOnExploreQuota() throws {
+        let window = HXFix.quotaWindow(.claude, daysBack: 2, hour: 15)
+        let block = HXFix.block(at: window.resetsAt.addingTimeInterval(-1800), lockout: 1800)
+        let vm = HistoryViewModel(experience: HXFix.experience([
+            HXFix.tool(.claude, limitBlocks: [block], quotaWindows: [window]),
+            HXFix.tool(.codex)]))
+        vm.mode = .hardBlocks
+        let link = try XCTUnwrap(vm.experience?.pages(.all).hardBlocks.rows.first?.link)
+        vm.navigate(to: link.destination)
+        XCTAssertEqual(vm.mode, .exploreQuota)
+        XCTAssertEqual(vm.provider, .tool(.claude))
+        XCTAssertEqual(vm.scope?.banner, link.destination.banner)
+        XCTAssertFalse(vm.scope?.hasWeek ?? true)
+        let page = try XCTUnwrap(vm.experience?.pages(vm.provider).quota)
+        XCTAssertEqual(vm.resolvedQuotaPoint(in: page)?.id, window.id)
+        vm.clearScope()
+        XCTAssertNil(vm.resolvedQuotaPoint(in: page))
+        XCTAssertEqual(vm.provider, .tool(.claude))
+    }
+
     func testAPinnedWindowTheReportNoLongerHoldsIsDroppedNotStranded() throws {
         let vm = model()
         vm.mode = .exploreQuota

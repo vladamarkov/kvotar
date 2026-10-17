@@ -4,11 +4,12 @@ import KvotarCore
 /// Where an explicit link should open the History window — a **typed** destination, never a
 /// string the receiver parses (STEP_178; widened to four modes in STEP_182 — REV-93 / D-115).
 ///
-/// Two producers. The popover's `N more projects ›` names the provider whose tab was open and the
+/// Three producers. The popover's `N more projects ›` names the provider whose tab was open and the
 /// **local day the section was describing**, captured at click time, so a midnight rollover
 /// between the click and the window's asynchronous load cannot move the target. A Weekly recap
 /// evidence link names the mode that holds the supporting evidence, the exact completed week, and
-/// the provider where the fact belongs to one.
+/// the provider where the fact belongs to one. A hard block row names the quota window it fell
+/// in, by the window's own id.
 ///
 /// A `nil` destination is the ordinary opening — Weekly recap — which the popover footer link and
 /// the status-item menu item both keep.
@@ -25,9 +26,13 @@ public struct HistoryDestination: Sendable, Equatable {
         case week(start: Date, end: Date)
     }
 
-    /// Which grain of a day the reader is being sent to. Projects is the only one so far.
+    /// Which thing on the page the reader is being sent to: the day's project rows, or one
+    /// window on Explore quota, named by `QuotaWindowOutcome.id` — provider, reset and width,
+    /// the same id a click selects, stable across reloads — which arrives pinned with its
+    /// detail open.
     public enum Focus: Sendable, Equatable {
         case projects
+        case quotaWindow(id: String)
     }
 
     /// The mode to open. Weekly recap is the ordinary open and is never a link target — a recap
@@ -58,6 +63,20 @@ public struct HistoryDestination: Sendable, Equatable {
     public static func projects(provider: Tool, day: Date) -> HistoryDestination {
         HistoryDestination(mode: .exploreUsage, provider: provider, scope: .day(day),
                            focus: .projects)
+    }
+
+    /// A hard block row's way back to its window: Explore quota, that provider, the window
+    /// pinned, under a banner naming the block (`From hard block · Claude · Aug 12, 3:34 pm`).
+    public static func quotaWindow(provider: Tool, id: String, banner: String)
+        -> HistoryDestination {
+        HistoryDestination(mode: .exploreQuota, provider: provider,
+                           focus: .quotaWindow(id: id), banner: banner)
+    }
+
+    /// The quota window this destination pins, where it names one.
+    public var quotaWindowID: String? {
+        if case .quotaWindow(let id) = focus { return id }
+        return nil
     }
 
     /// The day this destination selects, where it has one.

@@ -46,6 +46,23 @@ final class HistoryViewModelDestinationTests: XCTestCase {
         XCTAssertEqual(vm.selectedEntry(in: page(vm, .tool(tool)))?.id, day)
     }
 
+    /// A destination naming a quota window opens Explore quota with that window pinned; an
+    /// ordinary open afterwards drops the pin like the rest of the destination.
+    func testAQuotaWindowDestinationArrivesPinned() throws {
+        let window = HXFix.quotaWindow(.claude, daysBack: 2, hour: 15)
+        let vm = HistoryViewModel(
+            experience: HXFix.experience([HXFix.tool(.claude, quotaWindows: [window])]))
+        vm.prepareForOpen(destination: .quotaWindow(
+            provider: .claude, id: window.id, banner: "From hard block · Claude · Aug 14, 2:30 pm"))
+        XCTAssertEqual(vm.mode, .exploreQuota)
+        XCTAssertEqual(vm.provider, .tool(.claude))
+        XCTAssertEqual(vm.scope?.banner, "From hard block · Claude · Aug 14, 2:30 pm")
+        let page = try XCTUnwrap(vm.experience?.pages(.tool(.claude)).quota)
+        XCTAssertEqual(vm.resolvedQuotaPoint(in: page)?.id, window.id)
+        vm.prepareForOpen()
+        XCTAssertNil(vm.selectedQuotaPoint)
+    }
+
     /// The provider setter clears the day selection, so the order the destination applies them in
     /// is load-bearing — this is the pin for it.
     func testProviderIsAppliedBeforeTheDay() throws {

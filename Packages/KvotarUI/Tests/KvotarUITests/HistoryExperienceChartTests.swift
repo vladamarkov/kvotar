@@ -100,6 +100,20 @@ final class HistoryExperienceChartTests: XCTestCase {
                        + "Codex \(Fmt.monthDay(codexDays[0].start)) · 3.1M")
     }
 
+    /// Each lane prints its own scale — the busiest-day figure the footer names, formatted the
+    /// same way — and a provider with no bar in the period has no lane and no hint.
+    func testEachLaneCarriesItsOwnBusiestDayFigureAsItsScale() {
+        let claude = HXFix.tool(.claude, days: HXFix.days([0, 88_800_000, 1_000]))
+        let codex = HXFix.tool(.codex, days: HXFix.days([3_100_000, 0, 0]))
+        let idle = HXFix.tool(.codex, days: HXFix.days([0, 0, 0]))
+        XCTAssertEqual(strip([claude])?.scaleHints, [.claude: "88.8M"])
+        XCTAssertEqual(strip([claude, codex])?.scaleHints, [.claude: "88.8M", .codex: "3.1M"])
+        XCTAssertEqual(strip([claude, idle])?.scaleHints, [.claude: "88.8M"])
+        let page = HXFix.pages([claude, codex], .all).explore
+        XCTAssertEqual(page.stripScaleHints, [.claude: "88.8M", .codex: "3.1M"],
+                       "the page carries the hints the view draws")
+    }
+
     func testLegendAppearsOnlyWhenItSaysSomething() {
         let claude = HXFix.tool(.claude, days: HXFix.days([0, 5_000_000]))
         XCTAssertEqual(strip([claude])?.legend.count, 0,
@@ -187,6 +201,12 @@ final class HistoryExperienceChartTests: XCTestCase {
 
     private func hourWork(_ shape: [Int]) -> [Int] { shape }
 
+    /// The chart in the fixture calendar — the one `HXFix.pages` injects and `localBlock`
+    /// builds its clock hours in — so an hour never depends on the machine running the suite.
+    private func hourChart(_ tools: [HistoryReport.ToolReport]) -> HistoryScreen.HourChart? {
+        HistoryDisplay.experienceHourChart(tools, calendar: HXFix.utcCalendar)
+    }
+
     private var spreadWork: [Int] {
         [9, 5, 0, 0, 0, 0, 0, 0, 0, 3, 4, 2, 1, 0, 1, 1, 0, 1, 1, 3, 4, 7, 6, 7]
     }
@@ -195,24 +215,102 @@ final class HistoryExperienceChartTests: XCTestCase {
         let watching = HXFix.now.addingTimeInterval(-29 * 86_400)
         let short = HXFix.tool(.claude, limitBlocks: [HXFix.localBlock(daysBack: 2, hour: 15)],
                                watchingSince: watching, workByHour: spreadWork)
-        XCTAssertNotNil(HistoryDisplay.experienceHourChart([short]))
+        XCTAssertNotNil(hourChart([short]))
 
         let wide = HXFix.tool(.codex,
                               limitBlocks: [HXFix.block(
                                   at: HXFix.now.addingTimeInterval(-2 * 86_400),
                                   lockout: 3600, width: 604_800)],
                               watchingSince: watching, workByHour: spreadWork)
-        XCTAssertNil(HistoryDisplay.experienceHourChart([wide]),
+        XCTAssertNil(hourChart([wide]),
                      "the hour hardly matters when the consequence runs to next Tuesday")
 
         let noBlocks = HXFix.tool(.claude, watchingSince: watching, workByHour: spreadWork)
-        XCTAssertNil(HistoryDisplay.experienceHourChart([noBlocks]))
+        XCTAssertNil(hourChart([noBlocks]))
 
         let noWork = HXFix.tool(.claude,
                                 limitBlocks: [HXFix.localBlock(daysBack: 2, hour: 15)],
                                 watchingSince: watching)
-        XCTAssertNil(HistoryDisplay.experienceHourChart([noWork]),
+        XCTAssertNil(hourChart([noWork]),
                      "there is nothing to draw the marks against")
+    }
+
+    func testOnlyShortWindowBlocksAreDrawnAndTheCueSaysSo() throws {
+        let t = HXFix.tool(.claude,
+                           limitBlocks: [HXFix.localBlock(daysBack: 5, hour: 9, width: 604_800),
+                                         HXFix.localBlock(daysBack: 3, hour: 11, lockout: nil),
+                                         HXFix.localBlock(daysBack: 1, hour: 15)],
+                           watchingSince: HXFix.now.addingTimeInterval(-29 * 86_400),
+                           workByHour: spreadWork)
+        let chart = try XCTUnwrap(hourChart([t]))
+        XCTAssertEqual(chart.points[9].blockCounts, [:],
+                       "a weekly block is not about the hour it began")
+        XCTAssertEqual(chart.points[11].blockCounts, [:], "an unknown width is not a short one")
+        XCTAssertEqual(chart.points[15].blockCounts, [.claude: 1])
+        XCTAssertEqual(chart.caption,
+                       "The one block landed in the afternoon, though you work hardest in the "
+                       + "evening.", "the caption describes the drawing, not the row list")
+        XCTAssertEqual(chart.cue,
+                       "Bars: local tokens by hour over the last 30 days. "
+                       + "Dots: recorded blocks on windows of 6 hours or less.")
+        XCTAssertEqual(chart.lanes, [.claude])
+    }
+
+    func testAProviderBlockedWithNoLocalWorkStillGetsALaneForItsDot() throws {
+        let watching = HXFix.now.addingTimeInterval(-29 * 86_400)
+        let claude = HXFix.tool(.claude, watchingSince: watching, workByHour: spreadWork)
+        let codex = HXFix.tool(.codex, limitBlocks: [HXFix.localBlock(daysBack: 2, hour: 9)],
+                               watchingSince: watching)
+        let chart = try XCTUnwrap(hourChart([claude, codex]))
+        XCTAssertEqual(chart.lanes, [.claude, .codex], "a lane for bars or for marks")
+        XCTAssertEqual(chart.points[9].bars.map(\.tool), [.claude])
+        XCTAssertEqual(chart.points[9].blockCounts, [.codex: 1])
+        XCTAssertEqual(chart.legend.map(\.label), ["Claude", "Codex", "Hit the limit"])
+        XCTAssertEqual(chart.points[9].hoverBody, "**9 am**\nClaude 3\nCodex 1 block")
+        XCTAssertEqual(chart.caption, "The one block landed in the morning.",
+                       "no bars of the blocked provider ⇒ no busiest band to name")
+    }
+
+    func testTheCaptionNamesTheBlockedProvidersOwnBand() throws {
+        let watching = HXFix.now.addingTimeInterval(-29 * 86_400)
+        let morningWork = (0..<24).map { (6..<12).contains($0) ? 9 : 1 }
+        let claude = HXFix.tool(.claude, limitBlocks: [HXFix.localBlock(daysBack: 2, hour: 15)],
+                                watchingSince: watching, workByHour: spreadWork)
+        let codex = HXFix.tool(.codex, watchingSince: watching, workByHour: morningWork)
+        XCTAssertEqual(try XCTUnwrap(hourChart([claude, codex])).caption,
+                       "The one block landed in the afternoon, though Claude works hardest in "
+                       + "the evening.")
+
+        let codexBlocked = HXFix.tool(.codex, limitBlocks: [HXFix.localBlock(daysBack: 1, hour: 9)],
+                                      watchingSince: watching, workByHour: morningWork)
+        XCTAssertEqual(try XCTUnwrap(hourChart([claude, codexBlocked])).caption,
+                       "Blocks landed across the day.",
+                       "the blocked providers' busiest bands disagree ⇒ no clause")
+
+        let codexEvening = HXFix.tool(.codex, limitBlocks: [HXFix.localBlock(daysBack: 1, hour: 21)],
+                                      watchingSince: watching, workByHour: spreadWork)
+        let claudeEvening = HXFix.tool(.claude,
+                                       limitBlocks: [HXFix.localBlock(daysBack: 2, hour: 20)],
+                                       watchingSince: watching, workByHour: spreadWork)
+        XCTAssertEqual(try XCTUnwrap(hourChart([claudeEvening, codexEvening])).caption,
+                       "Every block landed in the evening, when you work hardest.",
+                       "both blocked providers share the band ⇒ it is said once, unnamed")
+    }
+
+    func testTheHourChartAndTheRhythmReadTheReportsCalendar() throws {
+        var plusTwo = HXFix.utcCalendar
+        plusTwo.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 2 * 3600))
+        let blocks = (1...12).map { HXFix.localBlock(daysBack: Double($0), hour: 23, minute: 30) }
+        let t = HXFix.tool(.claude, limitBlocks: blocks,
+                           watchingSince: HXFix.now.addingTimeInterval(-29 * 86_400),
+                           workByHour: spreadWork)
+        XCTAssertEqual(hourChart([t])?.points[23].blockCounts, [.claude: 12])
+        let shifted = HistoryDisplay.experienceHourChart([t], calendar: plusTwo)
+        XCTAssertEqual(shifted?.points[1].blockCounts, [.claude: 12], "23:30 UTC is 1:30 at +2")
+        XCTAssertEqual(HistoryDisplay.claimedRhythm(blocks, calendar: HXFix.utcCalendar),
+                       HistoryDisplay.hourBand(from: 23, hours: 4))
+        XCTAssertEqual(HistoryDisplay.claimedRhythm(blocks, calendar: plusTwo),
+                       HistoryDisplay.hourBand(from: 1, hours: 4))
     }
 
     func testEveryBlockIsItsOwnMarkAndTheCaptionDescribesTheDrawing() throws {
@@ -222,11 +320,12 @@ final class HistoryExperienceChartTests: XCTestCase {
                                          HXFix.localBlock(daysBack: 1, hour: 13)],
                            watchingSince: HXFix.now.addingTimeInterval(-29 * 86_400),
                            workByHour: spreadWork)
-        let chart = try XCTUnwrap(HistoryDisplay.experienceHourChart([t]))
+        let chart = try XCTUnwrap(hourChart([t]))
         XCTAssertEqual(chart.points.count, 24, "the axis is the clock, not the data")
-        XCTAssertEqual(chart.points[15].blockTools, [.claude, .claude], "two blocks, two marks")
-        XCTAssertEqual(chart.points[13].blockTools, [.claude])
+        XCTAssertEqual(chart.points[15].blockCounts, [.claude: 2], "two blocks, two marks")
+        XCTAssertEqual(chart.points[13].blockCounts, [.claude: 1])
         XCTAssertEqual(chart.points.compactMap(\.tickLabel), ["12a", "6a", "12p", "6p"])
+        XCTAssertEqual(chart.points[15].hoverBody, "**3 pm** · 1\n2 blocks")
         XCTAssertEqual(chart.caption,
                        "Every block landed in the afternoon, though you work hardest in the "
                        + "evening.")
@@ -242,7 +341,7 @@ final class HistoryExperienceChartTests: XCTestCase {
                                          HXFix.localBlock(daysBack: 1, hour: 19)],
                            watchingSince: HXFix.now.addingTimeInterval(-29 * 86_400),
                            workByHour: spreadWork)
-        let chart = try XCTUnwrap(HistoryDisplay.experienceHourChart([t]))
+        let chart = try XCTUnwrap(hourChart([t]))
         XCTAssertEqual(chart.caption,
                        "Blocks landed across the day; you work hardest in the evening.")
     }
@@ -257,16 +356,21 @@ final class HistoryExperienceChartTests: XCTestCase {
                                limitBlocks: [HXFix.localBlock(daysBack: 3, hour: 21)],
                                watchingSince: watching,
                                workByHour: Array(repeating: 2_000_000, count: 24))
-        let chart = try XCTUnwrap(HistoryDisplay.experienceHourChart([claude, codex]))
+        let chart = try XCTUnwrap(hourChart([claude, codex]))
         XCTAssertEqual(chart.points[0].bars.map(\.tool), [.claude, .codex])
         XCTAssertEqual(chart.points[0].bars.map(\.fraction), [1.0, 1.0],
                        "flat work fills each provider's own lane — scales never shared")
-        XCTAssertEqual(chart.points[15].blockTools, [.claude])
-        XCTAssertEqual(chart.points[21].blockTools, [.codex])
+        XCTAssertEqual(chart.points[15].blockCounts, [.claude: 1])
+        XCTAssertEqual(chart.points[21].blockCounts, [.codex: 1])
         XCTAssertEqual(chart.legend.map(\.label), ["Claude", "Codex", "Hit the limit"])
         XCTAssertEqual(chart.points[0].hoverBody, "**12 am**\nClaude 8.0M\nCodex 2.0M")
+        XCTAssertEqual(chart.points[15].hoverBody,
+                       "**3 pm**\nClaude 8.0M\nCodex 2.0M\nClaude 1 block",
+                       "the block line names its provider when two lanes draw")
         let text = chart.points.map(\.hoverBody).joined(separator: " ") + chart.caption
         XCTAssertFalse(text.contains("10.0M"), "no combined figure anywhere")
+        XCTAssertEqual(chart.caption, "Blocks landed across the day.",
+                       "flat work ties every quarter, and a tie names no busiest band")
     }
 
     // MARK: - REV-72 window summary (helpers survive the cutover unchanged)

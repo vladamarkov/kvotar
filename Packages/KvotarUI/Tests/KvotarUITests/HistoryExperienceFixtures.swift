@@ -103,11 +103,12 @@ enum HXFix {
             windowSeconds: lockout == nil ? nil : width)
     }
 
-    /// A block `daysBack` days before `now` at a given **local** clock hour — for the
-    /// rhythm/hour tests, whose subject is the local clock.
+    /// A block `daysBack` days before `now` at a given clock hour of the fixture calendar
+    /// (`utcCalendar`, the one `pages(_:_:)` injects) — for the rhythm/hour tests, whose
+    /// subject is the clock the report keeps.
     static func localBlock(daysBack: Double, hour: Int, minute: Int = 0, lockout: Int? = 3600,
                            width: Int? = 18_000) -> HistoryReport.LimitBlock {
-        let midnight = Calendar.current.startOfDay(for: now)
+        let midnight = utcCalendar.startOfDay(for: now)
         return block(at: midnight.addingTimeInterval(-daysBack * 86_400 + Double(hour) * 3600
                                                      + Double(minute) * 60),
                      lockout: lockout, width: width)
@@ -180,11 +181,12 @@ enum HXFix {
                             endedAt: Date, used: Double, gap: TimeInterval = 0,
                             ending: QuotaWindowOutcome.Ending = .reachedReset,
                             scheduled: Date? = nil, hitLimit: Bool = false,
-                            now: Date = HXFix.now) -> WeeklyLimitOutcome {
+                            now: Date = HXFix.now,
+                            readings: [QuotaWindowOutcome.Reading] = []) -> WeeklyLimitOutcome {
         let resetsAt = scheduled ?? endedAt
-        let last = endedAt.addingTimeInterval(-gap)
+        let last = readings.last?.at ?? endedAt.addingTimeInterval(-gap)
         let outcome = QuotaWindowOutcome(
-            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))",
+            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))-604800",
             tool: tool, resetsAt: resetsAt, windowSeconds: 604_800, widthEvidence: .recorded,
             start: resetsAt.addingTimeInterval(-604_800),
             firstObservedAt: resetsAt.addingTimeInterval(-604_800), lastObservedAt: last,
@@ -192,8 +194,17 @@ enum HXFix {
             completion: now < endedAt ? .current
                 : (gap <= QuotaWindowOutcomes.fullObservationTolerance || hitLimit
                     ? .completedFull : .completedPartial),
-            ending: ending, endedAt: endedAt)
+            ending: ending, endedAt: endedAt, readings: readings)
         return WeeklyLimitOutcome(limit: limit, outcome: outcome)
+    }
+
+    /// Readings every `every` seconds ending `endingAt`, one per value in `pcts`, oldest first.
+    static func readings(endingAt: Date, pcts: [Double],
+                         every: TimeInterval = 6 * 3600) -> [QuotaWindowOutcome.Reading] {
+        pcts.enumerated().map { index, pct in
+            .init(at: endingAt.addingTimeInterval(-Double(pcts.count - 1 - index) * every),
+                  usedPct: pct)
+        }
     }
 
     // MARK: - Quota windows (STEP_181 outcomes, STEP_182 display)
@@ -208,6 +219,7 @@ enum HXFix {
                             readings: Int = 12,
                             completion: QuotaWindowOutcome.Completion = .completedFull,
                             ending: QuotaWindowOutcome.Ending = .reachedReset,
+                            endedAt: Date? = nil,
                             hitLimit: Bool = false) -> QuotaWindowOutcome {
         var components = utcCalendar.dateComponents(
             [.year, .month, .day], from: now.addingTimeInterval(-daysBack * 86_400))
@@ -216,12 +228,15 @@ enum HXFix {
         let start = width.map { resetsAt.addingTimeInterval(-TimeInterval($0)) }
         let last = resetsAt.addingTimeInterval(-lastSeenBefore)
         return QuotaWindowOutcome(
-            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))",
+            // Core's own shape: provider, reset and width.
+            id: "\(tool.rawValue)-\(Int(resetsAt.timeIntervalSince1970))"
+                + (width.map { "-\($0)" } ?? ""),
             tool: tool, resetsAt: resetsAt, windowSeconds: width,
             widthEvidence: widthEvidence ?? (width == nil ? .unknown : .recorded), start: start,
             firstObservedAt: start ?? last.addingTimeInterval(-3600), lastObservedAt: last,
             observationCount: readings, highWaterPct: used,
-            hitLimitAt: hitLimit ? last : nil, completion: completion, ending: ending)
+            hitLimitAt: hitLimit ? last : nil, completion: completion, ending: ending,
+            endedAt: endedAt)
     }
 
     /// A tool with no work at all — the empty-corpus shape.

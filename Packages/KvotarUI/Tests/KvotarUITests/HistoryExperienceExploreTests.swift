@@ -242,6 +242,60 @@ final class HistoryExperienceExploreTests: XCTestCase {
                        ["\(Fmt.tokens(400_000)) · \(Fmt.dollarValue(3.2))"])
     }
 
+    /// S2.2 (plan, Oct 2026): each bar is against its own provider's top row, so the two
+    /// providers are never sorted into one order — Claude rows, then Codex rows, each group
+    /// under its own cap and on its own scale, even when every Codex figure is the larger.
+    func testAllBreakdownGroupsByProviderEachOnItsOwnScaleAndCap() {
+        let seen = HXFix.now.addingTimeInterval(-2 * 86_400)
+        func project(_ name: String, _ tokens: Int) -> HistoryReport.Project {
+            HistoryReport.Project(name: name, sessions: 1, tokens: tokens)
+        }
+        func session(_ id: String, _ project: String, _ tokens: Int) -> HistoryReport.Session {
+            HistoryReport.Session(sessionId: id, project: project, model: nil,
+                                  lastSeenAt: seen, tokens: tokens, value: 1)
+        }
+        let claude = HXFix.tool(
+            .claude,
+            projects: [project("/u/a", 400_000), project("/u/b", 200_000),
+                       project("/u/c", 100_000), project("/u/d", 50_000)],
+            topSessions: [session("c1", "a", 300_000), session("c2", "b", 150_000)])
+        let codex = HXFix.tool(
+            .codex,
+            projects: [project("/u/x", 5_000_000), project("/u/y", 1_000_000)],
+            topSessions: [session("x1", "x", 4_000_000), session("x2", "y", 2_000_000),
+                          session("x3", "x", 1_000_000), session("x4", "y", 500_000)])
+
+        let all = explore([claude, codex]).breakdown
+        XCTAssertEqual(all.projects.map(\.row.label), ["a", "b", "c", "x", "y"],
+                       "Claude's group first, capped at 3, then Codex's — never one order")
+        XCTAssertEqual(all.projects.map(\.tag), ["Claude", "Claude", "Claude", "Codex", "Codex"])
+        XCTAssertEqual(all.projects.map(\.fraction), [1.0, 0.5, 0.25, 1.0, 0.2],
+                       "each group's top row is the full track on its own scale")
+        XCTAssertEqual(all.largestWork.map(\.accent),
+                       [.claude, .claude, .codex, .codex, .codex])
+        XCTAssertEqual(all.largestWork.map(\.fraction), [1.0, 0.5, 1.0, 0.5, 0.25],
+                       "largest work follows the same grouping and cap")
+
+        let claudeOnly = explore([claude, codex], .tool(.claude)).breakdown
+        XCTAssertEqual(claudeOnly.projects.map(\.row.label), ["a", "b", "c", "d"],
+                       "a provider filter keeps the reader's own top rows, untagged")
+        XCTAssertEqual(claudeOnly.projects.map(\.tag), [nil, nil, nil, nil])
+    }
+
+    /// S2.1: whether a lane has a bar on a day is the model's statement. A day with no work
+    /// contributes no `DayBar`, so the strip has nothing to draw there; a day with any work
+    /// contributes one, however small its fraction.
+    func testAnEmptyDayHasNoBarForTheStripToDraw() {
+        let claude = HXFix.tool(.claude, days: HXFix.days([900_000, 1_000, 0, 0]))
+        let codex = HXFix.tool(.codex, days: HXFix.days([0, 0, 300_000, 0]))
+        let days = explore([claude, codex]).days
+        XCTAssertEqual(days.map { $0.point.bars.map(\.tool) },
+                       [[.claude], [.claude], [.codex], []])
+        XCTAssertEqual(days[1].point.bars.first?.fraction ?? 0, 1_000.0 / 900_000, accuracy: 1e-9,
+                       "a day with little work keeps its bar, however short")
+        XCTAssertEqual(days[3].detail.status, "No activity")
+    }
+
     // MARK: - Empty state
 
     func testExploreEmptyStateIsProviderScoped() {

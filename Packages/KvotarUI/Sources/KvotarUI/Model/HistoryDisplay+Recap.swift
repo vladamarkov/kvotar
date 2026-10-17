@@ -33,12 +33,17 @@ extension HistoryDisplay {
     static let recapAllowanceEyebrow = "Allowance change"
     static let recapPatternEyebrow = "Work pattern"
     static let recapCalmEyebrow = "Week in review"
+    /// The clipped week's own eyebrow: its lead is about coverage, not a review.
+    static let recapPartialEyebrow = "Partly covered"
+    /// The clipped lead's grounding, in place of the coverage note it folds in.
+    static let recapPartialGrounding = "Week totals are not shown for a partly covered week."
     /// The whole-mode empty state: the horizon holds no completed week yet.
     static let recapEmptyMessage =
         "No completed week yet. The recap covers Monday to Sunday, and appears once a week has "
         + "finished."
     /// A week the fixed 30-day horizon only partly covers. Named beside every conclusion it
-    /// bounds, and every whole-week conclusion is withheld while it is set (§6.2).
+    /// bounds, and every whole-week conclusion is withheld while it is set (§6.2). Omitted when
+    /// the clipped lead itself names the limit (`recapPartialRung`), so the week says it once.
     static let recapClippedCoverage =
         "Only part of this week is inside the 30-day horizon, so week totals are not shown."
     /// Kvotar was not watching for the whole week — poll evidence starts at the watching date and
@@ -103,7 +108,7 @@ extension HistoryDisplay {
             title: isLatest ? recapLatestTitle : "Week of \(Fmt.monthDay(week.start))",
             span: span,
             isLatest: isLatest,
-            coverageNote: recapCoverage(evidence),
+            coverageNote: lead.kind == .partialWeek ? nil : recapCoverage(evidence),
             lead: lead,
             table: recapTable(evidence),
             weeklyLimits: recapWeeklyLimits(evidence, lines: limits),
@@ -113,7 +118,7 @@ extension HistoryDisplay {
 
     /// Which rungs may take the lead, strongest first (§6.2 *Lead priority*).
     static let recapLeadOrder: [RecapCandidate.Slot] =
-        [.block, .allowance, .pattern, .calm]
+        [.block, .allowance, .partial, .pattern, .calm]
 
     /// The last **day** of a `[start, end)` week, for the inclusive span the reader reads.
     static func lastDay(of week: HistoryWeeks.Week) -> Date {
@@ -209,7 +214,7 @@ extension HistoryDisplay {
     /// `lead` is a fact that may support a recap but must never head one.
     struct RecapCandidate {
         enum Slot: Sendable, Equatable {
-            case block, allowance, pattern, calm
+            case block, allowance, partial, pattern, calm
         }
 
         let slot: Slot
@@ -222,7 +227,7 @@ extension HistoryDisplay {
     /// Every lead this week supports. Which of them leads is decided by `recapLeadOrder` above,
     /// not by the order they are gathered in.
     static func recapCandidates(_ e: RecapEvidence) -> [RecapCandidate] {
-        [recapBlockRung(e), recapAllowanceRung(e), recapPatternRung(e),
+        [recapBlockRung(e), recapAllowanceRung(e), recapPartialRung(e), recapPatternRung(e),
          recapCalmRung(e)].compactMap { $0 }
     }
 
@@ -284,7 +289,7 @@ extension HistoryDisplay {
                                            label: "See allowance history")))
     }
 
-    /// Rung 3. This week against the same provider's own preceding completed week, outside the
+    /// Rung 4. This week against the same provider's own preceding completed week, outside the
     /// ±5 % band the surface already uses, **with its percent** (REV-104 §2.2): `Local token use
     /// fell 86% on Claude and 43% on Codex.` Withheld on a clipped week and against a clipped
     /// one — a partial week compared against a full one manufactures a trend (REV-73).
@@ -343,7 +348,25 @@ extension HistoryDisplay {
         return sentence + "."
     }
 
-    /// Rung 4 — the calm factual summary. Per-provider tokens and active days, never a combined
+    /// Rung 3. The clipped week's lead, below the recorded facts and above the whole-week claims. It
+    /// names the covered span and says why the totals are missing, so the week neither reads
+    /// as empty (`Nothing was recorded`) beside its own work nor presents a fraction as a week.
+    /// The covered span starts on the period's first day, a partial one.
+    static func recapPartialRung(_ e: RecapEvidence) -> RecapCandidate? {
+        guard e.week.isClipped else { return nil }
+        let first = Fmt.monthDay(e.report.periodStart)
+        let last = Fmt.monthDay(lastDay(of: e.week))
+        let covered = first == last ? first : "\(first) – \(last)"
+        return RecapCandidate(
+            slot: .partial,
+            lead: .init(eyebrow: recapPartialEyebrow,
+                        sentence: "Only \(covered) of this week is inside the last 30 days.",
+                        grounding: recapPartialGrounding,
+                        kind: .partialWeek),
+            insight: nil)
+    }
+
+    /// Rung 5 — the calm factual summary. Per-provider tokens and active days, never a combined
     /// token figure (§6.1: the field for one does not exist). Withheld on a clipped week, whose
     /// totals would be a fraction presented as a week.
     static func recapCalmRung(_ e: RecapEvidence) -> RecapCandidate? {
@@ -618,7 +641,8 @@ extension HistoryDisplay {
         return nil
     }
 
-    /// The lead of last resort: the week is inside the horizon and holds nothing at all.
+    /// The lead of last resort: a whole week inside the horizon that holds nothing at all (a
+    /// clipped week always has `recapPartialRung`).
     static func recapNothingRecorded(_ e: RecapEvidence) -> String {
         guard let watching = e.watchingSince else {
             return "Nothing was recorded this week."

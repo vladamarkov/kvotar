@@ -102,11 +102,17 @@ public struct HistoryScreen: Sendable {
         public let points: [DayPoint]
         public let legend: [DayLegendEntry]
         public let footer: String
+        /// Each lane's scale, printed at its top: the provider's busiest-day figure, which is
+        /// what its tallest bar reaches. The same tokens formatting as `footer`, so one number
+        /// never reads two ways; the footer still names the day. Empty for a lane with no bar.
+        public let scaleHints: [Tool: String]
 
-        public init(points: [DayPoint], legend: [DayLegendEntry], footer: String) {
+        public init(points: [DayPoint], legend: [DayLegendEntry], footer: String,
+                    scaleHints: [Tool: String] = [:]) {
             self.points = points
             self.legend = legend
             self.footer = footer
+            self.scaleHints = scaleHints
         }
     }
 
@@ -115,33 +121,45 @@ public struct HistoryScreen: Sendable {
     public struct HourPoint: Sendable, Equatable {
         /// Stacked bottom-up in this order; a tool with nothing in this hour contributes no bar.
         public let bars: [DayBar]
-        /// **One entry per block**, not per tool that has one — three blocks are three marks. This
-        /// is what makes a rhythm honest at n = 3, where an averaged distribution would not be.
-        public let blockTools: [Tool]
+        /// Blocks in this hour **per provider, every block counted** — three blocks are three
+        /// marks under that provider's lane, not one mark per provider that had any. This is what
+        /// makes a rhythm honest at n = 3, where an averaged distribution would not be. The hover
+        /// line and the drawn dots read the same count, so the two cannot disagree.
+        public let blockCounts: [Tool: Int]
         /// Set on the quarter hours (12a / 6a / 12p / 6p) so the axis can be read without counting.
         public let tickLabel: String?
         /// The hover card's markdown. Pre-formatted here; the view renders it and parses nothing.
         public let hoverBody: String
 
-        public init(bars: [DayBar], blockTools: [Tool] = [], tickLabel: String? = nil,
+        public init(bars: [DayBar], blockCounts: [Tool: Int] = [:], tickLabel: String? = nil,
                     hoverBody: String) {
             self.bars = bars
-            self.blockTools = blockTools
+            self.blockCounts = blockCounts
             self.tickLabel = tickLabel
             self.hoverBody = hoverBody
         }
     }
 
-    /// Work by hour of day with every block plotted on it (STEP_120). The caption describes what is
-    /// **drawn** — never a claimed distribution, which needs the floor the aggregate row applies.
+    /// Work by hour of day with every short-window block plotted on it (STEP_120). The caption
+    /// describes what is **drawn** — never a claimed distribution, which needs the floor the
+    /// aggregate row applies.
     public struct HourChart: Sendable, Equatable {
         public let points: [HourPoint]          // exactly 24, hour 0 first
+        /// One lane per provider with bars **or** marks, in stacking order: a provider blocked
+        /// with no local work still gets the lane its dot sits under. The view labels a lane
+        /// by its provider only when there are two.
+        public let lanes: [Tool]
         public let legend: [DayLegendEntry]
+        /// One line saying what the bars and the dots are; the legend alone only hinted at it.
+        public let cue: String
         public let caption: String
 
-        public init(points: [HourPoint], legend: [DayLegendEntry], caption: String) {
+        public init(points: [HourPoint], lanes: [Tool], legend: [DayLegendEntry], cue: String,
+                    caption: String) {
             self.points = points
+            self.lanes = lanes
             self.legend = legend
+            self.cue = cue
             self.caption = caption
         }
     }
@@ -167,15 +185,20 @@ public struct HistoryScreen: Sendable {
         /// arrival can find its rows without re-reading the label (STEP_183). Never displayed:
         /// the row's own label already carries the date in the D-80/D-81 grammar.
         public let at: Date?
+        /// Where the row leads, where it leads anywhere: a hard block row's typed link to the
+        /// quota window it fell in (`blockWindowLink`). Nil on a row that is only a fact.
+        public let link: HistoryExperience.RecapLink?
 
         public init(row: LabeledRow, tag: String? = nil, fraction: Double? = nil,
-                    accent: Tool? = nil, warn: Bool = false, at: Date? = nil) {
+                    accent: Tool? = nil, warn: Bool = false, at: Date? = nil,
+                    link: HistoryExperience.RecapLink? = nil) {
             self.row = row
             self.tag = tag
             self.fraction = fraction.map { min(max($0, 0), 1) }
             self.accent = accent
             self.warn = warn
             self.at = at
+            self.link = link
         }
     }
 
@@ -278,7 +301,7 @@ public enum HistoryDisplay {
     /// The most of a cycle's rise that may have no local work behind it — the web app, another
     /// machine. Above this the cycle is not evidence about this Mac's work.
     static let maximumUnseenShare = 0.20
-    /// Ranked rows kept on the All tab, where two tools share the list.
+    /// Ranked rows kept **per provider** on the All tab, where two tools share the list.
     public static let allRankedRowLimit = 3
 
     public static var emptyReportMessage: String {
@@ -381,9 +404,10 @@ public enum HistoryDisplay {
     /// both pass: at least `claimedRhythmFloor` blocks, and more than `claimedRhythmShare` of them
     /// inside one `rhythmBandHours` band. **Hours only, never a weekday** — nothing on this page
     /// plots weekdays, and a claim must describe an axis the reader can check (REV-73 §6).
-    static func claimedRhythm(_ blocks: [HistoryReport.LimitBlock]) -> String? {
+    static func claimedRhythm(_ blocks: [HistoryReport.LimitBlock],
+                              calendar: Calendar = .current) -> String? {
         guard blocks.count >= claimedRhythmFloor else { return nil }
-        let hours = blocks.map { Calendar.current.component(.hour, from: $0.firedAt) }
+        let hours = blocks.map { calendar.component(.hour, from: $0.firedAt) }
         var best = (start: 0, count: 0)
         // Only bands that *begin* on an hour a block landed in. Otherwise a run at 2–4 pm names
         // itself `1–5 pm`, because an empty leading hour scores exactly the same and sorts first.
@@ -405,8 +429,13 @@ public enum HistoryDisplay {
 
     /// The sentence under the chart. It says what is **drawn** and stops there: which part of the
     /// day the marks are in, and which part the bars are tallest in. It never claims a tendency —
-    /// that is `claimedRhythm`'s job and it has a floor this does not.
-    static func hourCaption(marks: [Int: [Tool]], work: [Int]) -> String {
+    /// that is `claimedRhythm`'s job and it has a floor this does not. `busiest` is each blocked
+    /// provider's own busiest band, from its own lane's bars: the lanes never share a scale, so a
+    /// band summed across providers would describe a drawing nobody sees. When the blocked
+    /// providers disagree the clause is dropped; when the band is one named provider's on a
+    /// chart with two lanes, that provider is named (`when Claude works hardest`).
+    static func hourCaption(marks: [Int: [Tool]], busiest: [Tool: DayBand],
+                            named: Bool) -> String {
         let count = marks.values.reduce(0) { $0 + $1.count }
         let bands = Set(marks.keys.map { dayBand($0) })
         let lead: String
@@ -417,13 +446,16 @@ public enum HistoryDisplay {
         } else {
             lead = "Blocks landed across the day"
         }
-        guard let busiest = busiestBand(work) else { return "\(lead)." }
-        if bands.count == 1, bands.first == busiest {
-            return "\(lead), when you work hardest."
+        let agreed = Set(busiest.values)
+        guard agreed.count == 1, let band = agreed.first else { return "\(lead)." }
+        let subject = named && busiest.count == 1
+            ? "\(busiest.keys.first?.tabLabel ?? "") works" : "you work"
+        if bands.count == 1, bands.first == band {
+            return "\(lead), when \(subject) hardest."
         }
         return bands.count == 1
-            ? "\(lead), though you work hardest \(bandPhrase(busiest))."
-            : "\(lead); you work hardest \(bandPhrase(busiest))."
+            ? "\(lead), though \(subject) hardest \(bandPhrase(band))."
+            : "\(lead); \(subject) hardest \(bandPhrase(band))."
     }
 
     /// Six-hour quarters of the day. Coarse on purpose: the caption is a direction to look in, not
@@ -448,12 +480,14 @@ public enum HistoryDisplay {
         }
     }
 
-    /// The quarter of the day holding the most drawn work, or `nil` when there is none to name.
+    /// The quarter of the day holding the most drawn work, or `nil` when there is none to name
+    /// — or when two quarters tie, since naming one of them would be a choice, not a fact.
     static func busiestBand(_ work: [Int]) -> DayBand? {
         var totals: [DayBand: Int] = [:]
         for (hour, tokens) in work.enumerated() { totals[dayBand(hour), default: 0] += tokens }
-        guard let best = totals.max(by: { $0.value < $1.value }), best.value > 0 else { return nil }
-        return best.key
+        guard let best = totals.values.max(), best > 0 else { return nil }
+        let leaders = totals.filter { $0.value == best }.keys
+        return leaders.count == 1 ? leaders.first : nil
     }
 
     /// `12 am` / `2 pm` — the clock vocabulary `Fmt.clock` uses, for an hour with no date attached.

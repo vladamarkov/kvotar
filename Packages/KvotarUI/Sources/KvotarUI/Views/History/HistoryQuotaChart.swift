@@ -1,14 +1,22 @@
 import SwiftUI
 import KvotarCore
 
-/// The Explore quota trend chart (STEP_183 — REV-93 / UI Spec §6.3): one provider's observed
-/// quota windows, drawn against a 0–100 % **used** axis.
+/// The Explore quota charts (STEP_183 — REV-93 / UI Spec §6.3): one provider's observed quota
+/// windows, drawn against a 0–100 % **used** axis — the weekly window's climb week by week above,
+/// the short-window strip below, on one date axis and under one hover cursor.
 ///
 /// Nothing in the window plotted points before this: the day strip and the hour chart are both
 /// bar shapes. So this is a new primitive, built to the conventions those two already set —
-/// the block itself is the keyboard stop, `←`/`→` move the selection, and every drawn mark is a
-/// value the model already decided (`x`, `fraction`, `kind`, `hitLimit`, `accessibilityValue`).
-/// The only arithmetic here is a fraction times a size.
+/// each plot is a keyboard stop, `←`/`→` move the selection, and every drawn mark is a value the
+/// model already decided (`x`, `fraction`, `kind`, `hitLimit`, `accessibilityValue`, the axis
+/// ticks, the curves' samples and end labels, the in-place labels and the hover card). The only
+/// arithmetic here is a fraction times a size, and its inverse for the pointer.
+///
+/// **No legend.** Every ended window is the same dot, a partly seen one faded; the open window
+/// is a ring labelled `So far` beside it; a limit hit is a diamond labelled `Hit the limit`
+/// where the model finds room; a week's curve writes its result at its end. The sentence above
+/// carries the counts and the hover card names the rest, so a key under the chart would only
+/// repeat them.
 ///
 /// **`% used`, not `% left`.** This is the narrow retrospective exception (§6.1): the chart shows
 /// consumption ending at a limit, so 100 % sits at the top. Every live surface in the app stays
@@ -19,32 +27,25 @@ struct QuotaChartView: View {
     /// A week-scoped arrival dims what it is not about. The points themselves are unchanged —
     /// the section's factual sentence still describes all thirty days, which is what it says.
     let scope: HistoryViewModel.Scope?
-    /// The report period, from the window's own header — the axis runs across exactly this span,
-    /// and printing it is what gives the horizontal dimension a meaning. The string is the
-    /// model's; nothing here formats a date.
-    let periodLabel: String
-    let onSelect: (String) -> Void
-
-    private let plotHeight: CGFloat = 180
-    private let gutter: CGFloat = 34
-    /// Room for a mark sitting exactly at the end of the period (the open window usually does).
-    private let rightPad: CGFloat = 8
-    private let markSize: CGFloat = 9
-    /// Half the invisible hit area around a mark: the marks are small and, on a busy Claude
-    /// account, close together.
-    private let hitInset: CGFloat = 7
+    @ObservedObject var vm: HistoryViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            HistoryEyebrow(text: "% used")
-            plot
-            HStack(spacing: 8) {
-                QuotaChartLegend()
-                Spacer(minLength: 8)
-                Text(periodLabel)
-                    .font(HistoryTheme.note)
-                    .monospacedDigit()
-                    .foregroundStyle(HistoryTheme.tertiary)
+            if let title = section.weeklyTitle, !section.curves.isEmpty {
+                HistoryEyebrow(text: title)
+                QuotaPlot(section: section, chart: .weekly, selectedID: selectedID, scope: scope,
+                          plotHeight: 190, vm: vm)
+            }
+            if let title = section.stripTitle, !section.points.isEmpty {
+                HistoryEyebrow(text: title)
+                    .padding(.top, section.curves.isEmpty ? 0 : 8)
+                QuotaPlot(section: section, chart: .strip, selectedID: selectedID, scope: scope,
+                          plotHeight: 130, vm: vm)
+            }
+            // The selected window's day, laid out by the hour, so the three to five windows a
+            // busy day stacks on the strip stand apart. Absent for a weekly window.
+            if let selectedID, let lens = section.dayLens(selecting: selectedID) {
+                QuotaDayLensView(section: section, lens: lens, vm: vm)
             }
             // The unjoined-run sentence is the same one for every such run, so it is stated once
             // under the chart rather than per segment — three copies of one caveat is noise, not
@@ -54,48 +55,124 @@ struct QuotaChartView: View {
             }
         }
     }
+}
 
-    // MARK: Plot
+/// One of a section's two plots. The weekly chart draws the section's curves, the strip its
+/// points; both draw the same axis, and whichever the pointer is over owns the ring and the
+/// card while the cursor line stands in both.
+private struct QuotaPlot: View {
+    let section: HistoryExperience.QuotaSection
+    let chart: HistoryExperience.QuotaChart
+    let selectedID: String?
+    let scope: HistoryViewModel.Scope?
+    /// 190 pt for the weekly climb, 130 pt for the dense strip; the dates under it carry the
+    /// horizontal meaning either way.
+    let plotHeight: CGFloat
+    @ObservedObject var vm: HistoryViewModel
 
-    private var plot: some View {
+    /// Room under the plot for the tick marks and their labels.
+    private let axisHeight: CGFloat = 26
+    private let gutter: CGFloat = 34
+    /// The margin the model reserves to the right of the period's end for the open window's
+    /// label (`QuotaSection.rightMargin`).
+    private var rightPad: CGFloat { HistoryExperience.QuotaSection.rightMargin }
+    private let markSize: CGFloat = 9
+    private var tickLabelWidth: CGFloat { HistoryExperience.QuotaSection.tickLabelWidth }
+
+    /// The points this plot steps through with ← and →, and rings when selected.
+    private var points: [HistoryExperience.QuotaPoint] {
+        chart == .weekly ? section.weeklyPoints : section.points
+    }
+
+    private var hover: HistoryExperience.QuotaHover? {
+        vm.quotaHover?.provider == section.provider ? vm.quotaHover : nil
+    }
+
+    var body: some View {
         GeometryReader { geo in
             let width = max(geo.size.width - gutter - rightPad, 1)
             ZStack(alignment: .topLeading) {
                 axis(width: width)
-                ForEach(Array(section.segments.enumerated()), id: \.offset) { index, segment in
-                    boundary(segment, isFirst: index == 0, width: width)
-                    if segment.connects { line(segment, width: width) }
+                switch chart {
+                case .weekly:
+                    ForEach(section.curves) { curve in
+                        self.curve(curve, width: width)
+                    }
+                case .strip:
+                    let labelSides = section.inPlaceLabelSides(plotWidth: width)
+                    ForEach(Array(section.segments.enumerated()), id: \.offset) { index, segment in
+                        boundary(segment, isFirst: index == 0, width: width)
+                        if !segment.joinedIDs.isEmpty { line(segment, width: width) }
+                    }
+                    ForEach(section.points) { point in
+                        mark(point, width: width)
+                        if let text = point.inPlaceLabel, let side = labelSides[point.id] {
+                            inPlaceLabel(text, for: point, side: side, width: width)
+                        }
+                    }
                 }
-                ForEach(section.points) { point in
-                    mark(point, width: width)
+                if let hover { cursor(hover, width: width) }
+            }
+            .contentShape(Rectangle())
+            // The pointer anywhere over the plot resolves to the nearest window or reading, at
+            // once — the macOS tooltip appeared late and only over a 9 pt mark.
+            .onContinuousHover(coordinateSpace: .local) { phase in
+                switch phase {
+                case .active(let location):
+                    vm.quotaHover(section, atX: fraction(of: location.x, width: width), chart: chart)
+                case .ended:
+                    vm.quotaHoverEnded()
+                }
+            }
+            .onTapGesture(coordinateSpace: .local) { location in
+                let x = fraction(of: location.x, width: width)
+                // A click on the strip's axis band opens that day in the lens, on its first
+                // window; a click on the plot selects the window nearest on x.
+                if chart == .strip, location.y > plotHeight {
+                    vm.selectQuotaDay(in: section, atX: x)
+                } else {
+                    vm.selectQuotaPoint(nearestTo: section, atX: x, chart: chart)
                 }
             }
         }
-        .frame(height: plotHeight)
+        .frame(height: plotHeight + axisHeight)
         .focusable()
         // Keep the chart as one keyboard stop, but not the chart-sized blue system frame. The
         // selected quota mark retains its own visible outline.
         .focusEffectDisabled()
         .onMoveCommand { direction in
-            let points = section.points
+            let points = self.points
             guard !points.isEmpty else { return }
             let index = points.firstIndex { $0.id == selectedID } ?? points.count - 1
             switch direction {
-            case .left where index > 0: onSelect(points[index - 1].id)
-            case .right where index + 1 < points.count: onSelect(points[index + 1].id)
+            case .left where index > 0: vm.selectQuotaPoint(points[index - 1].id)
+            case .right where index + 1 < points.count: vm.selectQuotaPoint(points[index + 1].id)
             default: break
             }
         }
-        .accessibilityLabel("\(section.title) chart")
+        .accessibilityLabel(chart == .weekly ? section.weeklyChartLabel : section.stripChartLabel)
     }
 
-    /// 0 / 50 / 100 gridlines with their labels in the gutter. The 100 % line is the limit and
-    /// is drawn solid; 50 % is a hint and is drawn faint.
+    /// The inverse of `gutter + width × x`: where the pointer is across the period, 0…1.
+    private func fraction(of pointX: CGFloat, width: CGFloat) -> Double {
+        min(max((pointX - gutter) / width, 0), 1)
+    }
+
+    private func position(x: Double, fraction: Double, width: CGFloat) -> CGPoint {
+        CGPoint(x: gutter + width * x, y: plotHeight * (1 - fraction))
+    }
+
+    // MARK: Axis
+
+    /// The gridlines the model named: `% used` lines with their gutter labels, and the date
+    /// ticks under the baseline — a faint gridline, a 7 pt mark and a label at a labelled tick,
+    /// a 3 pt mark at a midnight.
+    @ViewBuilder
     private func axis(width: CGFloat) -> some View {
-        ForEach([100.0, 50.0, 0.0], id: \.self) { value in
-            let y = plotHeight * (1 - value / 100)
+        ForEach(section.valueLabels, id: \.fraction) { value in
+            let y = plotHeight * (1 - value.fraction)
             HStack(spacing: 5) {
-                Text("\(Int(value))")
+                Text(value.label)
                     .font(HistoryTheme.note)
                     .monospacedDigit()
                     .foregroundStyle(HistoryTheme.tertiary)
@@ -103,11 +180,97 @@ struct QuotaChartView: View {
                 Rectangle()
                     .fill(HistoryTheme.line)
                     .frame(width: width, height: 1)
-                    .opacity(value == 50 ? 0.5 : 1)
+                    .opacity(value.prominent ? 1 : 0.5)
             }
             .offset(y: y - 5)
         }
+        let labelled = section.labelledTickIDs(plotWidth: width)
+        ForEach(section.ticks) { tick in
+            let x = gutter + width * tick.x
+            if let label = tick.label {
+                Rectangle()
+                    .fill(HistoryTheme.line.opacity(0.45))
+                    .frame(width: 1, height: plotHeight)
+                    .offset(x: x)
+                Rectangle()
+                    .fill(HistoryTheme.secondary)
+                    .frame(width: 1, height: 7)
+                    .offset(x: x, y: plotHeight)
+                if labelled.contains(tick.id) {
+                    let center = HistoryExperience.QuotaSection.tickLabelCenter(
+                        x: tick.x, plotWidth: width)
+                    Text(label)
+                        .font(HistoryTheme.note)
+                        .monospacedDigit()
+                        .foregroundStyle(HistoryTheme.secondary)
+                        .fixedSize()
+                        .frame(width: tickLabelWidth)
+                        .offset(x: gutter + center - tickLabelWidth / 2, y: plotHeight + 10)
+                }
+            } else {
+                Rectangle()
+                    .fill(HistoryTheme.line)
+                    .frame(width: 1, height: 3)
+                    .offset(x: x, y: plotHeight)
+            }
+        }
     }
+
+    // MARK: Weekly curves
+
+    /// One week's climb: the area under its recorded readings, the line through them, the
+    /// boundary where the provider ended it early, its mark on the sample the model chose, and
+    /// the words at its end. A single reading is a mark alone.
+    @ViewBuilder
+    private func curve(_ curve: HistoryExperience.QuotaCurve, width: CGFloat) -> some View {
+        let accent = HistoryTheme.accent(section.provider)
+        let positions = curve.samples.map { position(x: $0.x, fraction: $0.fraction, width: width) }
+        if positions.count > 1, let first = positions.first, let last = positions.last {
+            Path { path in
+                path.move(to: CGPoint(x: first.x, y: plotHeight))
+                for point in positions { path.addLine(to: point) }
+                path.addLine(to: CGPoint(x: last.x, y: plotHeight))
+                path.closeSubpath()
+            }
+            .fill(accent.opacity(curve.faded ? 0.05 : 0.1))
+            .allowsHitTesting(false)
+            Path { path in
+                for (index, point) in positions.enumerated() {
+                    if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
+                }
+            }
+            .stroke(accent.opacity(curve.faded ? 0.5 : 0.9),
+                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+            .allowsHitTesting(false)
+        }
+        if let boundaryX = curve.boundaryX {
+            Path { path in
+                let x = gutter + width * boundaryX
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: plotHeight))
+            }
+            .stroke(HistoryTheme.redAccent.opacity(0.8), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            .allowsHitTesting(false)
+        }
+        if let point = section.weeklyPoints.first(where: { $0.id == curve.pointID }) {
+            mark(point, width: width)
+            if let text = curve.endLabel {
+                Text(text)
+                    .font(HistoryTheme.note)
+                    .monospacedDigit()
+                    .foregroundStyle(HistoryTheme.secondary)
+                    .fixedSize()
+                    .frame(width: 120, alignment: .leading)
+                    .position(x: gutter + width * point.x
+                                 + HistoryExperience.QuotaSection.inPlaceLabelGap + 60,
+                              y: plotHeight * (1 - point.fraction))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    // MARK: Strip
 
     /// Where a segment begins — a dashed hairline carrying the reason as its hover and spoken
     /// text. The first segment of a section starts at the edge of the evidence and needs none.
@@ -126,24 +289,44 @@ struct QuotaChartView: View {
         }
     }
 
-    /// The connecting line, drawn only where the model says these windows abut
-    /// (`QuotaSegment.connects`). A run whose widths were never recorded has no defensible start,
-    /// so it stays a group of separate points.
+    /// The connecting line, through the points the model joined (`QuotaSegment.joinedIDs`: the
+    /// run's ended windows where the windows abut; the open one is never on it). Thin and faint:
+    /// on a strip of ninety windows the line is the eye's guide through the run, not the figure.
     private func line(_ segment: HistoryExperience.QuotaSegment, width: CGFloat) -> some View {
-        let points = segment.pointIDs.compactMap { id in
+        let points = segment.joinedIDs.compactMap { id in
             section.points.first { $0.id == id }
         }
         return Path { path in
             for (index, point) in points.enumerated() {
-                let position = CGPoint(x: gutter + width * point.x,
-                                       y: plotHeight * (1 - point.fraction))
+                let position = position(x: point.x, fraction: point.fraction, width: width)
                 if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
             }
         }
-        .stroke(HistoryTheme.accent(section.provider).opacity(0.72),
-                style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+        .stroke(HistoryTheme.accent(section.provider).opacity(0.4),
+                style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round))
         .allowsHitTesting(false)
     }
+
+    /// The words beside a mark, on the side the model chose. The mark's own accessibility value
+    /// already says the same thing, so the label is decoration to VoiceOver.
+    private func inPlaceLabel(_ text: String, for point: HistoryExperience.QuotaPoint,
+                              side: HistoryExperience.QuotaSection.LabelSide,
+                              width: CGFloat) -> some View {
+        let gap = HistoryExperience.QuotaSection.inPlaceLabelGap
+        let labelWidth = HistoryExperience.QuotaSection.inPlaceLabelWidth
+        let markX = gutter + width * point.x
+        let center = side == .right ? markX + gap + labelWidth / 2 : markX - gap - labelWidth / 2
+        return Text(text)
+            .font(HistoryTheme.note)
+            .foregroundStyle(HistoryTheme.secondary)
+            .fixedSize()
+            .frame(width: labelWidth, alignment: side == .right ? .leading : .trailing)
+            .position(x: center, y: plotHeight * (1 - point.fraction))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    // MARK: Marks and hover
 
     private func mark(_ point: HistoryExperience.QuotaPoint, width: CGFloat) -> some View {
         let isSelected = point.id == selectedID
@@ -152,23 +335,175 @@ struct QuotaChartView: View {
         if isSelected { _ = traits.insert(.isSelected) }
         return QuotaMark(point: point, accent: HistoryTheme.accent(section.provider),
                          size: markSize, isSelected: isSelected)
-            .frame(width: markSize + hitInset * 2, height: markSize + hitInset * 2)
-            .contentShape(Rectangle())
             .opacity(dimmed ? 0.25 : 1)
-            .position(x: gutter + width * point.x, y: plotHeight * (1 - point.fraction))
-            .onTapGesture { onSelect(point.id) }
-            .help(point.accessibilityValue)
+            .position(position(x: point.x, fraction: point.fraction, width: width))
+            // The pointer is handled by the plot (nearest window on x); the mark itself takes
+            // no hits, and VoiceOver selects it through its action.
+            .allowsHitTesting(false)
             .accessibilityElement()
             .accessibilityLabel(point.detail.title)
             .accessibilityValue(point.accessibilityValue)
             .accessibilityAddTraits(traits)
+            .accessibilityAction { vm.selectQuotaPoint(point.id) }
     }
 
+    /// The hover: a faint cursor line through the plot and the axis in both of the provider's
+    /// charts, and on the chart the pointer is over a ring on the nearest mark or reading and the
+    /// card — the day strip's own overlay, anchored to the line so it sits just under the axis
+    /// and flips above or slides in from the window's edge when there is no room. The line is
+    /// placed with `position`, not `offset`: the overlay reads the anchor's layout frame, and an
+    /// offset is not part of it.
+    @ViewBuilder
+    private func cursor(_ hover: HistoryExperience.QuotaHover, width: CGFloat) -> some View {
+        let line = Rectangle()
+            .fill(HistoryTheme.text.opacity(0.2))
+            .frame(width: 1, height: plotHeight + axisHeight)
+            .position(x: gutter + width * hover.cursorX, y: (plotHeight + axisHeight) / 2)
+            .allowsHitTesting(false)
+        if hover.chart == chart {
+            line.anchorPreference(key: DayHoverAnchorKey.self, value: .bounds) {
+                [.quota(hover.id): DayHoverAnchor(bounds: $0, body: hover.body)]
+            }
+            Circle()
+                .strokeBorder(HistoryTheme.text.opacity(0.65), lineWidth: 1.5)
+                .frame(width: markSize + 8, height: markSize + 8)
+                .position(position(x: hover.ringX, fraction: hover.ringFraction, width: width))
+                .allowsHitTesting(false)
+        } else {
+            line
+        }
+    }
 }
 
-/// One drawn window. **Shape carries the state and colour only supplements it** (§6.3): a filled
-/// dot completed and fully observed, a hollow ring where the figure is a lower bound, a dashed
-/// ring for the window still open, and a diamond wherever the limit was reached.
+/// The day lens: the selected window's local day on a 0–24 h baseline under the strip, one mark
+/// per window of that day at its reset (the open window at its last reading, as on the strip),
+/// its figure above it, the selected one ringed. The strip's marks are the same `QuotaMark`, so
+/// a window looks the same in both places. A click anywhere over the lens selects the window
+/// nearest on x, the strip's own convention; VoiceOver selects a mark through its action. The
+/// model laid the day out — the marks' x, the hour ticks, the title — and the view multiplies.
+private struct QuotaDayLensView: View {
+    let section: HistoryExperience.QuotaSection
+    let lens: HistoryExperience.QuotaDayLens
+    @ObservedObject var vm: HistoryViewModel
+
+    /// The same left gutter and right margin as the plots above, so the lens's baseline starts
+    /// and ends under theirs even though its scale is the day, not the period.
+    private let gutter: CGFloat = 34
+    private var rightPad: CGFloat { HistoryExperience.QuotaSection.rightMargin }
+    private let markSize: CGFloat = 9
+    /// The figure's row, the marks' row and the baseline, top down; then the hour labels.
+    private let labelY: CGFloat = 8
+    private let markY: CGFloat = 27
+    private let baseline: CGFloat = 42
+    private let axisHeight: CGFloat = 20
+    private let hourLabelWidth: CGFloat = 48
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(lens.title)
+                .font(HistoryTheme.small.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(HistoryTheme.text)
+                .padding(.leading, gutter)
+            GeometryReader { geo in
+                let width = max(geo.size.width - gutter - rightPad, 1)
+                ZStack(alignment: .topLeading) {
+                    axis(width: width)
+                    ForEach(lens.marks) { mark in
+                        if let point = section.points.first(where: { $0.id == mark.id }) {
+                            self.mark(mark, point: point, width: width)
+                        }
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture(coordinateSpace: .local) { location in
+                    vm.selectQuotaPoint(nearestTo: lens,
+                                        atX: min(max((location.x - gutter) / width, 0), 1))
+                }
+            }
+            .frame(height: baseline + axisHeight)
+        }
+        .padding(.top, 10)
+        .overlay(alignment: .top) {
+            Rectangle().fill(HistoryTheme.line).frame(height: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(lens.accessibilityLabel)
+    }
+
+    /// The baseline and the hour ticks the model named: a 6 pt tick and a label every six hours,
+    /// a 3 pt tick every three.
+    @ViewBuilder
+    private func axis(width: CGFloat) -> some View {
+        Rectangle()
+            .fill(HistoryTheme.line)
+            .frame(width: width, height: 1)
+            .offset(x: gutter, y: baseline)
+        ForEach(lens.ticks) { tick in
+            let x = gutter + width * tick.x
+            if let label = tick.label {
+                Rectangle()
+                    .fill(HistoryTheme.secondary)
+                    .frame(width: 1, height: 6)
+                    .offset(x: x, y: baseline)
+                Text(label)
+                    .font(HistoryTheme.note)
+                    .monospacedDigit()
+                    .foregroundStyle(HistoryTheme.secondary)
+                    .fixedSize()
+                    .frame(width: hourLabelWidth)
+                    .offset(x: x - hourLabelWidth / 2, y: baseline + 8)
+            } else {
+                Rectangle()
+                    .fill(HistoryTheme.line)
+                    .frame(width: 1, height: 3)
+                    .offset(x: x, y: baseline)
+            }
+        }
+    }
+
+    /// One window of the day: a faint stem to the baseline, the strip's own mark, and its figure
+    /// above — in the text colour on the selected window, secondary on the rest, and faded with
+    /// the dot on a window seen only in part.
+    @ViewBuilder
+    private func mark(_ mark: HistoryExperience.QuotaDayLens.Mark,
+                      point: HistoryExperience.QuotaPoint, width: CGFloat) -> some View {
+        let x = gutter + width * mark.x
+        let isSelected = mark.id == lens.selectedID
+        let accent = HistoryTheme.accent(section.provider)
+        let traits: AccessibilityTraits = isSelected ? [.isButton, .isSelected] : [.isButton]
+        Rectangle()
+            .fill(accent.opacity(0.35))
+            .frame(width: 1, height: baseline - markY - markSize / 2)
+            .offset(x: x, y: markY + markSize / 2)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        QuotaMark(point: point, accent: accent, size: markSize, isSelected: isSelected)
+            .position(x: x, y: markY)
+            .allowsHitTesting(false)
+            .accessibilityElement()
+            .accessibilityLabel(point.detail.title)
+            .accessibilityValue(point.accessibilityValue)
+            .accessibilityAddTraits(traits)
+            .accessibilityAction { vm.selectQuotaPoint(mark.id) }
+        Text(mark.label)
+            .font(HistoryTheme.note)
+            .monospacedDigit()
+            .foregroundStyle(isSelected ? HistoryTheme.text : HistoryTheme.secondary)
+            .opacity(point.kind == .completedPartial ? 0.6 : 1)
+            .fixedSize()
+            .frame(width: 80)
+            .position(x: x, y: labelY)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// One drawn window. **One shape for every ended window** (§6.3 as redrawn): a filled dot in
+/// the provider's colour; a window Kvotar saw only part of is the same dot faded, with the fact
+/// in the hover, the detail and the sentence; the open window is a hollow ring; and a window
+/// seen at the limit is a red diamond whatever else it is. Shape and colour carry the state
+/// together, and the labels beside the ring and the diamond say what they are.
 private struct QuotaMark: View {
     let point: HistoryExperience.QuotaPoint
     let accent: Color
@@ -188,70 +523,21 @@ private struct QuotaMark: View {
     }
 
     @ViewBuilder private var shape: some View {
-        let stateColor = point.hitLimit
-            ? HistoryTheme.redAccent
-            : (point.kind == .completedPartial ? HistoryTheme.warn : accent)
-        switch point.kind {
-        case .completedFull:
-            outline.fill(stateColor)
-        case .completedPartial:
-            ZStack {
-                outline.fill(HistoryTheme.surface)
-                outline.stroke(stateColor,
-                               style: StrokeStyle(lineWidth: 2.5, dash: [2, 2]))
-            }
-        case .current:
-            ZStack {
-                outline.fill(HistoryTheme.surface)
-                outline.stroke(accent, style: StrokeStyle(lineWidth: 1.5, dash: [2.5, 2]))
-            }
-        }
-    }
-
-    /// The limit mark is a diamond, so a blocked window is distinguishable from a busy one with
-    /// the colour switched off — and it composes with the fill rules above rather than replacing
-    /// them.
-    private var outline: AnyShape {
-        point.hitLimit
-            ? AnyShape(Rectangle().rotation(.degrees(45)))
-            : AnyShape(Circle())
-    }
-}
-
-/// The shape key. Static copy — it names what the marks mean, and says nothing about the data.
-private struct QuotaChartLegend: View {
-    var body: some View {
-        HStack(spacing: 14) {
-            entry("Hit the limit", filled: true, dashed: false, diamond: true,
-                  color: HistoryTheme.redAccent)
-            entry("Partial", filled: false, dashed: true, diamond: false,
-                  color: HistoryTheme.warn)
-            entry("Completed", filled: false, dashed: false, diamond: false,
-                  color: HistoryTheme.claudeAccent)
-            entry("So far", filled: false, dashed: true, diamond: false,
-                  color: HistoryTheme.secondary)
-        }
-    }
-
-    private func entry(_ label: String, filled: Bool, dashed: Bool,
-                       diamond: Bool, color: Color) -> some View {
-        HStack(spacing: 5) {
-            Group {
-                if diamond {
-                    Rectangle().rotation(.degrees(45)).fill(color)
-                } else if filled {
-                    Circle().fill(color)
-                } else if dashed {
-                    Circle().stroke(color,
-                                    style: StrokeStyle(lineWidth: 1.5, dash: [2.5, 2]))
-                } else {
-                    Circle().stroke(color, lineWidth: 1.5)
+        if point.hitLimit {
+            Rectangle().rotation(.degrees(45)).fill(HistoryTheme.redAccent)
+                .opacity(point.kind == .completedPartial ? 0.4 : 1)
+        } else {
+            switch point.kind {
+            case .completedFull:
+                Circle().fill(accent)
+            case .completedPartial:
+                Circle().fill(accent).opacity(0.4)
+            case .current:
+                ZStack {
+                    Circle().fill(HistoryTheme.surface)
+                    Circle().strokeBorder(accent, lineWidth: 1.5)
                 }
             }
-            .frame(width: 8, height: 8)
-            Text(label)
-                .font(HistoryTheme.note)
-                .foregroundStyle(HistoryTheme.tertiary)
         }
     }
 }

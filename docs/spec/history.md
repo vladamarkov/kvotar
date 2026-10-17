@@ -34,16 +34,16 @@ read_when: Changing HistoryWindowController, HistoryViewModel, HistoryDestinatio
 
 ## Decided
 
-The maintainer ruled on this on 2026-10-04. The code does not follow it yet; its row in *Known
-gaps* below names the change.
+The maintainer ruled on this on 2026-10-04; the code follows it since the History chart
+redesign (#25).
 
 1. **Rewrite the out-of-date weekly-exhaustion coverage copy.** The Hard blocks coverage note
-   says *Weekly-only exhaustion may not appear*. That was true when the state engine read only
+   said *Weekly-only exhaustion may not appear*. That was true when the state engine read only
    the five-hour window; it now enters Over quota on a spent weekly too
    ([state](state.md#the-states)), so a spent weekly reaches the same notification path. The
-   clause, and the `ToolReport.limitBlocks` doc that says such a block "cannot" be recorded, are
-   to be rewritten. (Whether a weekly block shows the right reset is a separate, unverified gap;
-   see *Known gaps*.)
+   clause is gone and the `ToolReport.limitBlocks` doc no longer says such a block "cannot" be
+   recorded. (Whether a weekly block shows the right reset is a separate, unverified gap; see
+   *Known gaps*.)
 
 ## About this page
 
@@ -124,8 +124,8 @@ which exist only from the day Kvotar started watching.
   so History and the popover cannot disagree about a dollar
   ([estimated value](estimated-value.md#spans-and-where-each-figure-shows);
   `AttributionEngine.historyReport`).
-- **Keys.** Esc drops a day or hour hover card (`HistoryView`, `onExitCommand`). The quota chart
-  takes ← and → (see *Explore quota*). The controller installs no ⌘W or ⌘Q handling (see Known
+- **Keys.** Esc drops a day, hour or quota hover card (`HistoryView`, `onExitCommand`;
+  `HistoryViewModel.releaseDayPeek`). The quota chart takes ← and → (see *Explore quota*). The controller installs no ⌘W or ⌘Q handling (see Known
   gaps).
 
 ## Arriving with a destination
@@ -148,6 +148,7 @@ receiver parses can drift from the link that built it. (`Model/HistoryDestinatio
 | Popover `N more projects ›` | Explore usage, that provider, the local day the section described, a `projects` focus, no banner | That day is selected; the day's project rows are what the popover's overflow pointed at |
 | A recap evidence link | The mode holding the evidence, the provider where the fact is one provider's, the exact week, a banner | The banner shows; the mode still shows all 30 days |
 | A quota window's `Recorded block` link | Hard blocks, that provider, a banner naming the window | The banner shows; no week is scoped |
+| A hard block row's `Quota window` link | Explore quota, that provider, a `quotaWindow` focus naming the window by its id, a banner naming the block | The banner shows; that window is selected and its detail pinned; no week is scoped |
 
 - **The day is captured at click time and matched by calendar day.** A midnight between the
   click and the load cannot move the target, and the oldest column, which starts mid-day, still
@@ -163,12 +164,21 @@ receiver parses can drift from the link that built it. (`Model/HistoryDestinatio
   destination and remembers the recap week the reader was on. (test
   `HistoryViewModelNavigationTests.testAnEvidenceLinkOpensItsModeWithARemovableBanner`)
 - **The banner** reads `From weekly recap · <provider> · <span>` (provider only when the link
-  has one) or `From quota window · <provider> · <span>`. It is built beside the link, so the two
+  has one), `From quota window · <provider> · <span>` or `From hard block · <provider> · <date>,
+  <time>`. It is built beside the link, so the two
   cannot drift. It carries `Back to weekly recap`, which returns to the recap week the link came
   from, and a clear button (`Clear scope`), which drops the banner and keeps the provider.
-  (`HistoryDisplay.recapLink`, `quotaBlockLink`; `ScopeBannerView`;
+  (`HistoryDisplay.recapLink`, `quotaBlockLink`, `blockWindowLink`; `ScopeBannerView`;
   `HistoryViewModel.clearScope`, `backToWeeklyRecap`; test
   `testBackToWeeklyRecapReturnsToTheWeekTheLinkCameFrom`)
+- **A window focus pins that window.** The destination names it by `QuotaWindowOutcome.id`
+  (provider, reset and width), the id a click selects, so nothing is parsed on arrival. The pin
+  is applied after the mode and the provider, whose setters drop it; a reload that no longer
+  holds the window drops it silently, and clearing the scope drops it too. The reader's own
+  selection then replaces it. (`HistoryDestination.quotaWindow`, `quotaWindowID`;
+  `HistoryViewModel.navigate`, `prepareForOpen`; tests
+  `HistoryViewModelNavigationTests.testABlockRowsLinkPinsItsWindowOnExploreQuota`,
+  `HistoryViewModelDestinationTests.testAQuotaWindowDestinationArrivesPinned`)
 - **A scope moves attention; it never re-bases a figure.** A week scope dims quota points outside
   the week and pins the first window inside it, selects the newest active day of that week on
   Explore usage, and highlights event rows inside the week. Every sentence still describes all
@@ -376,6 +386,9 @@ they learn from ([forecast](forecast.md#shadow-outputs); `ShadowTablesReader`).
   `testOpenWindowIsCurrentAndKeepsItsRunningReading`)
 - **Hit the limit** is the first reading at or above 100 %, from the provider's readings, not from
   any notification. `lastReadingGap` is how long before `endedAt` the last reading came.
+- **The readings stay on the outcome** (`readings`, oldest first, time and utilization only), so
+  Explore quota's weekly chart draws a week's climb from what was recorded rather than from a
+  line between windows. (test `testAnOutcomeCarriesItsReadingsOldestFirst`)
 - **Weekly limits** (`WeeklyLimitOutcome`, `HistoryReportReader.weeklyLimits`): the overall
   weekly is the secondary window folded with the seven-day contract and only the `weekly` breaks,
   plus any main window that is itself seven days wide (a Codex plan whose only window is weekly),
@@ -407,9 +420,13 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
   `testNoCompletedWeekYieldsTheEmptyState`)
 - **Coverage note.** A clipped week says `Only part of this week is inside the 30-day horizon, so
   week totals are not shown.` and withholds every whole-week conclusion (the table, the pattern
-  and calm leads, the day and project observations, and comparisons against it). A week that
-  began before `watchingSince` says `Kvotar began watching <date>, so part of this week has no
-  poll evidence.` (`recapCoverage`; tests `testAClippedWeekWithholdsWholeWeekConclusions`,
+  and calm leads, the day and project observations, and comparisons against it). The note is
+  omitted when the clipped week's own lead (rung 3 below) already names the limit, so it is said
+  once. A week that began before `watchingSince` says `Kvotar began watching <date>, so part of
+  this week has no poll evidence.` The horizon clip outranks the watching date: a clipped week
+  that Kvotar also began watching partway through names the horizon only, in its lead or its
+  note, never both limits. (`recapCoverage`; tests `testAClippedWeekWithholdsWholeWeekConclusions`,
+  `testAClippedWeekWatchedPartwayNamesTheHorizonOnly`,
   `testAWeekAfterAClippedWeekCarriesNoComparison`,
   `testAWatchingDateInsideTheWeekIsNamedBesideTheConclusion`)
 - **Five blocks, in order, each omitted when empty** (no empty heading):
@@ -419,13 +436,16 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
      |---|---|---|---|
      | 1 | `Capacity outcome` | A recorded hard block in the week | `Claude ran out of its window once.` / `Work stopped 3 times — Claude 2 times, Codex 1 time.`, then the known lockout or `…the lockout is unknown.` |
      | 2 | `Allowance change` | A plan change, or a window added, removed or re-widened | `Codex recorded plan changed · plus → pro.` + `One recorded change this week.` |
-     | 3 | `Work pattern` | A provider's tokens moved 5 % or more against its own previous complete week | `Local token use fell 40% on Claude and 20% on Codex.`; a move of 50 % or more adds a line naming the previous week's figure |
-     | 4 | `Week in review` | Otherwise | Per-provider tokens and active days; `Nothing was blocked and no allowance change was recorded.` on a quiet week; `Nothing was recorded this week.` (plus ` Kvotar has been watching since <date>.` once watching began) when no other rung applies — which includes a clipped week with work but no block or change (see Known gaps) |
+     | 3 | `Partly covered` | A clipped week nothing above leads | `Only Sep 17 – Sep 20 of this week is inside the last 30 days.` + `Week totals are not shown for a partly covered week.` — the covered span runs from the period's first (partial) day to the week's last; this lead replaces the coverage note, which would say the same thing twice |
+     | 4 | `Work pattern` | A provider's tokens moved 5 % or more against its own previous complete week | `Local token use fell 40% on Claude and 20% on Codex.`; a move of 50 % or more adds a line naming the previous week's figure |
+     | 5 | `Week in review` | Otherwise | Per-provider tokens and active days; `Nothing was blocked and no allowance change was recorded.` on a quiet week; `Nothing was recorded this week.` (plus ` Kvotar has been watching since <date>.` once watching began) when a whole week holds nothing at all |
 
      An early reset never leads: on an account whose weekly resets early often it would lead
      every recap; it is said on its weekly line instead. (`recapLeadOrder`, `recapBlockRung`,
-     `recapAllowanceRung`, `recapPatternRung`, `recapCalmRung`; tests
+     `recapAllowanceRung`, `recapPartialRung`, `recapPatternRung`, `recapCalmRung`; tests
      `testRungOneAHardBlockLeadsWithItsKnownConsequence`,
+     `testAClippedWeekLeadsWithItsCoverageLimitAndSaysItOnce`,
+     `testABlockOnAClippedWeekStillLeadsWithTheCoverageNoteBesideIt`,
      `testABlockWithNoRecoveredResetStillLeadsAndSaysTheLockoutIsUnknown`,
      `testRungTwoAStructuralAllowanceChangeLeadsWhenNothingBlocked`,
      `testAnEarlyResetNeverLeadsAndIsNoLongerAnObservation`,
@@ -436,7 +456,10 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
      $40 · Priced at published API rates for each model. Not a bill.` (the note alone with one
      column). A value cell carries `≈` when any of that week's work was priced at the fallback
      rate, with `<Provider> includes models priced at a fallback rate.` beneath. Values of $10 or
-     more are whole dollars (Questions for owner, item 2). (`recapTable`, `recapDollars`; tests
+     more are whole dollars (Questions for owner, item 2). The recap is a reading column, capped
+     at 690 pt and centred in the window; the provider columns share that width equally, so the
+     table spans the column like the blocks around it rather than bunching at its left edge.
+     (`recapTable`, `recapDollars`; tests
      `testTheTableCarriesTokensValueAndActiveDaysPerProvider`,
      `testOneProviderGetsOneColumnAndNoCombinedLine`)
   3. **Weekly limits that reset `<span>`.** One line per weekly limit instance that ended in the
@@ -475,29 +498,88 @@ shown on an empty window ([local usage](local-usage.md#from-requests-to-figures)
 Answers: *how did the provider-reported quota windows end?* Provider readings, not local work.
 (`Model/HistoryDisplay+Quota.swift`; `Views/History/HistoryQuotaChart.swift`)
 
-- **Main account window only.** The page says `Main account window history. Secondary, monthly and
-  model allowances are shown live in the popover and have no recorded history here.` The chart
-  plots the primary window's outcomes (`quotaWindows`) whatever their width, so a monthly
-  primary appears here; the secondary weekly and model allowances reach only the recap.
+- **Main window and weekly limit.** The page says `Main account window and weekly limit history.
+  Monthly and model allowances are shown live in the popover and have no recorded history here.`
+  The weekly chart plots the report's **overall** weekly limits (`weeklyLimits`: the secondary
+  weekly, or a main window a week wide); the strip plots the other primary window outcomes
+  (`quotaWindows`), whatever their width, so a monthly primary appears there. A main window that
+  is one of the weekly limits is drawn once, as a curve. Model allowances reach only the recap.
 - **`% used`, 100 % at the top.** The one retrospective exception to "the number says what is
   left" is defined on [display semantics](display-semantics.md#by-surface); every value is labelled.
-- **One section per provider.** On `All` they stack, Claude then Codex, full width, never side by
-  side and never on one axis or one sentence. The title names the width (`Claude · 5-hour
-  windows`) or, when widths differ or are unknown, `Claude · main account window`. A provider
-  that reported no window has no section. With none at all: `Quota history starts as Kvotar
-  observes provider windows on this Mac. Earlier windows cannot be recovered.` (tests
-  `testAllStacksOneSectionPerProvider`, `testAFreshInstallSaysEarlierWindowsCannotBeRecovered`)
-- **One factual sentence per section**, counting completed windows only: `2 of 7 completed
-  windows hit the limit.` or `None of the 7 completed windows hit the limit.`, plus `One more
-  ended above 80% used.` when it applies; `No completed window recorded yet.` when none. Below 3
-  completed windows: `Not enough completed windows to show a pattern yet.`, and the points are
-  still drawn. No advice, no pattern language. (`quotaSummary`, `quotaPatternFloor`; tests
-  `testTheSummaryCountsOnlyCompletedWindows`, `testSparseHistoryStillDrawsItsPointsAndSaysSo`)
-- **One point per window.** `Ended at N% used` (seen to the end), `Reached at least N% used ·
-  Partial` (a lower bound, drawn hollow), `So far N% used` (the open window, dashed, in no
-  count). Hitting the limit is its own mark, never colour alone. A point's horizontal place is its
-  reset across the period. (`quotaPoint`; tests `testPointCopyDistinguishesEndedLowerBoundAndSoFar`,
-  `testHitLimitIsItsOwnFlagNotAColour`)
+- **One section per provider, two charts.** On `All` the sections stack, Claude then Codex,
+  full width, never side by side and never on one axis or one sentence. The section is titled
+  by the provider (`Claude`); under it, the weekly chart (`Weekly window · % used`, 190 pt)
+  where the provider reported a weekly limit in the period, then the strip (`5-hour windows ·
+  % used`, or `Main account window · % used` when widths differ or are unknown, 130 pt) where it
+  has main windows shorter than a week. Either chart is absent when there is nothing for it; a
+  Codex plan with only a weekly has curves and no strip. The two share the date axis and one
+  hover cursor. A provider that reported no window has no section. With none at all: `Quota
+  history starts as Kvotar observes provider windows on this Mac. Earlier windows cannot be
+  recovered.` (tests `testAllStacksOneSectionPerProvider`, `testAWeeklyOnlyPlanHasCurvesAndNoStrip`,
+  `testAFreshInstallSaysEarlierWindowsCannotBeRecovered`)
+- **One factual sentence per section**, counting ended windows only, with the windows seen to
+  the end as the denominator: `2 of 7 windows seen to the end hit the limit.` or `None of the 7
+  windows seen to the end hit the limit.`, plus `One more ended at or above 80% used.` when it
+  applies; `No window seen to the end yet.` when none. A partly seen window's figure is a floor,
+  so it reaches neither count; it is counted in its own clause, `3 windows were only partly
+  seen.` Below 3 ended windows: `Not enough completed windows to show a pattern yet.`, and the
+  points are still drawn. No advice, no pattern language. (`quotaSummary`, `quotaPatternFloor`;
+  tests `testTheSummaryCountsOnlyCompletedWindows`,
+  `testPartlySeenWindowsAreCountedApartFromThoseSeenToTheEnd`,
+  `testSparseHistoryStillDrawsItsPointsAndSaysSo`)
+- **One point per window, one shape.** Every ended window is a filled dot in the provider's
+  colour: `Ended at N% used` (seen to the end) or `Reached at least N% used` (a lower bound; the
+  same dot at 40 % opacity, the fact in the hover, the detail and the sentence). The open window
+  is a hollow ring, `So far N% used`, in no count, standing at its **last recorded reading**,
+  never at now; its detail's `Reset` row ends `after the period shown`. A window seen at the
+  limit is a red diamond whatever else it is, never colour alone. An ended window's horizontal
+  place is its reset across the period. There is no legend: the ring is labelled `So far` beside
+  it, inside a margin the chart keeps free of the period for it (`QuotaSection.rightMargin`), and
+  a diamond is labelled `Hit the limit` where the model finds room on the chart's own scale —
+  right of the mark, else left, else not at all (`QuotaPoint.inPlaceLabel`,
+  `QuotaSection.inPlaceLabelSides(plotWidth:)`). The sentence carries the counts and the hover
+  card names the rest. Windows join in a 1 pt line at 40 % opacity inside a run (see *Segments*);
+  the open window is never on the line. The short-window strip is 130 pt high. (`quotaPoint`;
+  tests `testPointCopyDistinguishesEndedLowerBoundAndSoFar`, `testHitLimitIsItsOwnFlagNotAColour`,
+  `testTheOpenWindowStandsAtItsLastReadingAndNamesItself`,
+  `testInPlaceLabelsGoWhereTheModelFindsRoom`)
+- **The weekly chart: one curve per week.** Each overall weekly limit is drawn from the readings
+  it was folded from (`QuotaWindowOutcome.readings`), those inside the period only: a line
+  through them from the first to the last with a light area under it, placed by each reading's
+  own time and value (`QuotaSection.curves`, `QuotaCurve.samples`). Readings inside a flat run
+  are thinned out: the first, the last and both ends of every run of one value are kept, so the
+  line runs flat until the value moved, never ramps across a stretch where nothing changed, and a
+  week carries hundreds of samples, not tens of thousands. The hover rests on the nearest kept
+  reading; a reading inside a flat run is not drawn and the run's ends stand for it. Nothing joins
+  one week to the next, and a curve is never extended past its last reading — not to now and
+  not to the scheduled reset. The week's mark (`QuotaSection.weeklyPoints`, the same point type
+  the strip uses) stands on the first reading at the limit where it hit, else on the last
+  reading, and the curve writes its figure there, `74%`, or `So far · 54%` on the open week; the
+  figure alone, because the ring, the fading of a partly seen week, the diamond and the red
+  dashed boundary at an early ending already say what kind of week it was, and the hover and the
+  detail say it in words. A week that hit the limit runs flat at 100 only across readings
+  recorded there. A week with no reading inside the period but a last reading in it stands as
+  one mark. (`quotaCurve`; tests `testAWeekIsACurveThroughItsOwnReadingsInsidePeriod`,
+  `testTheEndOfEachKindOfWeekIsNamed`, `testRepeatedReadingsAreThinnedToTheEndsOfEachFlatRun`,
+  `testOnlyTheOverallWeeklyIsDrawnAndABareWeekIsOneMark`,
+  `testAShortWindowThatSharesTheWeeklyResetStaysOnTheStrip`)
+- **Date axis.** The model gives each section its ticks (`QuotaSection.ticks`): a labelled tick
+  at each weekly reset of the provider inside the period, from the report's **overall** weekly
+  limits (an early ending at its actual time; twins within the anchor jitter are one tick; a
+  model allowance's weekly resets at its own first use and is not the provider's reset), labelled
+  weekday and date in the report's calendar (`Fri Sep 18`) and drawn as a faint gridline, a 7 pt
+  tick and the label; an unlabelled 3 pt tick at every other local midnight. A provider with no
+  weekly reset in the period is labelled at local Mondays in the same form. A label is centred on its
+  tick and pulled in at either edge to stay on the plot (`QuotaSection.tickLabelCenter`); two
+  labels closer than one label's width (72 pt) as placed keep both marks and print the earlier
+  label only (`QuotaSection.labelledTickIDs(plotWidth:)`). The midnights are cut on the
+  report's injected calendar, the one its local days use, so the axis and the day strip agree on
+  where a day begins. The `0` / `50` / `100` gridline labels come from the model too
+  (`QuotaSection.valueLabels`); the view draws nothing it decided itself. (`quotaTicks`,
+  `quotaValueLabels`; tests `testTicksLabelTheWeeklyResetsAndMarkEveryOtherMidnight`,
+  `testAProviderWithNoWeeklyResetTicksAtMondays`, `testMidnightTicksAreTheDayStripsDayStarts`,
+  `testACrowdedTickKeepsItsMarkAndDropsItsLabel`, `testTheSpacingRuleJudgesLabelsWhereTheEdgePlacesThem`,
+  `testTheValueLabelsComeFromTheModel`)
 - **Segments.** Points join into a line only within a run. A run breaks, and names why, when the
   previous window ended early (`Reset early`) or was withdrawn (`Withdrawn by the provider`), when
   the width changed (`Window width changed`), or when windows overlap or the gap between them
@@ -508,16 +590,62 @@ Answers: *how did the provider-reported quota windows end?* Provider readings, n
   `testShortIdlePauseDoesNotBecomeAMissingHistoryGap`,
   `testWindowsWithNoRecordedWidthAreGroupedButNeverJoined`,
   `testRecoveredLegacyWidthsJoinAndCarryOneEvidenceNote`)
-- **Selecting a point** (click, or ← / → on the chart, which is one keyboard stop) pins a detail
-  below the charts: title `<provider> · <span>` (the reset alone when the start is unknown);
+- **Hover, anywhere, at once.** The pointer anywhere over the strip rests on the window nearest on
+  x: that mark is ringed, a faint cursor line stands at it in both of the provider's charts, and
+  the day strip's own card
+  (`DayHoverOverlay`, never the macOS `.help` tooltip) shows the window's weekday, date, span and
+  result (`QuotaPoint.hoverBody`: `**Fri Sep 18, 9:00 am – 2:00 pm**` over `Ended at 87% used`,
+  with `Hit the limit` where it did; the open window's head is `**Last reading Sun Aug 16, 11:00
+  am**`, the instant its ring stands at) with no delay — the day strip's peek timer does not apply.
+  Over the weekly chart the pointer rests on the recorded reading nearest on x, ringed where it
+  was read, and the card names the reading and its week (`**Tue Aug 11, 6:00 am**` over `48% used
+  · week ending Tue Aug 11, 12:00 pm`, with `Reset early` where so). What the pointer rests on is
+  the model's answer to the pointer's fraction of the plot (`quotaHover`); the view
+  positions the overlay. Esc drops the card (see *Keys*). (`HistoryViewModel.quotaHover`; tests
+  `testTheHoverCardNamesTheSpanAndTheResultForEachKindOfWindow`,
+  `testHoverResolvesToTheNearestWindow`, `testAWeeklyHoverRestsOnTheNearestReadingAndSelectsItsWeek`,
+  `HistoryDayHoverTests.testAQuotaHoverShowsItsCardAtOnce`, `testEscDropsAQuotaCardToo`)
+- **Selecting a point** (a click anywhere over the strip selects the window nearest on x, the one
+  the hover rings; a click on the weekly chart selects the week of the nearest reading; or ← / →
+  on either chart, each one keyboard stop) pins a detail under the section it belongs to, never
+  under another provider's: title `<provider> · <span>`
+  (the reset alone when the start is unknown);
   rows `Width`, `Used`, `Coverage` (`Seen to the reset`, `Seen at the limit`, `Last seen <span>
   before the reset`, `Partly observed`, `Open now`, with the reading count), `Reset` (with `reset early` or
   `withdrawn by the provider` where so), and `Local work that day | those days` with the note
   `Local work is shown for context. It does not prove what moved the window.` A fact with no
   value is omitted. A block recorded inside the window adds a `Recorded block · <date>, <time>`
-  link to Hard blocks. Before a selection: `Select a window to see how it ended.` (`quotaDetail`,
+  link to Hard blocks; the block's row there links back (see *Hard blocks*), and arriving on
+  that link pins the window. Before a selection: `Select a window to see how it ended.` (`quotaDetail`,
   `quotaBlockLink`; tests `testTheDetailCarriesWidthUsedCoverageAndReset`,
-  `testLocalWorkIsLabelledAsContextNotCause`, `testARecordedBlockInsideTheWindowBecomesATypedLink`)
+  `testLocalWorkIsLabelledAsContextNotCause`, `testARecordedBlockInsideTheWindowBecomesATypedLink`,
+  `HistoryDayHoverTests.testAClickSelectsTheWindowNearestThePointer`,
+  `testAClickOnTheWeeklyChartSelectsTheWeek`)
+- **The day lens.** A busy day holds three to five short windows inside a few points of the
+  strip's axis, so their marks stack. Under the strip, above the detail, the selected window's
+  **local day** is laid out by reset time on a 0–24 h baseline, titled `Oct 7 · 5 windows`: one
+  mark per short window of that day, the strip's own mark (dot, faded dot, ring, diamond), each
+  standing where it stands on the strip (its reset; the open window at its last reading), with
+  its figure above it in the weekly chart's style — `49%`, `So far 13%` on the open window, the
+  figure alone otherwise, because the shape already says what kind of window it was — and the
+  selected one ringed. The hour axis is a labelled tick every six hours (`12 am`, `6 am`, `12 pm`,
+  `6 pm`, `12 am`) and an unlabelled one every three, each at the day's own clock hour, so on
+  the day the clocks change `6 am` stands five or seven hours after midnight and still reads `6
+  am`. A click anywhere over the lens selects the window nearest on x, as on the strip; a click on
+  the strip's **axis band** opens the day under the pointer on its first window (midnight belongs
+  to the day it starts), or the nearest day that has a lens when that day has no short
+  window. The lens is absent for a window a day wide or wider and for one of unknown width
+  (nothing shows it is not a week); such windows are not counted in a day's lens either. The
+  30-day plot does not change. The local day is cut on the report's injected calendar, the same
+  one the axis midnights use. The model supplies the lens (`QuotaSection.dayLenses`,
+  `QuotaDayLens`: title, marks with x in 0…1 of the day, labels, hour ticks, the day's span
+  across the period, the selected id); the view multiplies by a width. (`quotaDayLenses`,
+  `QuotaSection.dayLens(selecting:)`, `dayLens(atX:)`, `HistoryViewModel.selectQuotaDay`; tests
+  `testTheDayLensLaysOutTheSelectedWindowsLocalDayByResetTime`,
+  `testTheLensWritesTheFigureAloneAndSoFarOnTheOpenWindow`,
+  `testTheLensIsAbsentForAWeekAndForAnUnknownWidth`,
+  `testAClickOnTheAxisBandOpensThatDayOnItsFirstWindow`, `testTheLensHoursFollowTheClockAcrossADSTChange`,
+  `HistoryDayHoverTests.testAClickOnTheAxisBandOpensTheDayOnItsFirstWindow`)
 - **Spoken values** name provider, width, span, outcome, a hit limit and an early ending, as plain
   text. (`quotaAccessibility`)
 
@@ -529,10 +657,17 @@ time: `By day` (the default), `By week`, `30-day breakdown`.
 
 - **By day.** A 31-column strip, oldest first, with a dot under a day a quota window was blocked
   and a diamond on a day the account or its windows changed; ticks on the report's own week
-  starts; a footer `Busiest day <date> · <tokens>` per provider. The newest day with work is
-  selected first, else today. Hovering a column peeks a card; a click or arrow key selects it.
+  starts; a footer `Busiest day <date> · <tokens>` per provider, and the same `<tokens>` figure
+  printed at the top of that provider's lane as its scale, where its tallest bar peaks (one
+  number, formatted once, beside the bar it measures; the footer keeps the date; VoiceOver hears
+  the figure from the footer only). A day with no work for a
+  provider has no bar in that lane, so nothing is drawn there and a selected empty day shows
+  the selection outline alone. The newest day with work is selected first, else today.
+  Hovering a column peeks a card; a click or arrow key selects it.
   (`experienceDayStrip`; tests in `HistoryExperienceChartTests`, `HistoryDayHoverTests`,
-  `HistoryExperienceExploreTests.testInitialSelectionIsTheNewestDayWithActivity`)
+  `HistoryExperienceExploreTests.testInitialSelectionIsTheNewestDayWithActivity`,
+  `testAnEmptyDayHasNoBarForTheStripToDraw`,
+  `HistoryExperienceChartTests.testEachLaneCarriesItsOwnBusiestDayFigureAsItsScale`)
 - **The selected day** shows, per provider with work: displayed tokens, Est. token value,
   sessions or threads, model rows (tokens only) and project rows; on `All` with both providers,
   one combined value. Then the day's blocks, critical observations (`At risk · 3:34 pm` → `8%
@@ -547,9 +682,13 @@ time: `By day` (the default), `By week`, `30-day breakdown`.
   `testWeekRowsCarryTokensValueOwnScaleAndPartialNote`)
 - **30-day breakdown.** `Projects`, `Models` (per provider, tokens and value) and `Largest work`
   (sessions and threads: `<date> · <project>` → tokens · value; the session id is never shown).
-  On `All` the projects and largest-work lists merge, keep 3 rows, and carry provider tags only
-  when both providers contribute. No day input exists, so selecting a day cannot change it.
-  (`breakdown`, `allRankedRowLimit`; test `testBreakdownIsThirtyDayGrainAndNeverCrossesTheDayModels`)
+  On `All` the projects and largest-work lists are grouped by provider — Claude rows, then
+  Codex rows — each group on its own scale and keeping at most 3 rows, never sorted into one
+  order across providers (each bar is against its own provider's top row, so a cross-provider
+  order would imply a comparison the bars cannot make); rows carry provider tags only when
+  both providers contribute. No day input exists, so selecting a day cannot change it.
+  (`breakdown`, `allRankedRowLimit`; tests `testBreakdownIsThirtyDayGrainAndNeverCrossesTheDayModels`,
+  `testAllBreakdownGroupsByProviderEachOnItsOwnScaleAndCap`)
 
 ## Hard blocks
 
@@ -576,6 +715,25 @@ Whether History should keep its own record: Questions for owner, item 1.)
 - **Row:** `<date> · <width> · <time>` → `locked out 3h 25m`, newest first. The width and the
   duration drop out together when unknown; an unknown lockout reads `—` in the warn hue, never
   zero. (`blockRow`; test `HistoryExperienceHardBlocksTests.testUnknownLockoutRowIsFlaggedWarnAndKeepsTheDash`)
+- **The way back to the window.** Under the row, `Quota window · <span>` opens Explore quota
+  for that provider with the window selected and its detail pinned, under the banner `From
+  hard block · <provider> · <date>, <time>` — the mirror of the quota detail's `Recorded block`
+  link, built beside it. The window is found among the ones Explore quota draws — the strip's
+  windows and the overall weekly limits with a curve; a provider with no main window has no
+  section and its blocks no link — by the block's own facts, never by a string: the window held
+  the block's instant, up to its **actual** end (earlier than the reset where it was reset early
+  or withdrawn; both links use this rule); where the block's reset was recovered, the window's
+  reset is that reset; where the block's width is known, the window's width is that width, so a
+  five-hour block never points at the weekly it shares a reset with; both within the fold's
+  jitter, the block's width being rounded to the minute. A block of unknown width takes the
+  narrowest window holding it. A block whose window is not on the page carries no link, and the
+  row stands without one. On `All` the link names the row's own provider. The row carries the
+  link as a typed destination (`RankedRow.link`); the view only follows it.
+  (`blockWindowLink`, `quotaDrawnWindows`, `quotaWindowHolds`, `HistoryDestination.quotaWindow`;
+  tests `testABlockRowLinksToItsQuotaWindow`,
+  `testABlockPicksItsOwnWindowWhereTheWeeklySharesTheReset`,
+  `testABlockWhoseWindowIsNotOnThePageCarriesNoLink`,
+  `testAWithdrawnWindowHoldsNoBlockAfterItsActualEnd`, `testOnlyAWindowThePageDrawsCanBeNamed`)
 - **The reset is derived, never guessed.** The block row stores the instant and a window key; the
   reset comes from the primary window's last reset in the `history_rollups` hours. Rules
   (`HistoryReportReader.limitBlock`): candidates come from the fired hour and the hour before,
@@ -595,19 +753,44 @@ Whether History should keep its own record: Questions for owner, item 1.)
   more than one block has a known lockout), or `Unknown` with `No reset could be recovered.`
   With one block: `The reset was recovered.` or `Unknown` with `The reset could not be
   recovered.` No card without blocks. (`blocksConclusion`, `blockConsequence`; tests in `HistoryExperienceHardBlocksTests`)
-- **Activity by hour.** 24 local-clock bars of displayed tokens with every block drawn as its own
-  mark, shown only when a block's window is 6 hours wide or less and there is work to draw.
-  Reason: a seven-day lockout is not about the hour it began. The caption describes only what is
-  drawn (`Every block landed in the afternoon, though you work hardest in the evening.`).
-  (`experienceHourChart`, `hourCaption`, `shortWindowSeconds`; tests
-  `testChartStaysGatedOnAShortBlockingWindow`, `testEveryBlockIsItsOwnMarkAndTheCaptionDescribesTheDrawing`)
+- **Activity by hour.** 24 clock-hour bars of displayed tokens in the report's calendar, one
+  lane per provider, with every **short-window** block drawn as its own mark in a band directly
+  under its provider's bars. Shown only when a block's window is 6 hours wide or less and there
+  is work to draw; only those blocks are drawn, so a weekly block or one of unknown width never
+  lands on it. Reason: a seven-day lockout is not about the hour it began. A lane is a provider
+  with bars or marks, so a provider blocked with no local work still has a lane for its dot;
+  with two lanes each is labelled by its provider, as on the day strip. Several blocks in one
+  hour are that many dots. No time on a dot: the hour is the bucket and the incident row carries
+  the time. Under the legend, one cue line: `Bars: local tokens by hour over the last 30 days.
+  Dots: recorded blocks on windows of 6 hours or less.` The caption describes only what is drawn.
+  Its busiest-band clause comes from the blocked provider's **own** bars, never a sum across
+  lanes: with two lanes and one blocked provider it is named (`The one block landed in the
+  afternoon, though Claude works hardest in the evening.`); when the blocked providers' busiest
+  bands disagree the clause is dropped (`Blocks landed across the day.`); when they agree, or
+  the chart has one lane, it reads `when you work hardest`. A provider whose quarters tie for
+  the most work has no busiest band, so the clause is dropped rather than one of them chosen. The hover card's block line names
+  the provider when two lanes draw (`Codex 1 block`). (`experienceHourChart`, `hourCaption`,
+  `hourChartCue`, `shortWindowSeconds`; tests `HistoryExperienceChartTests
+  .testTheChartNeedsAShortWindowBlockAndSomeWorkToDrawIt`,
+  `testOnlyShortWindowBlocksAreDrawnAndTheCueSaysSo`,
+  `testAProviderBlockedWithNoLocalWorkStillGetsALaneForItsDot`,
+  `testTheCaptionNamesTheBlockedProvidersOwnBand`,
+  `testEveryBlockIsItsOwnMarkAndTheCaptionDescribesTheDrawing`,
+  `testTheHourChartAndTheRhythmReadTheReportsCalendar`)
 - **Pattern note.** `Most often 2–6 pm` only with 12 or more blocks and more than half of them in
   one 4-hour band, hours only, never weekdays; below that, `Not enough recorded blocks to call a
-  typical time.` (`claimedRhythm`, `claimedRhythmFloor`; test `testPatternClaimStaysBehindTheFloor`)
-- **Coverage note.** `Recorded since <date>, when Kvotar began watching. Weekly-only exhaustion
-  may not appear, and an unknown reset means an unknown lockout, not zero.`; before any watching,
-  `Recorded from the day Kvotar starts watching — nothing yet.` replaces the first sentence. The
-  middle clause is out of date and is to be rewritten (*Decided*, item 1). (`coverageNote`)
+  typical time.` The note says which it is (`PatternNote.state`): a claim is the amber `Possible
+  pattern` card with the coverage note inside it; below the floor the note is an ordinary panel
+  note above the coverage note, no amber and no title, because an amber card over *not enough
+  blocks* read as a warning about nothing. The view switches on the state, never on the text.
+  (`claimedRhythm`, `claimedRhythmFloor`, `patternNote`; test `testPatternClaimStaysBehindTheFloor`)
+- **Coverage note.** `Recorded since <date>, when Kvotar began watching. Blocks are recorded
+  only while Notify me ▸ Over quota is on. An unknown reset means an unknown lockout, not
+  zero.`; before any watching, `Recorded from the day Kvotar starts watching — nothing yet.`
+  replaces the first sentence. The middle sentence is the dependency *Hard blocks depend on the
+  Over quota notifications* describes; the old weekly-only clause went with *Decided*, item 1.
+  (`coverageNote`, `blocksNeedNotificationsSentence`; test
+  `HistoryExperienceHardBlocksTests.testNoBlockStateReportsHonestlyWithoutAChart`)
 
 ### Allowance history and the work-per-1% display gate
 
@@ -648,8 +831,8 @@ recorded account changes. It is context near an event, never a claimed cause.
   Monday–Sunday week here, the last ended five-hour window there.
 - **History's window outcome versus the popover's `Last window ended at N%` line.** Two ideas,
   two owners. This page owns the fold, `QuotaWindowOutcomes` and its `QuotaWindowOutcome`:
-  width, ending and completion, so a window watched only partly reads `Reached at least N% used ·
-  Partial`. [explanations](explanations.md) owns the popover's `Last window ended at N%` line, built
+  width, ending and completion, so a window watched only partly reads `Reached at least N%
+  used`. [explanations](explanations.md) owns the popover's `Last window ended at N%` line, built
   from `SQLiteStore.previousWindowOutcome`, a separate `WindowOutcome` with the high water and the
   first 100 % reading only and no coverage check. Both read `quota_series` by anchor with the same
   ±60 s rule; they can word the same window differently.
@@ -690,18 +873,16 @@ recorded account changes. It is context near an event, never a claimed cause.
 
 | Gap | Today | Proposed fix |
 |---|---|---|
-| Hard blocks depend on a notification switch | With Over quota notifications off, no block is recorded and History says there were none; nothing on the page says why | Owner's choice (Questions for owner, item 1). At minimum, have the coverage note say blocks are recorded only while Over quota notifications are on |
-| Stale weekly-exhaustion copy and comment | The coverage note says weekly-only exhaustion may not appear; the `ToolReport.limitBlocks` doc says it "cannot" be there because the state engine ignores the weekly. The state engine now enters Over quota on a spent weekly (`StateEngine`, the secondary check) | Rewrite the coverage clause and the doc (*Decided*, item 1) |
+| Hard blocks depend on a notification switch | With Over quota notifications off, no block is recorded and History says there were none; the coverage note says so, but nothing records the blocks | Owner's choice (Questions for owner, item 1) |
 | A weekly block may show the wrong reset (until verified) | `limitBlock` reads `primaryResetsAtLast` only, and the row's window key is built from the primary window, so a block driven by a spent weekly probably shows the five-hour reset as its lockout end. Unverified | Build a fixture of a block driven by a spent weekly; if confirmed, take the reset of the limit that caused the block |
 | Stale "Summary · All" comments | `HistoryWindowController.show`, the History block in `AppDelegate`, `AppViewModel.onOpenHistory` and the `HistoryViewModelSelectionTests` header still say an ordinary open lands on Summary · All; it lands on Weekly recap. `HistoryExperience.AllowancePanel` still names a Summary title | Fix with the next change to each file |
 | Dead `HistoryDisplay` helpers | `footer` (the old `evidence from <date>` footer), `changeFootnote` with `providerCutSentence`, `projectRows` and the private `work` have no caller; `ToolReport.evidenceFrom` is read only by the dead `footer`, tests and previews | Delete the helpers; then keep or drop `evidenceFrom` |
 | The window's lifecycle has no test | `HistoryWindowController` (one window, close hides, reload on open and focus, frame autosave) is App-level and checked by hand | Add an App-level test that shows, closes and shows again and asserts one window and a reload each time |
 | No ⌘W in the History window | The app window wires ⌘W and ⌘Q by hand because an accessory app has no app menu (`QuotaWindowController.installKeyMonitor`); the History controller wires nothing. Whether ⌘W closes History is untested | Check by hand; if it does nothing, add the same scoped key monitor |
-| The hour chart's block marks and the pattern band use `Calendar.current` | The report's local days use the injected calendar; `experienceHourChart` and `claimedRhythm` read the system calendar directly | Pass the injected calendar through |
+| The quota point and detail copy format in the system zone | The report's local days, Explore quota's date axis and hover card, the hour chart and the pattern band use the injected calendar; `Fmt.monthDay` and `Fmt.clock` still format in the system zone | Pass the injected calendar through |
 | "Last 30 days" wording oversells the poll-side half | The popover link reads `History · last 30 days` and the menu-item comment says "the last 30 days of the local corpus"; quota windows, blocks and changes start at the watching date | The label is [popover](popover.md)'s to decide; fix the comment with the next change to `MenuBarController` |
 | Live diagnostics can read the live database | With `KVOTAR_LIVE=1`, several env-gated tests reach the real database file. `HistoryExperienceLiveDiagnostics` falls back to `SQLiteStore.defaultPath()` when `KVOTAR_LIVE_DB` is unset (`HistoryExperienceLiveDiagnostics.swift:18`) and opens it writable with migrations on, though its type comment says read-only. `ExplanationLiveDiagnostics` falls back the same way (`ExplanationLiveDiagnostics.swift:145`), then copies the file before opening it. Core `LiveDiagnostics` opens `SQLiteStore.defaultPath()` directly in four tests (`LiveDiagnostics.swift:31`, `:52`, `:129`, `:160`) and falls back to it in two more (`:201`, `:254`); only `testLiveQuotaWindowOutcomes` demands a copy (`:313`). `HistoryExperienceSnapshots` opens whatever `KVOTAR_LIVE_DB` names writable | Require an explicit database copy in every live test: skip unless `KVOTAR_LIVE_DB` is set and is not the live path, and open it with `readOnly: true, runMigrations: false` (`SQLiteStore.openReadOnly`) |
-| The oldest, clipped recap week usually says nothing happened | On a clipped week the pattern and calm leads are withheld, so without a block or change the lead falls to `Nothing was recorded this week.` beside the week's own work. No test pins this lead | Give a clipped week its own lead (for example, name the coverage limit as the lead) and pin it with a test |
-| `HistoryDestination.focus` is carried but never read | The projects hand-off sets `focus: .projects`; nothing reads it. The day's project rows show because the day is selected | Read it (scroll to the project rows) or drop the field |
+| `HistoryDestination.focus == .projects` is carried but never read | The projects hand-off sets `focus: .projects`; nothing reads it (the `.quotaWindow` focus is read). The day's project rows show because the day is selected | Read it (scroll to the project rows) or drop the case |
 | A comment names a release stage | `HistoryViewModel`'s selection comment ties "nothing persisted" to a release stage | Drop the stage from the comment |
 
 ## Code and tests

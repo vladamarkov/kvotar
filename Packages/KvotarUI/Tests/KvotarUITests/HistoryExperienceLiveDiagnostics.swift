@@ -178,7 +178,7 @@ final class HistoryExperienceLiveDiagnostics: XCTestCase {
                 print("  \(row.tag.map { "[\($0)] " } ?? "")\(row.row.label) → \(row.row.value)")
             }
             print("  chart: \(b.chart.map { "yes — \($0.caption)" } ?? "withheld")")
-            print("  pattern: \(b.patternNote ?? "—")")
+            print("  pattern: \(b.patternNote?.text ?? "—")")
             print("  coverage: \(b.coverageNote)")
         }
 

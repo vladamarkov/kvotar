@@ -223,6 +223,19 @@ final class QuotaWindowOutcomesTests: XCTestCase {
         XCTAssertNil(out[0].hitLimitAt)
     }
 
+    /// The outcome keeps the readings it was folded from, oldest first, whatever order they
+    /// arrived in — the climb a chart draws is the recorded one, never a line between windows.
+    func testAnOutcomeCarriesItsReadingsOldestFirst() {
+        let points = [point(240, 26, resetsAt: resetsAt),
+                      point(0, 10, resetsAt: resetsAt),
+                      point(120, 18, resetsAt: resetsAt)]
+        let out = QuotaWindowOutcomes.compute(tool: .claude, points: points, now: resetsAt)
+        XCTAssertEqual(out.count, 1)
+        XCTAssertEqual(out[0].readings.map(\.usedPct), [10, 18, 26])
+        XCTAssertEqual(out[0].readings.map(\.at), [0, 120, 240].map { base.addingTimeInterval($0) })
+        XCTAssertEqual(out[0].observationCount, out[0].readings.count)
+    }
+
     /// The tolerance is two base poll ticks, and it is the freshness constant rather than a
     /// number chosen for this chart (STEP_181).
     func testToleranceIsTwoBasePollTicks() {
@@ -370,6 +383,19 @@ final class QuotaWindowOutcomesTests: XCTestCase {
             now: resetsAt.addingTimeInterval(600))
         XCTAssertNotEqual(claude[0].id, codex[0].id,
                           "two providers observing the same instant are two windows")
+    }
+
+    /// A five-hour window and a weekly one routinely reset at the same instant, and History
+    /// lists both; the id tells them apart by width.
+    func testIdentityIsWidthScoped() {
+        let short = QuotaWindowOutcomes.compute(
+            tool: .claude, points: [point(0, 10, resetsAt: resetsAt)],
+            now: resetsAt.addingTimeInterval(600))
+        let weekly = QuotaWindowOutcomes.compute(
+            tool: .claude, points: [point(0, 10, resetsAt: resetsAt, width: 604_800)],
+            now: resetsAt.addingTimeInterval(600))
+        XCTAssertNotEqual(short[0].id, weekly[0].id,
+                          "same provider, same reset, two widths, two windows")
     }
 
     // MARK: - Provider-contract width (STEP_227)

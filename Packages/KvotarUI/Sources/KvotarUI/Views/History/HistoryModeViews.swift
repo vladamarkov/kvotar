@@ -265,7 +265,10 @@ struct WeeklyRecapModeView: View {
     }
 
     /// `This week`: a small table read top to bottom like the prose around it — not a tile grid
-    /// (REV-104 §2.1). Every string is the formatter's; the view only lays them out.
+    /// (REV-104 §2.1). Every string is the formatter's; the view only lays them out. The
+    /// provider columns share the reading column's width equally, so the table spans the
+    /// column like the blocks around it instead of bunching at its left edge; the label column
+    /// keeps its own width.
     private func tableBlock(_ table: HistoryExperience.RecapTable) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HistoryEyebrow(text: table.title)
@@ -275,6 +278,7 @@ struct WeeklyRecapModeView: View {
                     Color.clear.frame(width: 1, height: 1)
                     ForEach(table.columns, id: \.self) { tool in
                         HistoryProviderTag(tool: tool)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 ForEach(Array(table.rows.enumerated()), id: \.offset) { _, row in
@@ -284,6 +288,7 @@ struct WeeklyRecapModeView: View {
                             .foregroundStyle(HistoryTheme.secondary)
                         ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
                             tableCell(cell)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
@@ -458,9 +463,6 @@ struct WeeklyRecapModeView: View {
 /// there is no combined figure — two allowances are not comparable magnitudes.
 struct ExploreQuotaModeView: View {
     let page: HistoryExperience.QuotaPage
-    /// `Aug 12 – Sep 11` — the window header's own subtitle, so the axis and the heading name
-    /// one period.
-    let periodLabel: String
     @ObservedObject var vm: HistoryViewModel
 
     var body: some View {
@@ -486,16 +488,17 @@ struct ExploreQuotaModeView: View {
                             QuotaChartView(section: section,
                                            selectedID: selected?.id,
                                            scope: vm.scope,
-                                           periodLabel: periodLabel,
-                                           onSelect: { vm.selectQuotaPoint($0) })
+                                           vm: vm)
                         }
                     }
+                    // The detail sits under the chart it belongs to (§6.3) — click or keyboard,
+                    // never hover alone — so a Claude selection is not read under the Codex
+                    // chart, often off screen.
+                    if let point = selected, point.provider == section.provider {
+                        QuotaDetailView(point: point, vm: vm)
+                    }
                 }
-                // One detail for the page, below every chart (§6.3) — click or keyboard, never
-                // hover alone.
-                if let point = selected {
-                    QuotaDetailView(point: point, vm: vm)
-                } else {
+                if selected == nil {
                     HistoryNote(text: HistoryDisplay.quotaSelectHint)
                 }
             }
@@ -666,7 +669,8 @@ struct ExploreModeView: View {
             DayStripView(
                 strip: HistoryScreen.DayStrip(points: page.days.map(\.point),
                                               legend: page.legend,
-                                              footer: page.stripFooter),
+                                              footer: page.stripFooter,
+                                              scaleHints: page.stripScaleHints),
                 vm: vm,
                 entries: page.days,
                 selectedID: vm.selectedEntry(in: page)?.id,
@@ -1006,29 +1010,14 @@ struct HardBlocksModeView: View {
                 if let chart = page.chart {
                     HourChartView(chart: chart, vm: vm)
                 }
-                if let pattern = page.patternNote {
-                    HStack(spacing: 0) {
-                        Rectangle().fill(HistoryTheme.warn).frame(width: 3)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(HistoryDisplay.possiblePatternTitle)
-                                .font(Font.system(size: 17, weight: .semibold))
-                                .foregroundStyle(HistoryTheme.text)
-                            Text(pattern)
-                                .font(HistoryTheme.body)
-                                .foregroundStyle(HistoryTheme.amberText)
-                                .fixedSize(horizontal: false, vertical: true)
-                            HistoryNote(text: page.coverageNote,
-                                        color: HistoryTheme.amberText)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 18)
-                    }
-                    .background(HistoryTheme.amberSoft)
-                    .clipShape(UnevenRoundedRectangle(bottomTrailingRadius: 9,
-                                                      topTrailingRadius: 9,
-                                                      style: .continuous))
+                if let pattern = page.patternNote, pattern.state == .claimed {
+                    patternCard(pattern.text)
                 } else {
+                    // Below the floor nothing is claimed, so the sample note is a note like
+                    // the coverage note under it — no amber, no title.
+                    if let pattern = page.patternNote {
+                        HistoryNote(text: pattern.text)
+                    }
                     HistoryNote(text: page.coverageNote)
                 }
             }
@@ -1037,7 +1026,7 @@ struct HardBlocksModeView: View {
             chartPanel
         } else {
             let historyPanel = HistoryPanel(title: HistoryDisplay.recordedIncidentsTitle) {
-                HistoryEventList(rows: page.rows, scope: vm.scope)
+                HistoryEventList(rows: page.rows, scope: vm.scope) { vm.navigate(to: $0) }
             }
             if page.chart != nil {
                 if isNarrow {
@@ -1058,5 +1047,30 @@ struct HardBlocksModeView: View {
                 }
             }
         }
+    }
+
+    /// The amber `Possible pattern` card: a claimed pattern, with the coverage note inside it.
+    private func patternCard(_ text: String) -> some View {
+        HStack(spacing: 0) {
+            Rectangle().fill(HistoryTheme.warn).frame(width: 3)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(HistoryDisplay.possiblePatternTitle)
+                    .font(Font.system(size: 17, weight: .semibold))
+                    .foregroundStyle(HistoryTheme.text)
+                Text(text)
+                    .font(HistoryTheme.body)
+                    .foregroundStyle(HistoryTheme.amberText)
+                    .fixedSize(horizontal: false, vertical: true)
+                HistoryNote(text: page.coverageNote,
+                            color: HistoryTheme.amberText)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+        }
+        .background(HistoryTheme.amberSoft)
+        .clipShape(UnevenRoundedRectangle(bottomTrailingRadius: 9,
+                                          topTrailingRadius: 9,
+                                          style: .continuous))
     }
 }

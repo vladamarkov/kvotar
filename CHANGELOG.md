@@ -5,6 +5,23 @@ the line of their change.
 
 ## Unreleased
 
+- The History window's charts were redrawn. On Explore quota, dates sit along the axis at the
+  weekly resets, the card appears as soon as the pointer moves over the chart, the weekly limit
+  has its own chart above the strip with each week drawn from the readings Kvotar recorded, and
+  selecting a short window lays out its day by the hour under the strip. Partly seen windows are
+  faded, the legend is gone, the sentence counts only windows seen to the end, and a window's
+  detail opens under its own chart.
+- On Hard blocks, each provider's block dots sit in their own labelled band under that provider's
+  bars, only blocks on windows of six hours or less are drawn, the coverage note says blocks are
+  recorded only while Notify me ▸ Over quota is on, a note that finds no pattern is plain text
+  instead of an amber card, and an incident links to its window on Explore quota when that window
+  is on the chart.
+- On Explore usage, a day with no work draws nothing in the day strip, each provider's lane prints
+  its busiest day's figure at the top, and the 30-day breakdown on All groups each provider's
+  projects and largest work, Claude then Codex.
+- On Weekly recap, the `This week` table spans the reading column, and the oldest, partly covered
+  week says which of its days are inside the last 30 days.
+
 ## [0.3.0 beta.11 (20)](https://github.com/vladamarkov/kvotar/releases/tag/v0.3.0-beta.11) — 2026-10-08
 
 - Kvotar can be installed with Homebrew: `brew install --cask vladamarkov/tap/kvotar`.

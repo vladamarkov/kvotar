@@ -82,4 +82,72 @@ final class HistoryDayHoverTests: XCTestCase {
         await settle()
         XCTAssertNil(vm.peekedDay, "one timer, one card — nothing is left behind")
     }
+
+    // MARK: - Explore quota hover
+
+    private func quotaSection() -> HistoryExperience.QuotaSection {
+        let windows = (1...3).map {
+            HXFix.quotaWindow(.claude, daysBack: 3, hour: 5 * $0, used: 50)
+        }
+        return HXFix.pages([HXFix.tool(.claude, quotaWindows: windows)], .tool(.claude))
+            .quota.sections[0]
+    }
+
+    /// The quota chart's card waits for no timer: the pointer is somewhere over a plot of many
+    /// marks, and the card shows the nearest window at once.
+    func testAQuotaHoverShowsItsCardAtOnce() {
+        let vm = model()
+        let section = quotaSection()
+        vm.quotaHover(section, atX: section.points[1].x)
+        XCTAssertEqual(vm.quotaHover?.pointID, section.points[1].id)
+        XCTAssertEqual(vm.peekedDay, .quota(section.points[1].id), "no peek delay")
+        XCTAssertEqual(vm.hoveredDay, vm.peekedDay)
+
+        vm.quotaHoverEnded()
+        XCTAssertNil(vm.quotaHover)
+        XCTAssertNil(vm.peekedDay)
+    }
+
+    func testEscDropsAQuotaCardToo() {
+        let vm = model()
+        let section = quotaSection()
+        vm.quotaHover(section, atX: 0.5)
+        vm.releaseDayPeek()
+        XCTAssertNil(vm.quotaHover)
+        XCTAssertNil(vm.peekedDay)
+    }
+
+    func testAClickSelectsTheWindowNearestThePointer() {
+        let vm = model()
+        let section = quotaSection()
+        vm.selectQuotaPoint(nearestTo: section, atX: section.points[2].x + 0.001)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.points[2].id)
+    }
+
+    /// A click on the strip's axis band opens the day under the pointer on its first window, and
+    /// a click on the day lens selects the mark nearest on x across the day.
+    func testAClickOnTheAxisBandOpensTheDayOnItsFirstWindow() throws {
+        let vm = model()
+        let section = quotaSection()
+        vm.selectQuotaDay(in: section, atX: section.points[2].x)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.points[0].id)
+        let lens = try XCTUnwrap(section.dayLens(selecting: section.points[0].id))
+        vm.selectQuotaPoint(nearestTo: lens, atX: 1)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.points[2].id)
+    }
+
+    /// A click on the weekly chart selects a week, and the page resolves it like any point.
+    func testAClickOnTheWeeklyChartSelectsTheWeek() {
+        let vm = model()
+        let end = HXFix.now.addingTimeInterval(-5 * 86_400)
+        let page = HXFix.pages([HXFix.tool(.claude, quotaWindows: [HXFix.quotaWindow(daysBack: 2)],
+                                           weeklyLimits: [HXFix.weeklyLimit(endedAt: end, used: 40)])],
+                               .tool(.claude)).quota
+        let section = page.sections[0]
+        vm.selectQuotaPoint(nearestTo: section, atX: 0.3, chart: .weekly)
+        XCTAssertEqual(vm.selectedQuotaPoint, section.weeklyPoints[0].id)
+        XCTAssertEqual(vm.resolvedQuotaPoint(in: page)?.id, section.weeklyPoints[0].id)
+        vm.quotaHover(section, atX: 0.3, chart: .weekly)
+        XCTAssertEqual(vm.peekedDay, .quota("\(section.weeklyPoints[0].id)@0"))
+    }
 }

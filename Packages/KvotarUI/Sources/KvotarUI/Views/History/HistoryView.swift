@@ -137,8 +137,7 @@ public struct HistoryView: View {
             case .weeklyRecap:
                 EmptyView()
             case .exploreQuota:
-                ExploreQuotaModeView(page: pages.quota,
-                                     periodLabel: experience.header.subtitle, vm: vm)
+                ExploreQuotaModeView(page: pages.quota, vm: vm)
             case .exploreUsage:
                 ExploreModeView(page: pages.explore,
                                 pricingNote: experience.pricingNote, vm: vm,

@@ -90,8 +90,10 @@ final class HistoryExperienceHardBlocksTests: XCTestCase {
         XCTAssertNil(page.patternNote)
         XCTAssertEqual(page.coverageNote,
                        "Recorded since \(Fmt.monthDay(watching)), when Kvotar began watching. "
-                       + "Weekly-only exhaustion may not appear, and an unknown reset means "
-                       + "an unknown lockout, not zero.")
+                       + "Blocks are recorded only while Notify me ▸ Over quota is on. "
+                       + "An unknown reset means an unknown lockout, not zero.")
+        XCTAssertFalse(HXFix.allStrings(of: page).contains { $0.contains("Weekly-only") },
+                       "a spent weekly reaches the same path now; the old clause is gone")
     }
 
     func testNeverWatchedCoverageNoteSaysNothingYet() {
@@ -120,19 +122,23 @@ final class HistoryExperienceHardBlocksTests: XCTestCase {
 
     // MARK: - Pattern floor (REV-73, preserved)
 
+    /// The note says which it is: a claim, drawn as the amber card, or the sample note below
+    /// the floor, drawn as an ordinary note — the view never reads the words to decide.
     func testPatternClaimStaysBehindTheFloor() {
         let above = (0..<12).map {
             HXFix.localBlock(daysBack: Double($0) + 1, hour: $0 % 2 == 0 ? 14 : 15)
         }
-        XCTAssertEqual(hardBlocks([HXFix.tool(.claude, limitBlocks: above)],
-                                  .tool(.claude)).patternNote,
-                       "Most often 2–6 pm")
+        let claimed = hardBlocks([HXFix.tool(.claude, limitBlocks: above)],
+                                 .tool(.claude)).patternNote
+        XCTAssertEqual(claimed?.text, "Most often 2–6 pm")
+        XCTAssertEqual(claimed?.state, .claimed)
 
         let below = (0..<3).map { HXFix.localBlock(daysBack: Double($0) + 1, hour: 14) }
-        XCTAssertEqual(hardBlocks([HXFix.tool(.claude, limitBlocks: below)],
-                                  .tool(.claude)).patternNote,
-                       "Not enough recorded blocks to call a typical time.",
+        let note = hardBlocks([HXFix.tool(.claude, limitBlocks: below)],
+                              .tool(.claude)).patternNote
+        XCTAssertEqual(note?.text, "Not enough recorded blocks to call a typical time.",
                        "below the floor the investigative note states the sample honestly")
+        XCTAssertEqual(note?.state, .belowFloor, "and claims nothing")
     }
 
     func testAllPatternNoteIsProviderScoped() {
@@ -142,8 +148,98 @@ final class HistoryExperienceHardBlocksTests: XCTestCase {
         let page = hardBlocks([HXFix.tool(.claude, limitBlocks: above),
                                HXFix.tool(.codex,
                                           limitBlocks: [HXFix.localBlock(daysBack: 1, hour: 9)])])
-        XCTAssertEqual(page.patternNote, "Claude · Most often 2–6 pm",
+        XCTAssertEqual(page.patternNote?.text, "Claude · Most often 2–6 pm",
                        "the claim is named; the below-floor provider makes no claim")
+        XCTAssertEqual(page.patternNote?.state, .claimed)
+    }
+
+    // MARK: - The way back to the window
+
+    /// The mirror of Explore quota's `Recorded block` link: a block row leads to its window,
+    /// pinned on Explore quota, under a banner naming the block.
+    func testABlockRowLinksToItsQuotaWindow() throws {
+        let window = HXFix.quotaWindow(.claude, daysBack: 5, hour: 17, used: 100, hitLimit: true)
+        let block = HXFix.block(at: window.resetsAt.addingTimeInterval(-1800), lockout: 1800)
+        let page = hardBlocks([HXFix.tool(.claude, limitBlocks: [block], quotaWindows: [window])],
+                              .tool(.claude))
+        let link = try XCTUnwrap(page.rows.first?.link)
+        XCTAssertEqual(link.label, "Quota window · \(HistoryDisplay.quotaSpan(window))")
+        XCTAssertEqual(link.destination,
+                       HistoryDestination(mode: .exploreQuota, provider: .claude,
+                                          focus: .quotaWindow(id: window.id),
+                                          banner: "From hard block · Claude · "
+                                              + "\(Fmt.monthDay(block.firedAt)), "
+                                              + "\(Fmt.clock(block.firedAt))"))
+        let all = hardBlocks([HXFix.tool(.claude, limitBlocks: [block], quotaWindows: [window]),
+                              HXFix.tool(.codex)])
+        XCTAssertEqual(all.rows.first?.link?.destination.provider, .claude,
+                       "on All the link names the row's own provider")
+    }
+
+    /// A five-hour window and the weekly routinely share a reset: the block's own width picks
+    /// its window. A block whose reset was never recovered takes the narrowest window holding
+    /// its instant.
+    func testABlockPicksItsOwnWindowWhereTheWeeklySharesTheReset() {
+        let short = HXFix.quotaWindow(.claude, daysBack: 5, hour: 17)
+        let weekly = HXFix.weeklyLimit(endedAt: short.resetsAt, used: 80)
+        let onShort = HXFix.block(at: short.resetsAt.addingTimeInterval(-1800), lockout: 1800)
+        let onWeekly = HXFix.block(at: short.resetsAt.addingTimeInterval(-7200), lockout: 7200,
+                                   width: 604_800)
+        let unknown = HXFix.block(at: short.resetsAt.addingTimeInterval(-600), lockout: nil)
+        let page = hardBlocks([HXFix.tool(.claude, limitBlocks: [onShort, onWeekly, unknown],
+                                          quotaWindows: [short], weeklyLimits: [weekly])],
+                              .tool(.claude))
+        XCTAssertEqual(page.rows.map { $0.link?.destination.quotaWindowID },
+                       [short.id, short.id, weekly.outcome.id],
+                       "newest first: the unknown-width block, the five-hour one, the weekly one")
+    }
+
+    /// A block outside every window on the page, or whose recovered reset is none of theirs,
+    /// has no way back — the row still stands.
+    func testABlockWhoseWindowIsNotOnThePageCarriesNoLink() {
+        let window = HXFix.quotaWindow(.claude, daysBack: 5, hour: 17)
+        let outside = HXFix.block(at: window.resetsAt.addingTimeInterval(-86_400), lockout: 1800)
+        let otherReset = HXFix.block(at: window.resetsAt.addingTimeInterval(-1800), lockout: 7200)
+        let page = hardBlocks([HXFix.tool(.claude, limitBlocks: [outside, otherReset],
+                                          quotaWindows: [window])], .tool(.claude))
+        XCTAssertEqual(page.rows.count, 2)
+        XCTAssertTrue(page.rows.allSatisfy { $0.link == nil })
+        let bare = hardBlocks([HXFix.tool(.claude, limitBlocks: [otherReset])], .tool(.claude))
+        XCTAssertNil(bare.rows.first?.link, "no quota window recorded at all")
+    }
+
+    /// A window that was withdrawn holds time only to its actual end: a block after that
+    /// belongs to the replacement window, whatever the withdrawn window was scheduled to reset at.
+    func testAWithdrawnWindowHoldsNoBlockAfterItsActualEnd() {
+        let scheduled = HXFix.quotaWindow(.claude, daysBack: 5, hour: 14)
+        let withdrawn = HXFix.quotaWindow(.claude, daysBack: 5, hour: 14, ending: .withdrawn,
+                                          endedAt: scheduled.resetsAt.addingTimeInterval(-4 * 3600))
+        let replacement = HXFix.quotaWindow(.claude, daysBack: 5, hour: 15)
+        let block = HXFix.block(at: scheduled.resetsAt.addingTimeInterval(-3 * 3600), lockout: nil)
+        let page = hardBlocks([HXFix.tool(.claude, limitBlocks: [block],
+                                          quotaWindows: [withdrawn, replacement])], .tool(.claude))
+        XCTAssertEqual(page.rows.first?.link?.destination.quotaWindowID, replacement.id)
+    }
+
+    /// Only a window the Explore quota page draws can be named: a provider with no main window
+    /// has no section there, so a surviving weekly alone earns its block no link; and a block
+    /// of a known width never points at a window of another width, even one sharing its reset.
+    func testOnlyAWindowThePageDrawsCanBeNamed() {
+        let weekly = HXFix.weeklyLimit(endedAt: HXFix.now.addingTimeInterval(-3 * 86_400), used: 80)
+        let onWeekly = HXFix.block(at: weekly.outcome.resetsAt.addingTimeInterval(-7200),
+                                   lockout: 7200, width: 604_800)
+        let weeklyOnly = hardBlocks([HXFix.tool(.claude, limitBlocks: [onWeekly],
+                                                weeklyLimits: [weekly])], .tool(.claude))
+        XCTAssertNil(weeklyOnly.rows.first?.link, "no main window, no section, no link")
+
+        let elsewhere = HXFix.quotaWindow(.claude, daysBack: 9, hour: 9)
+        let fiveHour = HXFix.block(at: weekly.outcome.resetsAt.addingTimeInterval(-1800),
+                                   lockout: 1800)
+        let page = hardBlocks([HXFix.tool(.claude, limitBlocks: [fiveHour],
+                                          quotaWindows: [elsewhere], weeklyLimits: [weekly])],
+                              .tool(.claude))
+        XCTAssertNil(page.rows.first?.link,
+                     "a five-hour block is not sent to the weekly it shares a reset with")
     }
 
     // MARK: - Chart (REV-84 §6 item 3 — independent scales)

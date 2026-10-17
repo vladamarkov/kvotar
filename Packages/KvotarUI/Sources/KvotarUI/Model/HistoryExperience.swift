@@ -158,10 +158,13 @@ public struct HistoryExperience: Sendable {
             /// reset is deliberately **not** here (it would lead every recap on an account whose
             /// weekly window resets early every other day); it supports a recap as an insight.
             case allowanceChange
-            /// Rung 3 — the week moved outside the ±5 % band against the preceding complete week.
+            /// Rung 4 — the week moved outside the ±5 % band against the preceding complete week.
             case usagePattern
-            /// Rung 4 — the calm factual summary.
+            /// Rung 5 — the calm factual summary.
             case calm
+            /// Rung 3 — a clipped week nothing stronger leads: the lead names the coverage limit,
+            /// since rungs 4 and 5 are whole-week claims the horizon cannot support.
+            case partialWeek
         }
 
         public let eyebrow: String
@@ -373,12 +376,14 @@ public struct HistoryExperience: Sendable {
     public struct QuotaPoint: Sendable, Equatable, Identifiable {
         /// How much of the window Kvotar watched — the shape's meaning, not a quality score.
         public enum Kind: String, Sendable, Equatable {
-            /// Seen to its end: `Ended at N% used` is an outcome.
+            /// Seen to its end: `Ended at N% used` is an outcome. A filled dot.
             case completedFull
-            /// Abandoned before its reset: `N%` is a **lower bound**, drawn hollow.
+            /// Abandoned before its reset: `N%` is a **lower bound**. The same dot, faded; the
+            /// hover and the detail say why.
             case completedPartial
-            /// The window still open, drawn dashed as `So far`. Excluded from every completed
-            /// count, median, comparison and conclusion (§6.3).
+            /// The window still open: a hollow ring at its last recorded reading, labelled `So
+            /// far` in place. Excluded from every completed count, median, comparison and
+            /// conclusion (§6.3).
             case current
         }
 
@@ -395,18 +400,29 @@ public struct HistoryExperience: Sendable {
         public let hitLimit: Bool
         /// Geometry: utilization ÷ 100, clamped 0…1. The view multiplies it by a height.
         public let fraction: Double
-        /// Geometry: where the window's reset sits across the report period, clamped 0…1.
+        /// Geometry: where the window's reset sits across the report period, clamped 0…1 — or,
+        /// for the open window, where its last recorded reading sits. Nothing is drawn at now:
+        /// the reading is the last thing Kvotar knows.
         public let x: Double
-        /// `Ended at 87% used` / `Reached at least 62% used · Partial` / `So far 41% used`.
+        /// `Ended at 87% used` / `Reached at least 62% used` / `So far 41% used`.
         public let label: String
+        /// The words written beside the mark where the chart finds room: `So far` on the open
+        /// window, `Hit the limit` on a diamond, nil otherwise. There is no legend; a mark that
+        /// means something names itself. Which side, or whether at all, is
+        /// `QuotaSection.inPlaceLabelSides(plotWidth:)`'s answer.
+        public let inPlaceLabel: String?
         /// Provider, span, width, ending/lower-bound utilization, completion and block state as
         /// plain text (§6.0 accessibility) — no markdown, so VoiceOver never reads punctuation.
         public let accessibilityValue: String
         public let detail: QuotaDetail
+        /// The hover card's markdown — the window's weekday, date and span in bold, then its
+        /// result — in the day strip's register. Pre-formatted here; the view renders it and
+        /// parses nothing.
+        public let hoverBody: String
 
         public init(id: String, provider: Tool, at: Date, kind: Kind, hitLimit: Bool,
                     fraction: Double, x: Double, label: String, accessibilityValue: String,
-                    detail: QuotaDetail) {
+                    detail: QuotaDetail, hoverBody: String = "", inPlaceLabel: String? = nil) {
             self.id = id
             self.provider = provider
             self.at = at
@@ -417,10 +433,12 @@ public struct HistoryExperience: Sendable {
             self.label = label
             self.accessibilityValue = accessibilityValue
             self.detail = detail
+            self.hoverBody = hoverBody
+            self.inPlaceLabel = inPlaceLabel
         }
     }
 
-    /// What is pinned below the charts when a point is selected (§6.3): the window's own facts,
+    /// What is pinned under the chart when a point is selected (§6.3): the window's own facts,
     /// then the local work that happened alongside it — labelled context, never cause.
     public struct QuotaDetail: Sendable, Equatable {
         /// `Claude · Sep 3, 2 pm – 7 pm`, or the reset alone where the width was never recorded.
@@ -465,25 +483,243 @@ public struct HistoryExperience: Sendable {
         public let widthNote: String?
         /// Point ids in time order. The points themselves live once, on the section.
         public let pointIDs: [String]
+        /// The points the line runs through, in time order: the run's ended windows where
+        /// `connects`, else none. The open window stands at its last reading, not at a reset,
+        /// so it is never on the line.
+        public let joinedIDs: [String]
 
         public init(id: String, widthLabel: String?, connects: Bool, boundaryNote: String?,
-                    widthNote: String? = nil, pointIDs: [String]) {
+                    widthNote: String? = nil, pointIDs: [String], joinedIDs: [String] = []) {
             self.id = id
             self.widthLabel = widthLabel
             self.connects = connects
             self.boundaryNote = boundaryNote
             self.widthNote = widthNote
             self.pointIDs = pointIDs
+            self.joinedIDs = joinedIDs
         }
     }
 
-    /// One provider's full-width quota chart. On `All` these stack, Claude then Codex; they
-    /// never sit side by side and never share an axis or a summary (§6.3).
+    /// One mark on the chart's date axis. A labelled tick is a weekly reset of the provider (or
+    /// a local Monday where the provider has none in the period): the view draws a faint gridline,
+    /// a 7 pt tick and the label. An unlabelled tick is a local midnight: a 3 pt tick and nothing
+    /// else. The instants and the words are the model's; the view decides nothing.
+    public struct QuotaAxisTick: Sendable, Equatable, Identifiable {
+        public let id: String
+        /// Where the instant sits across the report period, clamped 0…1.
+        public let x: Double
+        /// `Fri Sep 18`, or nil for a midnight tick.
+        public let label: String?
+
+        public init(id: String, x: Double, label: String?) {
+            self.id = id
+            self.x = min(max(x, 0), 1)
+            self.label = label
+        }
+    }
+
+    /// One `% used` gridline and its gutter label. The limit (100) and the floor (0) are drawn
+    /// solid, the halfway hint faint; the view reads `prominent` rather than deciding by value.
+    public struct QuotaValueLabel: Sendable, Equatable {
+        public let fraction: Double
+        public let label: String
+        public let prominent: Bool
+
+        public init(fraction: Double, label: String, prominent: Bool) {
+            self.fraction = min(max(fraction, 0), 1)
+            self.label = label
+            self.prominent = prominent
+        }
+    }
+
+    /// Which of a section's two charts something belongs to: the weekly burn-up above, or the
+    /// short-window strip below it.
+    public enum QuotaChart: Sendable, Equatable {
+        case weekly, strip
+    }
+
+    /// One recorded reading on a weekly curve, placed: where it sits across the period, how high
+    /// it reads, and the card for the pointer resting on it.
+    public struct QuotaSample: Sendable, Equatable {
+        public let x: Double
+        public let fraction: Double
+        /// `**Wed Sep 16, 3:00 pm**` over `42% used · week ending Fri Sep 18, 9:00 am`.
+        public let hoverBody: String
+
+        public init(x: Double, fraction: Double, hoverBody: String) {
+            self.x = min(max(x, 0), 1)
+            self.fraction = min(max(fraction, 0), 1)
+            self.hoverBody = hoverBody
+        }
+    }
+
+    /// One weekly window drawn as its own climb: a curve through that week's recorded readings
+    /// only, from the first to the last inside the period, with a light area under it. Nothing
+    /// joins one week to the next, and a curve is never extended past its last reading — not to
+    /// now and not to the scheduled reset. The window's own mark (`QuotaSection.weeklyPoints`,
+    /// by `pointID`) sits on the sample at `markIndex`: the first reading at the limit where it
+    /// hit, else the last one.
+    public struct QuotaCurve: Sendable, Equatable, Identifiable {
+        public let id: String
+        /// The weekly window this curve draws — its point in `QuotaSection.weeklyPoints`.
+        public let pointID: String
+        /// Oldest first; never empty.
+        public let samples: [QuotaSample]
+        /// A partly seen week: drawn at lower opacity, with the fact written at its end.
+        public let faded: Bool
+        /// Written at the mark: the week's figure, `74%`, or `So far · 54%` on the open week.
+        /// Nil only where there is nothing to say.
+        public let endLabel: String?
+        /// An early ending or a withdrawal: a dashed boundary at the event's time, which may be
+        /// later than the last reading the curve ends at. Nil for a week that reached its reset.
+        public let boundaryX: Double?
+        public let markIndex: Int
+
+        public init(id: String, pointID: String, samples: [QuotaSample], faded: Bool,
+                    endLabel: String?, boundaryX: Double?, markIndex: Int) {
+            self.id = id
+            self.pointID = pointID
+            self.samples = samples
+            self.faded = faded
+            self.endLabel = endLabel
+            self.boundaryX = boundaryX.map { min(max($0, 0), 1) }
+            self.markIndex = min(max(markIndex, 0), max(samples.count - 1, 0))
+        }
+
+        /// The sample the window's mark sits on.
+        public var mark: QuotaSample? { samples.indices.contains(markIndex) ? samples[markIndex] : nil }
+    }
+
+    /// What the pointer over one of a section's charts is resting on: on the strip the window
+    /// nearest on x, on the weekly chart the recorded reading nearest on x. Resolved by the
+    /// model from the pointer's fraction; the view draws one cursor line at `cursorX` through
+    /// both of the provider's charts, rings `ringX`/`ringFraction` on the chart the pointer is
+    /// over, and shows `body` in the day strip's card.
+    public struct QuotaHover: Sendable, Equatable {
+        /// What the card is keyed by: the window id on the strip, the window id and the sample's
+        /// place on the weekly chart.
+        public let id: String
+        public let provider: Tool
+        public let chart: QuotaChart
+        /// The window the pointer rests on — what a click selects.
+        public let pointID: String
+        /// The cursor's x, snapped to the ringed mark or reading. Clamped 0…1.
+        public let cursorX: Double
+        public let ringX: Double
+        public let ringFraction: Double
+        public let body: String
+
+        public init(provider: Tool, chart: QuotaChart, pointID: String, cursorX: Double,
+                    ringFraction: Double, body: String, sampleIndex: Int? = nil) {
+            self.id = sampleIndex.map { "\(pointID)@\($0)" } ?? pointID
+            self.provider = provider
+            self.chart = chart
+            self.pointID = pointID
+            self.cursorX = min(max(cursorX, 0), 1)
+            self.ringX = self.cursorX
+            self.ringFraction = min(max(ringFraction, 0), 1)
+            self.body = body
+        }
+    }
+
+    /// The selected window's local day, laid out by reset time on a 0–24 h baseline, so the
+    /// three to five short windows a busy day stacks inside a few points of the strip's axis
+    /// stand apart. One mark per window of that day with its figure above it, the selected one
+    /// ringed; a click on a mark selects that window. Built for every local day that has a
+    /// short window on the strip; a window a day wide or wider, or of unknown width, belongs to
+    /// no lens. The model lays the day out and the view multiplies by a width.
+    public struct QuotaDayLens: Sendable, Equatable, Identifiable {
+        /// One window of the day — its point is in `QuotaSection.points` by `id`.
+        public struct Mark: Sendable, Equatable, Identifiable {
+            public let id: String
+            /// Where the window stands across the local day, 0…1: its reset, or the open
+            /// window's last reading, as on the strip.
+            public let x: Double
+            /// The figure alone, `49%`, or `So far 13%` on the open window. The mark's shape
+            /// says the rest, as it does on the strip and the weekly chart.
+            public let label: String
+
+            public init(id: String, x: Double, label: String) {
+                self.id = id
+                self.x = min(max(x, 0), 1)
+                self.label = label
+            }
+        }
+
+        /// The local day, `2026-08-11`.
+        public let id: String
+        /// `Aug 11 · 5 windows`.
+        public let title: String
+        /// The day's windows in time order.
+        public let marks: [Mark]
+        /// The hour axis: a labelled tick every six hours (`12 am`, `6 am`, `12 pm`, `6 pm`,
+        /// `12 am`), an unlabelled one every three.
+        public let ticks: [QuotaAxisTick]
+        /// Where the day sits across the report period, so a click on the strip's axis band can
+        /// find the day under the pointer.
+        public let periodRange: ClosedRange<Double>
+        /// The window the lens is open on, ringed. Set by `QuotaSection.dayLens(selecting:)`.
+        public let selectedID: String?
+        /// What VoiceOver calls the lens: `Claude · Aug 11 · 5 windows`.
+        public let accessibilityLabel: String
+
+        public init(id: String, title: String, marks: [Mark], ticks: [QuotaAxisTick],
+                    periodRange: ClosedRange<Double>, selectedID: String? = nil,
+                    accessibilityLabel: String? = nil) {
+            self.id = id
+            self.title = title
+            self.marks = marks
+            self.ticks = ticks
+            let lower = min(max(periodRange.lowerBound, 0), 1)
+            self.periodRange = lower...max(lower, min(periodRange.upperBound, 1))
+            self.selectedID = selectedID
+            self.accessibilityLabel = accessibilityLabel ?? title
+        }
+
+        /// The same lens, open on `id`.
+        public func selecting(_ id: String) -> QuotaDayLens {
+            QuotaDayLens(id: self.id, title: title, marks: marks, ticks: ticks,
+                         periodRange: periodRange, selectedID: id,
+                         accessibilityLabel: accessibilityLabel)
+        }
+
+        /// Whether `x` falls in the day: from its midnight up to, not including, the next — an
+        /// instant exactly at midnight belongs to the day that starts there.
+        func holds(x: Double) -> Bool {
+            x >= periodRange.lowerBound && x < periodRange.upperBound
+        }
+
+        /// The mark nearest on x — what a click on the lens selects. A tie goes to the later one.
+        public func nearestMark(atX x: Double) -> Mark? {
+            var best: Mark?
+            for mark in marks where best == nil || abs(mark.x - x) <= abs(best!.x - x) {
+                best = mark
+            }
+            return best
+        }
+
+        /// How far `x` lies outside the day's span across the period; zero inside it.
+        func distance(toX x: Double) -> Double {
+            if periodRange.contains(x) { return 0 }
+            return x < periodRange.lowerBound ? periodRange.lowerBound - x : x - periodRange.upperBound
+        }
+    }
+
+    /// One provider's quota charts, full width: the weekly window's burn-up first where the
+    /// provider has one, then the short-window strip, sharing one date axis and one hover
+    /// cursor. On `All` the sections stack, Claude then Codex; they never sit side by side and
+    /// never share an axis or a summary (§6.3).
     public struct QuotaSection: Sendable, Equatable, Identifiable {
         public let provider: Tool
-        /// `Claude · 5-hour windows`, or `Claude · main account window` where widths vary or
-        /// were never recorded.
+        /// `Claude` — the charts under it name their own windows.
         public let title: String
+        /// The weekly chart's eyebrow, `Weekly window · % used`; nil where the provider reported
+        /// no weekly limit in the period and the chart is absent.
+        public let weeklyTitle: String?
+        /// The strip's eyebrow: `5-hour windows · % used`, or `Main account window · % used`
+        /// where widths vary or were never recorded; nil where every main window is a week wide
+        /// (a plan with only a weekly) and the strip is absent.
+        public let stripTitle: String?
         /// The one factual sentence above the chart — counts only, no advice and no pattern
         /// language. Weekly recap owns interpretation.
         public let summary: String
@@ -491,19 +727,139 @@ public struct HistoryExperience: Sendable {
         /// points are still drawn.
         public let sparseNote: String?
         public let segments: [QuotaSegment]
-        /// Every point of this section in time order, oldest first.
+        /// Every point on the strip in time order, oldest first: the main windows that are not
+        /// a week wide.
         public let points: [QuotaPoint]
+        /// The weekly windows, oldest first — one per curve, standing on the curve's mark. A
+        /// selection or a hover on the weekly chart is one of these.
+        public let weeklyPoints: [QuotaPoint]
+        /// The weekly chart's curves, oldest first.
+        public let curves: [QuotaCurve]
+        /// The date axis, by x. Labelled ticks at the provider's weekly resets (or Mondays),
+        /// unlabelled ones at every other local midnight.
+        public let ticks: [QuotaAxisTick]
+        /// The `% used` gridlines: 100, 50, 0.
+        public let valueLabels: [QuotaValueLabel]
+        /// One lens per local day with a short window on the strip, oldest first.
+        public let dayLenses: [QuotaDayLens]
+        /// What VoiceOver calls each plot: `Claude weekly chart`, `Claude window chart`.
+        public let weeklyChartLabel: String
+        public let stripChartLabel: String
 
         public var id: Tool { provider }
 
-        public init(provider: Tool, title: String, summary: String, sparseNote: String? = nil,
-                    segments: [QuotaSegment] = [], points: [QuotaPoint] = []) {
+        /// The lens for the day of the selected window, open on it — nil for a weekly window, a
+        /// window of unknown width, or a selection this section does not hold.
+        public func dayLens(selecting id: String) -> QuotaDayLens? {
+            dayLenses.first { lens in lens.marks.contains { $0.id == id } }?.selecting(id)
+        }
+
+        /// The lens for the day under fraction `x` of the strip's axis — the day whose span
+        /// holds `x` (midnight belongs to the day it starts), else the nearest day that has one,
+        /// so a click on a quiet day still opens something. Nil only where the section has no
+        /// lens at all.
+        public func dayLens(atX x: Double) -> QuotaDayLens? {
+            if let held = dayLenses.first(where: { $0.holds(x: x) }) { return held }
+            return dayLenses.min { $0.distance(toX: x) < $1.distance(toX: x) }
+        }
+
+        /// Which side of its mark an in-place label is written on.
+        public enum LabelSide: Sendable, Equatable {
+            case right, left
+        }
+
+        /// The margin the chart keeps free to the right of the period's end, so the open
+        /// window's `So far` always has room beside its ring, however late its last reading.
+        public static let rightMargin: CGFloat = 84
+        /// The room an in-place label needs: the gap from the mark, the longest label (`Hit the
+        /// limit`) and the clearance before the next mark.
+        public static let inPlaceLabelGap: CGFloat = 9
+        public static let inPlaceLabelWidth: CGFloat = 68
+        public static let inPlaceLabelClearance: CGFloat = 8
+
+        /// Where each labelled mark writes its words at the chart's own scale, by point id. The
+        /// open window's label always goes to the right: that is what the margin is for. Any
+        /// other label goes to the right of its mark when no other mark stands within the
+        /// clearance of the box the words would fill, else to the left on the same condition,
+        /// else nowhere — a dense strip drops the words and keeps the diamond, which the hover
+        /// and the sentence still name. Judged on x alone: a mark far above or below the words
+        /// still counts as in the way, which drops a label it might have kept, never the reverse.
+        public func inPlaceLabelSides(plotWidth: CGFloat) -> [String: LabelSide] {
+            let gap = Self.inPlaceLabelGap, width = Self.inPlaceLabelWidth
+            let clearance = Self.inPlaceLabelClearance
+            var sides: [String: LabelSide] = [:]
+            for point in points where point.inPlaceLabel != nil {
+                if point.kind == .current {
+                    sides[point.id] = .right
+                    continue
+                }
+                let px = CGFloat(point.x) * plotWidth
+                let others = points.filter { $0.id != point.id }.map { CGFloat($0.x) * plotWidth }
+                let rightBox = (px + gap - clearance)...(px + gap + width + clearance)
+                let leftBox = (px - gap - width - clearance)...(px - gap + clearance)
+                let rightClear = rightBox.upperBound <= plotWidth + Self.rightMargin
+                    && !others.contains { rightBox.contains($0) }
+                let leftClear = leftBox.lowerBound >= 0
+                    && !others.contains { leftBox.contains($0) }
+                if rightClear {
+                    sides[point.id] = .right
+                } else if leftClear {
+                    sides[point.id] = .left
+                }
+            }
+            return sides
+        }
+
+        /// The room one tick label needs on the chart. Two resets closer than this (an early
+        /// ending beside a scheduled one) would print over each other.
+        public static let tickLabelWidth: CGFloat = 72
+
+        /// Where a tick's label is centred on a plot `plotWidth` wide: on the tick, pulled in
+        /// at either edge so the label stays inside the plot. The view places labels with this
+        /// and the spacing rule below judges them with it, so the two cannot disagree.
+        public static func tickLabelCenter(x: Double, plotWidth: CGFloat) -> CGFloat {
+            let half = tickLabelWidth / 2
+            return min(max(CGFloat(x) * plotWidth, half), max(plotWidth - half, half))
+        }
+
+        /// Which labelled ticks print their label at the chart's own scale: walking left to
+        /// right, a label is shown only when its centre, as placed, is at least
+        /// `tickLabelWidth` from the last shown one. The tick and its gridline are drawn either
+        /// way; only the words give way.
+        public func labelledTickIDs(plotWidth: CGFloat) -> Set<String> {
+            var shown: Set<String> = []
+            var lastCenter: CGFloat?
+            for tick in ticks where tick.label != nil {
+                let center = Self.tickLabelCenter(x: tick.x, plotWidth: plotWidth)
+                if let lastCenter, center - lastCenter < Self.tickLabelWidth { continue }
+                shown.insert(tick.id)
+                lastCenter = center
+            }
+            return shown
+        }
+
+        public init(provider: Tool, title: String, weeklyTitle: String? = nil,
+                    stripTitle: String? = nil, summary: String, sparseNote: String? = nil,
+                    segments: [QuotaSegment] = [], points: [QuotaPoint] = [],
+                    weeklyPoints: [QuotaPoint] = [], curves: [QuotaCurve] = [],
+                    ticks: [QuotaAxisTick] = [], valueLabels: [QuotaValueLabel] = [],
+                    dayLenses: [QuotaDayLens] = [],
+                    weeklyChartLabel: String? = nil, stripChartLabel: String? = nil) {
             self.provider = provider
             self.title = title
+            self.weeklyChartLabel = weeklyChartLabel ?? "\(title) weekly chart"
+            self.stripChartLabel = stripChartLabel ?? "\(title) window chart"
+            self.weeklyTitle = weeklyTitle
+            self.stripTitle = stripTitle
             self.summary = summary
             self.sparseNote = sparseNote
             self.segments = segments
             self.points = points
+            self.weeklyPoints = weeklyPoints
+            self.curves = curves
+            self.ticks = ticks
+            self.valueLabels = valueLabels
+            self.dayLenses = dayLenses
         }
     }
 
@@ -696,10 +1052,12 @@ public struct HistoryExperience: Sendable {
     /// cannot silently change what its rows mean — structurally: nothing here takes a day.
     public struct Breakdown: Sendable {
         public let title: String
-        /// `ProjectGrouping` ranking, provider-tagged only when both providers contribute.
+        /// `ProjectGrouping` ranking; on `All`, one provider's rows after the other's, each
+        /// group on its own scale and under its own cap, provider-tagged only when both
+        /// providers contribute.
         public let projects: [HistoryScreen.RankedRow]
         public let models: [ModelGroup]
-        /// The merged session/thread ranking, provider tags only when needed.
+        /// The session/thread ranking, grouped and tagged the same way as `projects`.
         public let largestWork: [HistoryScreen.RankedRow]
 
         public init(title: String, projects: [HistoryScreen.RankedRow] = [],
@@ -722,6 +1080,8 @@ public struct HistoryExperience: Sendable {
         public let legend: [HistoryScreen.DayLegendEntry]
         /// The strip's footer (busiest-day line), same grammar as Summary's strip.
         public let stripFooter: String
+        /// Each lane's scale — the provider's busiest-day figure — printed at the lane's top.
+        public let stripScaleHints: [Tool: String]
         /// Visible 30-day totals, one per active provider.
         public let totals: [ProviderTotal]
         /// Combined 30-day Est. token value — `All` only, both providers active, once,
@@ -733,6 +1093,7 @@ public struct HistoryExperience: Sendable {
 
         public init(days: [DayEntry] = [], initialSelection: Date? = nil,
                     legend: [HistoryScreen.DayLegendEntry] = [], stripFooter: String = "",
+                    stripScaleHints: [Tool: String] = [:],
                     totals: [ProviderTotal] = [], combinedValue: String? = nil,
                     weekly: [ProviderWeekly] = [],
                     breakdown: Breakdown, emptyMessage: String? = nil) {
@@ -740,6 +1101,7 @@ public struct HistoryExperience: Sendable {
             self.initialSelection = initialSelection
             self.legend = legend
             self.stripFooter = stripFooter
+            self.stripScaleHints = stripScaleHints
             self.totals = totals
             self.combinedValue = combinedValue
             self.weekly = weekly
@@ -749,6 +1111,27 @@ public struct HistoryExperience: Sendable {
     }
 
     // MARK: - Hard blocks (REV-84 §6)
+
+    /// The line under the hour chart, typed by what it says. Above `claimedRhythmFloor` a
+    /// pattern is **claimed** and drawn as the amber card; below it the note states the sample
+    /// and is drawn like any other panel note — the amber card over `Not enough recorded
+    /// blocks` read as a warning about nothing. The view switches on `state`, never on the
+    /// words.
+    public struct PatternNote: Sendable, Equatable {
+        public enum State: Sendable, Equatable {
+            /// Twelve or more blocks, more than half of them in one four-hour band.
+            case claimed
+            /// Fewer blocks than the floor, or no band holding more than half: nothing claimed.
+            case belowFloor
+        }
+        public let state: State
+        public let text: String
+
+        public init(state: State, text: String) {
+            self.state = state
+            self.text = text
+        }
+    }
 
     /// Hard blocks answers: **what happened when access stopped, and how does it relate to my
     /// activity?** Investigative and provider-honest: unknown durations stay excluded with the
@@ -767,15 +1150,16 @@ public struct HistoryExperience: Sendable {
         /// Block history, **newest first** — REV-73 row grammar; `All` merges chronologically
         /// with provider tags. This view always lists rows; the conclusion is the aggregate.
         public let rows: [HistoryScreen.RankedRow]
-        /// Activity by hour with every block drawn as its own mark. On `All`, each bar's
-        /// fraction is against its own provider's busiest hour. The caption describes local
-        /// token activity — never effort or productivity.
+        /// Activity by hour with every short-window block drawn as its own mark under its
+        /// provider's lane. On `All`, each bar's fraction is against its own provider's busiest
+        /// hour. The caption describes local token activity — never effort or productivity.
         public let chart: HistoryScreen.HourChart?
-        /// `Most often 2–6 pm` above `claimedRhythmFloor`; below it, the investigative
-        /// sample note — which Summary must never borrow as a conclusion.
-        public let patternNote: String?
-        /// Watching-since plus the honest gaps: weekly-only exhaustion may be absent, and an
-        /// unknown reset means an unknown lockout, not zero.
+        /// `Most often 2–6 pm` above `claimedRhythmFloor`, as a claim; below it, the
+        /// investigative sample note — which Summary must never borrow as a conclusion — as a
+        /// plain note. Nil without blocks.
+        public let patternNote: PatternNote?
+        /// Watching-since plus the honest gaps: a block is recorded only while the Over quota
+        /// notifications are on, and an unknown reset means an unknown lockout, not zero.
         public let coverageNote: String
         /// `Allowance history` (REV-84 §6 item 6): the same provider-filtered recorded
         /// allowance/window context Summary carries, after the investigation — structural
@@ -786,7 +1170,7 @@ public struct HistoryExperience: Sendable {
 
         public init(eyebrow: String = "", conclusion: String, consequence: Stat? = nil,
                     rows: [HistoryScreen.RankedRow] = [],
-                    chart: HistoryScreen.HourChart? = nil, patternNote: String? = nil,
+                    chart: HistoryScreen.HourChart? = nil, patternNote: PatternNote? = nil,
                     coverageNote: String, allowance: AllowancePanel? = nil,
                     emptyMessage: String? = nil) {
             self.eyebrow = eyebrow
