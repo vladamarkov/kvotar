@@ -34,9 +34,9 @@ to make a run pass.
 
 ## The four safety rules
 
-These are copied word for word from the maintainer's own instructions. Private cross-references were
-replaced by links. Each rule has a decision record explaining why, and tests that enforce it, listed
-in [docs/safety-checks.md](docs/safety-checks.md).
+Rules 1–3 are copied word for word from the maintainer's instructions. Rule 4 includes the
+Claude app exception agreed in issue #26. Private cross-references were replaced by links. Each rule
+has a decision record explaining why, and tests that enforce it, listed in [docs/safety-checks.md](docs/safety-checks.md).
 
 1. **Never store** prompts, code, transcripts, tool outputs, or refresh tokens.
    Why: [credentials and privacy](docs/credentials-and-privacy.md),
@@ -48,8 +48,10 @@ in [docs/safety-checks.md](docs/safety-checks.md).
    Why: [never refresh a token](docs/decisions/0001-never-refresh-a-token.md).
 4. **Read-only credential posture** — read the Claude token silently by delegating to
    `/usr/bin/security` (the trusted app on the `Claude Code-credentials` ACL, so no dialog appears);
-   passive read of `~/.codex/auth.json`. Never present an auth dialog.
-   Why: [read the Claude credential through `security`](docs/decisions/0002-read-claude-credential-through-security.md).
+   passive read of `~/.codex/auth.json`. Never present an unexpected auth dialog. The one exception
+   is the user's explicit Connect/Retry action for the Claude app: that click may ask macOS for
+   access to `Claude Safe Storage`. Background reads always disable interaction in the read itself.
+   Why: [Claude app consent](docs/decisions/0005-claude-app-consent.md), [read the Claude credential through `security`](docs/decisions/0002-read-claude-credential-through-security.md).
 The four rules say what the code may do; they do not fence off files. A fix that makes the code obey
 a rule it already states goes straight to a pull request with a test. Only a change that would make a
 rule say something different needs the maintainer's agreement first (see [VISION.md](VISION.md)).

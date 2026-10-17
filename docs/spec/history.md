@@ -928,3 +928,12 @@ one, and only when the person you work for asks ([AGENTS.md](../../AGENTS.md)). 
 (`SQLiteStore.defaultPath()`), and both harnesses open the database writable with migrations on
 (`SQLiteStore(path:)` defaults), despite the diagnostics' "read-only" comment. Other live
 tests share the fallback (see Known gaps).
+
+## Claude app account reconnection
+
+An explicit reconnection to a different verified Claude app account/organization adds an
+`account_rebound` fact to the existing account-change markers and recap: “Claude account changed”.
+Its detail is “Connected again to the Claude app”. No identity is printed or stored in that event.
+Old quota history remains stored, with the change marked; the series are not partitioned by
+account. A stopped source produces no new quota readings before reconnection. Tests:
+`ClaudeAppDisplayTests.testHistoricalSourceAndChangedAccountFact` and `ClaudeAppSourceTests`.

@@ -200,6 +200,14 @@ Finder. The app never sends it anywhere; a failure shows an alert naming what we
   permission and style, Open at Login, whether (never what) `~/.codex/auth.json`, `~/.claude.json`
   and `~/.claude/projects` exist, the logs collected, and the `claude` and `codex` version lines.
   Only an output line that looks like a version is kept. (`environmentReport`, `versionLine`)
+- A second `environment.txt` block is headed exactly
+  “Claude app metadata and cache-marker presence (no value is decoded, kept or printed)”. Its five
+  lines report app presence/version, config presence, cache marker presence, and the presence and
+  capped file counts of `claude-code-sessions` and `local-agent-mode-sessions`. The shared detector
+  caps config reads at 8 MB and folder traversal at 1,000 entries, never follows session-folder
+  symlinks, and reports unknown on errors. It never accesses the Keychain or decrypts a value.
+  The existing credential “existence only” heading and block are unchanged. The privacy fixture
+  contains a fake token, email and UUID and asserts none reaches the report.
 - `manifest.json`: contents, channel, whether capture was on, time zone, the database summary, and
   notes naming every absence, so an empty bundle never reads as "nothing happened". (`notes`)
 - `diagnostics-summary.json`: row counts per table, the capture on/off history, and the model names

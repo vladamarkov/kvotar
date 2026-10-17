@@ -30,7 +30,7 @@ parts of §4 (terminology) that quota-readings does not already own. Which docum
 
 ## What Kvotar is
 
-A native macOS menu-bar app that shows how much of your Claude Code and Codex quota is left, how
+A native macOS menu-bar app that shows how much of your Claude and Codex quota is left, how
 fast it is going, and whether it lasts until the reset. It calls itself *Claude Code and Codex
 capacity intelligence* (`ProductIdentity.tagline`, shown in the right-click menu and the About
 panel).
@@ -41,6 +41,10 @@ What it does and what "local" means: [README.md](../../README.md). Scope going f
 It ships the menu bar and popover, notifications, the History window, the
 [first-run window](first-run-window.md), the right-click menu (which holds the settings available today; a separate Settings window is planned future work, Decided 1), the
 `kvotar` command-line tool and one local database ([storage](storage.md)).
+
+The Claude app can supply account quota after an explicit connection when no Claude Code credential
+exists ([credentials](credentials.md#the-claude-app-connection), issue #26). Its chat usage has no
+local session-log attribution and remains Elsewhere.
 
 ## What Kvotar is not
 

@@ -1,5 +1,5 @@
 ---
-summary: The current rules for finding and reading the Claude and Codex credentials — where each token lives, how it is read without a dialog, the outcomes of a read, the Claude expiry gate, a rejected token, and what Kvotar never does with a credential.
+summary: The current rules for finding and reading the Claude and Codex credentials — where each token lives, how background reads stay silent and explicit Claude app consent works, the outcomes of a read, the Claude expiry gate, a rejected token, and what Kvotar never does with a credential.
 read_when: Changing KeychainTokenProvider, CodexTokenProvider or CodexAuthFileReader, ClaudeTokenProvider or ClaudeCredential, the credential read or the expiry gate in ClaudeAccountAdapter, the 401/403 re-read, credentialChanged, the setupRequired / credentialUnreadable / reauthRequired / credentialExpired errors, DetectionStatus.classify, or anything that could read, write or prompt for a credential.
 ---
 
@@ -59,7 +59,7 @@ what the user sees is [display semantics](display-semantics.md).
 | Term | Meaning on this page |
 |---|---|
 | Credential | What Kvotar takes from a tool's sign-in: the access token and a few fields beside it. Never the refresh token |
-| Credential read | One call to a token provider (`ClaudeTokenProvider` or `CodexTokenProvider`). It reads, never writes, and never shows a dialog |
+| Credential read | One call to a token provider (`ClaudeTokenProvider` or `CodexTokenProvider`). It reads and never writes; only an explicit Claude app connection action may ask macOS for access |
 | Absent | The read worked and the credential is not there. The only outcome that may mean "not set up" |
 | Could not look | The read itself failed (the tool would not start, the file would not open). Says nothing about whether the user is signed in |
 | Re-auth required | The provider rejected the token with 401 or 403 |
@@ -67,7 +67,7 @@ what the user sees is [display semantics](display-semantics.md).
 
 ## Where each credential lives
 
-### Claude
+### Claude Code
 
 - **Where:** the macOS Keychain item `Claude Code-credentials`, written by Claude Code. Kvotar
   looks for no credentials file.
@@ -94,6 +94,52 @@ what the user sees is [display semantics](display-semantics.md).
   (`CodexWhamHTTPClient.fetchUsage`; `CodexAccountAdapter.fetchViaWham`,
   `supplementMonthlyLimitIfNeeded`) When each leg runs is for the codex-account page.
 
+## The Claude app connection
+
+`ClaudeSourceResolver` sits before the existing account adapter. `ClaudeAppDetector` is shared by
+its gate and diagnostics. It reads only app metadata, a bounded (8 MB) byte search for cache key
+names, and capped (1,000 visited entries) session-folder counts without following symlinks. An
+error is unknown, never zero. No value is decoded by the detector.
+
+Connect requires exit 44, `/Applications/Claude.app`, and a config cache marker. Present but
+undecodable CLI output still follows its existing behavior, but never enables this gate. The click
+checks it again before access. Expired, denied and unreadable CLI items do not enable connection.
+
+`ClaudeAppSafeStorage` reads service `Claude Safe Storage`, account `Claude Key`. Only Connect/Retry
+allows interaction. A shared lock protects the interactive read and background get-flag / disable /
+read / restore sequence. A get/disable failure prevents the read; failed restoration discards the
+result. LAContext/UIFail supplement the process switch. Permission denial, authentication failure
+and cancellation latch until a deliberate click, including across relaunches.
+
+The PBKDF2-HMAC-SHA1 key (salt `saltysalt`, 1,003 iterations, 16 bytes) decrypts Electron `v10`
+AES-128-CBC with a sixteen-space IV. The key lives only in process memory; it is reread silently
+at relaunch or after failed decryption. Revocation is detected at that next key read. Plain Allow
+therefore remains useful for the current process. Always Allow is macOS's grant, conditional on
+the grant, item and Kvotar signing identity staying unchanged.
+
+`ClaudeAppCache` decodes only access token, expiry and subscription type. Wrong-typed unknown
+fields are ignored; missing access/expiry is not eligible. Account-tagged entries must match
+`lastKnownAccountUuid`, supported client `9d1c250a-e61b-44d9-88ed-5944d1962f5e`, exact production
+host and `user:profile`. Expiry is strict, with no margin. Normalized V2 entries overwrite V1,
+including tombstones, expired and empty entries. Duplicate logical keys fail closed. More than
+one eligible organization stops selection. Production full-scope suitability, full scope, scope
+count, then expiry determine preference; an unresolved tie stops selection. File identity,
+modification metadata and content are checked again after selection and awaited profile proof.
+
+The profile must confirm both selected IDs before first usage. Its verified identity digest is
+saved before use, with connection intent, permission denial and reconnect-required flags in
+`claude_app_connection`. Nothing rebinds silently. A selected identity change stops the source,
+leaves historical readings labelled, and requires Connect again. That action still requires the
+original gate and records one `account_rebound` event for a different verified binding.
+
+A valid CLI credential beside an existing connection wins only after its profile verifies the
+same account and organization. A mismatch or unverifiable identity leaves the app source in use
+with an explanation. An expired CLI token is not profile-checked and changes nothing. Quitting
+Claude.app does not disconnect; presence checks inspect files, not its running process.
+
+The ordered states and actions are on [popover](popover.md#claude-app-connection).
+Tests: `ClaudeAppSourceTests`, `ClaudeAppSuppressionTests`, `ClaudeAppPresenceTests`.
+
 ## The outcomes of a read
 
 Every read ends in one of three outcomes, kept apart on purpose:
@@ -119,8 +165,8 @@ A fourth case, **present but undecodable** (either tool), is filed as absent tod
   both reads failed and the session-log watchers stopped too, and the user saw a first-run welcome
   on a Mac where both tools were signed in.
   (`DetectionStatusTests.testCredentialUnreadableIsNeverFirstRunEvenWithNoLocalActivity`)
-- **A failed read is never retried another way.** No fallback reader, no direct Keychain call, no
-  dialog. The next poll reads again.
+- **A failed Claude Code read is never retried another way.** Only positive exit 44 enables the
+  separate, explicit Claude app connection below. The next poll reads the CLI again.
 
 ## Read fresh, kept in memory only
 
@@ -187,10 +233,10 @@ The rules are in [AGENTS.md](../../AGENTS.md#the-four-safety-rules). In this cod
 - **No write.** No Keychain write API, no `security` subcommand but `find-generic-password`, no
   write under `~/.claude/`, `~/.codex/` or to `~/.claude.json`.
   (`CredentialTreesUntouchedTests` in KvotarCore and KvotarCLI; `make check`)
-- **No dialog.** The code makes no direct Keychain call and asks for no authorization. A read that
-  fails is "could not look", never a prompt. (A locked login keychain is not yet checked; see
-  *Known gaps*.)
-- **No other source.** No browser cookies and no claude.ai session keys (decision 0002), and no
+- **No unexpected dialog.** Claude Code still uses the delegated reader. Only the explicit Claude
+  app Connect/Retry click allows interaction; every background Safe Storage read suppresses it.
+  A failed background read never asks for authorization.
+- **No cookies or session keys.** No browser cookies and no claude.ai session keys (decision 0002), and no
   API keys (see *Rejected alternatives*).
 - **The CLI reads no credential.** `kvotar` never calls a provider ([ARCHITECTURE.md](../../ARCHITECTURE.md#the-cli)).
 
@@ -203,7 +249,7 @@ The rules are in [AGENTS.md](../../AGENTS.md#the-four-safety-rules). In this cod
 
 ## Rejected alternatives
 
-- **Reading the Keychain item directly, refreshing a token, or asking another program to refresh
+- **Reading the Claude Code Keychain item directly, refreshing a token, or asking another program to refresh
   one:** see decisions [0002](../decisions/0002-read-claude-credential-through-security.md) and
   [0001](../decisions/0001-never-refresh-a-token.md).
 - **Kvotar's own sign-in** (its own login flow and Keychain item). A large change; it would break
@@ -223,7 +269,7 @@ The rules are in [AGENTS.md](../../AGENTS.md#the-four-safety-rules). In this cod
 | Codex's own sign-in inside the child is unobserved | Kvotar never asks the `codex app-server` child to refresh, but whether Codex renews its token inside the long-running child is not known | The observe-only spike (Decided 1): record only whether `auth.json` changed, never its contents or a token, and never provoke a refresh |
 | The rotated token after a 401/403 is not expiry-checked | The one retry sends the re-read token without the gate. It sends a request; it never refreshes. Already stated in decision 0001 and the privacy doc | Run the gate on the re-read credential before the retry, with a test |
 | The `security` call has no time limit | `waitUntilExit` blocks the Claude adapter until the tool exits; behaviour on a locked login keychain is not recorded | Treat a timeout as "could not look", with a test; check the locked case on a test account. Never add a path that can show a dialog |
-| No static check for a direct Keychain read | `make check` bans `SecItemAdd`, `SecItemUpdate` and `SecItemDelete`, not `SecItemCopyMatching`, which decision 0002 forbids | Add it to `scripts/check_rules.sh`, skipping comments or with an exception for the `KeychainTokenProvider` doc comment |
+| Direct Keychain reads now checked | `make check` restricts `SecItemCopyMatching` and interaction-control calls to `ClaudeAppSafeStorage`; writes remain banned | Covered by issue #26 |
 | Expired at launch with nothing restored shows the idle card | Before the first success, with no restored reading, `PollCoordinator` calls `applyUnavailable`, which carries no reason, so the sign-in-expired line does not appear, although decision 0001 says the app shows that the sign-in expired. Read in the code, not checked in the running app | The display-semantics owner decides; likely pass the reason to the idle card, with a test |
 | Provider tests miss two paths | No decode-failure test in either provider; the Claude provider test does not assert `expiresAt` | Add with the decode fix above |
 | Fixed Codex path | `auth.json` is always read from `~/.codex/`. Codex lets a user move its home folder (`CODEX_HOME`); Kvotar does not follow it. Not checked against a real install | Decide whether to support it; if so, read the variable the way Codex does, with a test |

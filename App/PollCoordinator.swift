@@ -28,6 +28,8 @@ final class PollCoordinator {
     private let monthlyAttribution: MonthlyAttributionEstimator
     private let stateEngine: StateEngine
     private let notificationEngine: NotificationEngine
+    private var claudeOperationBusy = false
+    private var claudeOperationWaiters: [CheckedContinuation<Void, Never>] = []
     private let claude: any AccountAdapter
     private let codex: any AccountAdapter
     /// Held concretely (not just inside `codex`) so its `app-server` subprocess can be reaped on
@@ -712,6 +714,38 @@ final class PollCoordinator {
         await attribution?.historyReport()
     }
 
+    // Serialize the whole poll transaction with reconnection, not only credential resolution:
+    // an old poll must finish writing before the new identity's history marker is committed.
+    private func enterClaudeOperation() async {
+        if claudeOperationBusy { await withCheckedContinuation { claudeOperationWaiters.append($0) } }
+        else { claudeOperationBusy = true }
+    }
+    private func leaveClaudeOperation() {
+        if claudeOperationWaiters.isEmpty { claudeOperationBusy = false }
+        else { claudeOperationWaiters.removeFirst().resume() }
+    }
+
+    func connectClaudeApp() async {
+        guard !viewModel.connectingClaudeApp else { return }
+        viewModel.connectingClaudeApp = true
+        defer { viewModel.connectingClaudeApp = false }
+        await enterClaudeOperation()
+        defer { leaveClaudeOperation() }
+        await claude.connectClaudeApp()
+        let current = await claude.claudeAppConnection
+        viewModel.applyClaudeAppConnection(current)
+        if current?.state == .connected {
+            await forecast.reset(tool: .claude)
+            await stateEngine.resetAccount(tool: .claude)
+            lastSnapshot[.claude] = nil
+            restoredSnapshot[.claude] = nil
+            lastSuccessAt[.claude] = nil
+            staleShown[.claude] = nil
+            viewModel.resetClaudeAccountDisplay()
+        }
+        recheck(tool: .claude)
+    }
+
     func recheck(tool: Tool) {
         sleepers[tool]?.cancel()
         Logger.info("Manual re-check", component: .pollEngine, metadata: ["tool": tool.rawValue])
@@ -719,7 +753,10 @@ final class PollCoordinator {
 
     @discardableResult
     private func pollOnce(tool: Tool, adapter: any AccountAdapter) async -> PollOutcome {
+        if tool == .claude { await enterClaudeOperation() }
+        defer { if tool == .claude { leaveClaudeOperation() } }
         let outcome = await pollOnceInner(tool: tool, adapter: adapter)
+        if tool == .claude { viewModel.applyClaudeAppConnection(await adapter.claudeAppConnection) }
         // STEP_177: today's local report is refreshed on every poll cycle **regardless of
         // outcome** — the section must never depend on the account endpoint answering.
         refreshDailyReport(tool, reason: "poll")

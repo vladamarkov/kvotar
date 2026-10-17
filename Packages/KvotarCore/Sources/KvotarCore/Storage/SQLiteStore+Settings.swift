@@ -28,7 +28,7 @@ extension SQLiteStore {
     /// transaction — the REPLACE no longer erases the trail (§17.1, v5.18/REV-43). A no-op write
     /// (key exists, stored value equals the new one) is skipped entirely: no settings write, no
     /// audit row.
-    public func writeSetting(key: String, value: String?) throws {
+    public func writeSetting(key: String, value: String?, claudeAccountRebound: Bool = false) throws {
         let now = Int(Date().timeIntervalSince1970)
         do {
             try withPool { pool in
@@ -47,6 +47,23 @@ extension SQLiteStore {
                         INSERT INTO settings_changes (changed_at, key, old_value, new_value)
                         VALUES (?, ?, ?, ?)
                         """, arguments: [now, key, oldValue, value])
+                    if claudeAccountRebound, key == "claude_app_connection" {
+                        try db.execute(sql: """
+                            INSERT INTO discontinuity_events (tool, event_type, observed_at)
+                            VALUES ('claude', 'account_rebound', ?)
+                            """, arguments: [now])
+                        let snapshotKey = "last_open_snapshot_claude"
+                        let prior = try String.fetchOne(db, sql: "SELECT value FROM settings WHERE key = ?",
+                                                        arguments: [snapshotKey])
+                        if let prior {
+                            try db.execute(sql: "UPDATE settings SET value = NULL, updated_at = ? WHERE key = ?",
+                                           arguments: [now, snapshotKey])
+                            try db.execute(sql: """
+                                INSERT INTO settings_changes (changed_at, key, old_value, new_value)
+                                VALUES (?, ?, ?, NULL)
+                                """, arguments: [now, snapshotKey, prior])
+                        }
+                    }
                 }
             }
         } catch {
@@ -54,5 +71,17 @@ extension SQLiteStore {
                          metadata: ["key": key, "error": "\(error)"])
             throw error
         }
+    }
+}
+
+extension SQLiteStore {
+    public func readClaudeAppBinding() throws -> ClaudeAppBinding {
+        guard let value = try readSetting(key: "claude_app_connection") else { return .init() }
+        return try JSONDecoder().decode(ClaudeAppBinding.self, from: Data(value.utf8))
+    }
+    public func writeClaudeAppBinding(_ binding: ClaudeAppBinding, rebound: Bool) throws {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        let value = String(decoding: try encoder.encode(binding), as: UTF8.self)
+        try writeSetting(key: "claude_app_connection", value: value, claudeAccountRebound: rebound)
     }
 }

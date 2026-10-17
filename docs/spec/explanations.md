@@ -282,7 +282,7 @@ that tool. `[name]` is a placeholder the formatter fills.
 | **E-08·onCredits** | Verdict line 2 — Running on credits | **On credits.** You're past 100%, so every token is now paid from your prepaid balance at API prices, until the reset at [reset]. | — |
 | **E-08·monthlyOnPace** | Verdict line 2 — monthly, on pace | **Pace.** Your spend per day so far this month, against the limit. *~[pace] a day — at that rate the month ends before you reach [limit].* | **Pace.** Your credits per day so far this month, against the limit. *~[pace] a day — at that rate the month ends before you reach [limit].* |
 | **E-08·monthlyRunsOut** | Verdict line 2 — monthly, runs out | **Pace.** Your spend per day so far this month, against the limit. *~[pace] a day — at that rate you'd reach [limit] about [days] before the reset.* | **Pace.** Your credits per day so far this month, against the limit. *~[pace] a day — at that rate you'd reach [limit] about [days] before the reset.* |
-| **E-09** | Source tags (segments; only the shown terms render) | **exact:** straight from your account. **est.:** estimated from Claude Code's session logs on this Mac. **as of [t]:** the last good reading — nothing fresher was available. *Reconnecting…* — the account isn't answering right now. *sign-in expired* — open Claude Code to sign in again. | **exact:** straight from your account. **est.:** estimated from Codex's session logs on this Mac. **as of [t]:** the last good reading — nothing fresher was available. *Reconnecting…* — the account isn't answering right now. |
+| **E-09** | Source tags (segments; only the shown terms render) | **exact:** straight from your account. **est.:** estimated from Claude Code's session logs on this Mac. **as of [t]:** the last good reading — nothing fresher was available. *Reconnecting…* — the account isn't answering right now. *sign-in expired* — Claude Code: sign in; Claude app: wait. | **exact:** straight from your account. **est.:** estimated from Codex's session logs on this Mac. **as of [t]:** the last good reading — nothing fresher was available. *Reconnecting…* — the account isn't answering right now. |
 | **E-10** | `This window` / `Last window` / `Today` value row | **Est. token value.** What this work would have cost if you paid per token at the public API prices. Not a bill — it shows how much work you're getting for what you pay. | **Est. token value.** What this work would have cost if you paid per token at the public API prices. Not a bill — it shows how much work you're getting for what you pay. |
 | **E-11** | `Cache hit` row | **Cache hit.** How much of the model's input today was reused from a cache instead of read fresh. Cached input is much cheaper at API prices. High is normal in long sessions. | **Cache hit.** How much of the model's input today was reused from a cache instead of read fresh. Cached input is much cheaper at API prices. High is normal in long sessions. |
 | **E-12** | `Usage credits` row | **Usage credits.** Optional prepaid money that lets you keep working after you hit 100%, paying API prices until the reset. | — |
@@ -359,6 +359,20 @@ case (`5-hour`), or `quota period` when its width is unknown. (`ExplanationRegis
 
 A fact that cannot apply on this shape (the low-allowance shape, the retrospective grain) is hidden,
 not dashed, so its element never opens the table's text.
+
+### Claude app source and connection
+
+The account source tag names `Claude app` or `Claude Code`. An expired app credential's freeze
+sentence is “*sign-in expired* — waiting for the Claude app to renew it.” The existing Code
+sentence remains Code-specific. `ExplanationRegistry` also owns these connection explanations:
+
+- “The Claude app is signed in to a different account than the one Kvotar connected. Connect again
+  to follow it.”
+- “Claude Code uses a different account or organization, or its identity could not be confirmed.
+  Kvotar is keeping the connected Claude app source.”
+
+They are credential explanations, never polling mechanics. Tests: `ClaudeAppDisplayTests` and
+`ClaudeAppSourceTests`; source-tag assembly stays in `sourceTagCard`.
 
 ### The bridge line
 

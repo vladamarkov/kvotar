@@ -1,13 +1,14 @@
 # VISION.md
 
-Kvotar helps people who use Claude Code and Codex get the most from the plans they pay for. It shows
+Kvotar helps people who use Claude, Claude Code and Codex get the most from the plans they pay for. It shows
 how much is left and whether it will last, and it turns your own usage into insight: where the work
 went, what it would cost at published API prices, and when to push or pace yourself. All of it runs
 on your Mac, with the credentials your tools already have, and without asking you to trust a server.
 
 ## In scope
 
-- Claude Code and Codex, for the limits each provider reports, where available.
+- Claude Code and Codex, and account quota from an explicitly connected Claude app, for the limits
+  each provider reports, where available. Claude app chat has no local attribution.
 - macOS 14 and newer.
 - Quota, pace and reset; local attribution by project and model; notifications; History.
 - Honest display: say what is known, say when something is unknown, never guess a number.

@@ -376,6 +376,7 @@ public enum DisplayFormatter {
                               monthlyRatePerHour: Double? = nil,
                               localDay: LocalDayGrain? = nil,
                               dailyReport: DailyLocalReportState? = nil,
+                              connection: ClaudeAppConnection? = nil,
                               now: Date = Date()) -> ClaudeDisplayState {
         // Stale render (STEP_32, §9.3): cached/restored data keeps showing with a grey dot and an
         // "as of h:mm" source tag instead of wiping to the idle card; windows whose reset has
@@ -457,7 +458,9 @@ public enum DisplayFormatter {
                                 monthlyRatePerHour: monthlyRatePerHour,
                                 monthlyAttribution: monthlyAttribution, staleAsOf: staleAsOf,
                                 retrospective: idleLastWindow != nil, now: now)
-        let quotaTag = sourceTag(base: "Source: Claude account", asOf: pollAsOf,
+        let sourceName = snapshot?.source == .claudeApp ? "Source: Claude app"
+            : (snapshot?.source == .oauth ? "Source: Claude Code" : "Source: Claude account")
+        let quotaTag = sourceTag(base: sourceName + (connection?.isHistorical == true ? " · historical reading" : ""), asOf: pollAsOf,
                                  staleAsOf: staleAsOf, now: now)
         return ClaudeDisplayState(
             dot: dot, phase: .content,
@@ -471,7 +474,8 @@ public enum DisplayFormatter {
             recommendation: rec?.text,
             recommendationSeverity: rec?.severity ?? .warning,
             recommendationURL: monthlyNearCap(rendered) != nil ? manageCreditsURL : nil,
-            sourceFreeze: sourceFreeze(freezeReason, tool: .claude),
+            sourceFreeze: freezeReason == .credentialExpired && snapshot?.source == .claudeApp
+                ? .claudeAppExpired : sourceFreeze(freezeReason, tool: .claude),
             otherLimits: otherLimitsSection(selection, tool: .claude, state: state,
                                             snapshot: rendered, sourceTag: quotaTag,
                                             staleAsOf: staleAsOf, now: now),
@@ -1018,7 +1022,7 @@ public enum DisplayFormatter {
             // the setup prompt / re-auth ask — not polling mechanics (§1.4 / §10 ban untouched).
             // Wins over both the rate-limited and generic-unknown forms (more specific).
             if case .credentialExpired = freezeReason {
-                return HeaderVerdict(line1: "Claude sign-in expired — open Claude Code to reconnect.",
+                return HeaderVerdict(line1: claudeExpiredLine(snapshot),
                                      colour: .grey, line2: "—", family: .signInExpired)
             }
             // REV-37 / D-33 (STEP_41): a rate-limited freeze is *reconnecting*, not idle — it wins
@@ -1573,7 +1577,7 @@ public enum DisplayFormatter {
             // than "stale". line2 (lower-bound stamp) is identical across all three.
             let line1: String
             if case .credentialExpired = freezeReason {
-                line1 = "Claude sign-in expired — open Claude Code to reconnect."
+                line1 = claudeExpiredLine(snapshot)
             } else if case .rateLimited = freezeReason {
                 line1 = "Reconnecting…"
             } else {

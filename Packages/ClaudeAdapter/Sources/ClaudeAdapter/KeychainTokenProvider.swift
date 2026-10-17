@@ -54,6 +54,11 @@ public struct KeychainTokenProvider: ClaudeTokenProvider {
     }
 
     public func credential() throws -> ClaudeCredential? {
+        if case .available(let credential) = try readOutcome() { return credential }
+        return nil
+    }
+
+    public func readOutcome() throws -> ClaudeCodeCredentialRead {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: securityToolPath)
         process.arguments = ["find-generic-password", "-s", service, "-w"]
@@ -90,7 +95,7 @@ public struct KeychainTokenProvider: ClaudeTokenProvider {
             Logger.info("Claude Keychain credential unavailable",
                         component: .claudeAccountAdapter,
                         metadata: ["exit": "\(process.terminationStatus)"])
-            return nil
+            return .absent
         }
 
         struct Credentials: Decodable {
@@ -106,15 +111,15 @@ public struct KeychainTokenProvider: ClaudeTokenProvider {
 
         do {
             let oauth = try JSONDecoder().decode(Credentials.self, from: data).claudeAiOauth
-            return ClaudeCredential(
+            return .available(ClaudeCredential(
                 accessToken: oauth.accessToken,
                 subscriptionType: oauth.subscriptionType,
                 expiresAt: oauth.expiresAt
-            )
+            ))
         } catch {
             Logger.warning("Claude Keychain credential decode failed",
                            component: .claudeAccountAdapter, metadata: ["error": "\(error)"])
-            return nil
+            return .undecodable
         }
     }
 }

@@ -135,6 +135,36 @@ counts as detected, so a two-tool Mac keeps two tabs through startup
 [polling](polling.md#extra-polls). (`Packages/KvotarUI/Sources/KvotarUI/Views/StatusCards.swift`;
 test `testApplyUndetectedRendersFirstRunPerTool`)
 
+### Claude app connection
+
+Issue #26 adds a formatter-owned connection card to the Claude setup card (including welcome),
+the per-tool popover, and a matching right-click action. All actions recheck exit 44 plus app/config
+marker presence. Re-check remains a background read and cannot authorize a dialog.
+
+| State, in priority order | Action |
+|---|---|
+| App or config missing/unknown | None |
+| Permission denied/revoked on an actual key read | Retry, if the gate holds |
+| Token expired | None; wait for the Claude app to renew it |
+| Ambiguous eligible cache | None; not connected, with the reason |
+| Changed verified identity | Connect again, if the gate holds; explicitly binds to the new account |
+| No eligible entry / ready | Connect Claude app, if the gate holds |
+| Read failure | Re-check only |
+| Connected | No connection card |
+| Valid CLI identity differs or cannot be verified | Keep the app source and explain why |
+
+`Retry` is the issue's approved **permission action**, not polling copy; the polling-word list is
+unchanged. Connect/Retry carry: “Always Allow avoids repeat prompts while the grant, item and
+Kvotar’s signing identity stay unchanged; macOS keeps the grant.” Connect again instead explains
+the changed account and offers no permission remedy. Buttons are disabled while connecting.
+
+The source line names Claude app or Claude Code. After the app source stops, its last reading has
+an explicit historical-source line. A chat-only user without a cache sees that Kvotar cannot see
+the Claude app's chat sign-in; no Code-tab advice. Local attribution is unchanged.
+
+Copy: `DisplayFormatter+ClaudeApp.swift`, `ExplanationRegistry.swift`. Tests:
+`ClaudeAppDisplayTests`, `ClaudeAppSourceTests`.
+
 ### Phases of a tool's content
 
 Inside the tool view, each tab renders by its `PopoverPhase`:

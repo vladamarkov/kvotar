@@ -294,6 +294,8 @@ public enum DeltaLine {
                 switch change.kind {
                 case .planChanged:
                     return nil
+                case .accountRebound:
+                    return "Claude account changed"
                 case .windowWidthChanged:
                     let old = noun(HistoryDisplay.widthName(change.oldValue) ?? grain)
                     let new = HistoryDisplay.widthName(change.newValue) ?? "a new length"

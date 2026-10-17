@@ -29,6 +29,19 @@ public protocol ClaudeTokenProvider: Sendable {
     /// Returns the current credential, or `nil` when it is inaccessible (e.g. Keychain locked).
     /// Must fail silently — never present an auth dialog.
     func credential() throws -> ClaudeCredential?
+    func readOutcome() throws -> ClaudeCodeCredentialRead
+}
+
+public enum ClaudeCodeCredentialRead: Sendable, Equatable {
+    case available(ClaudeCredential)
+    case absent
+    case undecodable
+}
+
+public extension ClaudeTokenProvider {
+    func readOutcome() throws -> ClaudeCodeCredentialRead {
+        try credential().map(ClaudeCodeCredentialRead.available) ?? .absent
+    }
 }
 
 /// Minimal HTTP GET seam over the two Claude OAuth endpoints. Injected so tests can return

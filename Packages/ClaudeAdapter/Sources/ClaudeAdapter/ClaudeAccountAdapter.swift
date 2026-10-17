@@ -47,6 +47,8 @@ public actor ClaudeAccountAdapter: AccountAdapter {
     /// the wobble and far below a genuine 5-hour (18000 s) reset jump.
     static let resetJitterTolerance: TimeInterval = 60
 
+    private var sourceGeneration = 0
+    private let sourceResolver: ClaudeSourceResolver?
     private let tokenProvider: ClaudeTokenProvider
     private let fetcher: HTTPFetcher
     /// Local email fallback file (`~/.claude.json`). Overridable for tests.
@@ -117,9 +119,11 @@ public actor ClaudeAccountAdapter: AccountAdapter {
     public init(
         tokenProvider: ClaudeTokenProvider,
         fetcher: HTTPFetcher,
+        sourceResolver: ClaudeSourceResolver? = nil,
         localConfigURL: URL? = nil,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
+        self.sourceResolver = sourceResolver
         self.tokenProvider = tokenProvider
         self.fetcher = fetcher
         self.localConfigURL = localConfigURL
@@ -129,20 +133,43 @@ public actor ClaudeAccountAdapter: AccountAdapter {
     }
 
     public var health: AdapterHealth { currentHealth }
+    public var claudeAppConnection: ClaudeAppConnection? {
+        get async { await sourceResolver?.connection }
+    }
+    public func connectClaudeApp() async {
+        sourceGeneration += 1
+        await sourceResolver?.connect()
+        if await sourceResolver?.connection.state == .connected {
+            profileFetchedForToken = nil; lastPrimaryReset = nil; lastSecondaryReset = nil
+            cachedEmail = nil; cachedPlanType = nil; cachedOrgId = nil
+            cachedPrepaid = nil; prepaidFetchedAt = nil; cachedPrepaidEligible = nil
+            prepaidForbiddenForToken = false; prepaidSkipLogged = false; cachedIsEnterprise = false
+            creditsCache = nil; lastFetchAt = nil
+        }
+    }
+
+    private func resolveCredential() async throws -> ClaudeSourceResolver.Resolved? {
+        if let sourceResolver { return try await sourceResolver.resolve() }
+        return try tokenProvider.credential().map { .init(credential: $0, source: .oauth, profile: nil) }
+    }
 
     // MARK: - AccountAdapter
 
     public func fetchQuotaSnapshot() async throws -> QuotaSnapshot {
+        let generation = sourceGeneration
         // Three outcomes, deliberately kept apart (STEP_117 / REV-71 §3.2): a credential, no
         // credential (the Keychain item is genuinely absent → setup required), or a read that
         // could not be attempted at all. The third must not enter setup-required mode — it is a
         // transient local failure, and reporting it as "never set up" is what sent the user
         // hunting a sign-in problem they did not have.
         let read: ClaudeCredential?
+        var resolved: ClaudeSourceResolver.Resolved?
         do {
-            read = try tokenProvider.credential()
+            resolved = try await resolveCredential()
+            read = resolved?.credential
         } catch {
-            currentHealth = .unknown
+            if case AccountAdapterError.credentialExpired = error { currentHealth = .credentialExpired }
+            else { currentHealth = .unknown }
             Logger.warning("Claude credential could not be read — not treating as setup required",
                            component: .claudeAccountAdapter, metadata: ["error": "\(error)"])
             throw error
@@ -172,7 +199,7 @@ public actor ClaudeAccountAdapter: AccountAdapter {
 
         var (data, response) = try await fetcher.get(
             Self.usageURL,
-            headers: ["Authorization": "Bearer \(token)"]
+            headers: usageHeaders(token: token, source: resolved?.source)
         )
 
         // Change C (REV-37, §8.0.1): a concurrent client (Claude Code / CodexBar, §20 P1-12) may
@@ -182,15 +209,16 @@ public actor ClaudeAccountAdapter: AccountAdapter {
         // re-auth (checkUsageStatus throws below, as today). One retry, not a loop. Read-only: we
         // never write, delete, or refresh the item.
         if (response.statusCode == 401 || response.statusCode == 403),
-           let fresh = try? tokenProvider.credential(),   // try? flattens throw/nil → no retry
-           fresh.accessToken != token {
-            credential = fresh
-            token = fresh.accessToken
+           let fresh = try? await resolveCredential(),
+           fresh.credential.accessToken != token {
+            resolved = fresh
+            credential = fresh.credential
+            token = fresh.credential.accessToken
             Logger.info("Claude usage 401/403 with a rotated token on disk — retrying once after re-read",
                         component: .claudeAccountAdapter)
             (data, response) = try await fetcher.get(
                 Self.usageURL,
-                headers: ["Authorization": "Bearer \(token)"]
+                headers: usageHeaders(token: token, source: resolved?.source)
             )
         }
 
@@ -236,6 +264,9 @@ public actor ClaudeAccountAdapter: AccountAdapter {
             prepaidForbiddenForToken = false
             prepaidSkipLogged = false
             cachedIsEnterprise = false
+        }
+        if let verified = resolved?.profile {
+            applyProfile(verified, token: token)
         }
         // Collapse the endpoint's sub-second `resets_at` wobble to one stable value per window so
         // every downstream consumer (state/notification engines, forecast, UI) sees a genuine reset
@@ -356,6 +387,9 @@ public actor ClaudeAccountAdapter: AccountAdapter {
                         metadata: ["count": "\(scoped.unnamed)"])
         }
 
+        guard generation == sourceGeneration else {
+            throw AccountAdapterError.credentialUnreadable("connection changed during poll")
+        }
         let snapshot = QuotaSnapshot(
             tool: .claude,
             primaryUsedPct: primaryUtil,
@@ -373,7 +407,7 @@ public actor ClaudeAccountAdapter: AccountAdapter {
             rateLimitReset: headers.reset,
             additionalRateLimits: scoped.limits,
             monthlyLimit: monthlyLimit,
-            source: .oauth,
+            source: resolved?.source ?? .oauth,
             // A null five_hour window on Claude is an *absent* `five_hour` object (Enterprise,
             // §8.0.2) — the endpoint itself reports no such window → provider-origin (§9.5). A
             // present object with `resets_at: null` is not-started, not null (REV-80 / D-101).
@@ -701,14 +735,7 @@ public actor ClaudeAccountAdapter: AccountAdapter {
         profileFetchedForToken = token
 
         if let profile = await fetchProfile(token: token) {
-            cachedEmail = profile.account.email
-            cachedPlanType = Self.planType(from: profile)
-            cachedOrgId = profile.organization?.uuid
-            cachedIsEnterprise = Self.isEnterprise(profile)
-            // Pro/Max-positive, never Enterprise-negative (§7.1 amendment, STEP_168): the two
-            // booleans are the server's own statement of who may call `/prepaid/credits`.
-            cachedPrepaidEligible =
-                profile.account.hasClaudePro == true || profile.account.hasClaudeMax == true
+            applyProfile(profile, token: token)
             if cachedEmail != nil { return }
         }
         if let email = readLocalConfigEmail() {
@@ -716,6 +743,21 @@ public actor ClaudeAccountAdapter: AccountAdapter {
             Logger.info("Claude email from local config fallback",
                         component: .claudeAccountAdapter, metadata: ["email": "<redacted>"])
         }
+    }
+
+    private func usageHeaders(token: String, source: QuotaSource?) -> [String: String] {
+        var headers = ["Authorization": "Bearer \(token)"]
+        if source == .claudeApp { headers["anthropic-beta"] = Self.profileBetaHeader }
+        return headers
+    }
+
+    private func applyProfile(_ profile: ClaudeProfileResponse, token: String) {
+        profileFetchedForToken = token
+        cachedEmail = profile.account.email
+        cachedPlanType = Self.planType(from: profile)
+        cachedOrgId = profile.organization?.uuid
+        cachedIsEnterprise = Self.isEnterprise(profile)
+        cachedPrepaidEligible = profile.account.hasClaudePro == true || profile.account.hasClaudeMax == true
     }
 
     private func fetchProfile(token: String) async -> ClaudeProfileResponse? {
@@ -752,6 +794,7 @@ public actor ClaudeAccountAdapter: AccountAdapter {
     /// a reason to probe — the request would only hit the pre-poll expiry gate and trade a long
     /// hold for the 60 s credential cadence. A read that throws or finds nothing is `false`.
     public func credentialChanged() async -> Bool {
+        if let sourceResolver { return await sourceResolver.credentialChanged(baseline: lastPolledToken) }
         guard let fresh = try? tokenProvider.credential() else { return false }
         guard let baseline = lastPolledToken else {
             lastPolledToken = fresh.accessToken

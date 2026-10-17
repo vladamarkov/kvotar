@@ -437,7 +437,7 @@ final class DisplayFormatterMonthlyTests: XCTestCase {
         XCTAssertEqual(cl.header?.limitCaption, "Monthly spend limit left")
         XCTAssertEqual(cl.header?.heroDetails.map(\.text),
                        ["Set by your organization · on pace"])
-        XCTAssertTrue(cl.header?.sourceTag?.base.hasPrefix("Source: Claude account") ?? false)
+        XCTAssertTrue(cl.header?.sourceTag?.base.hasPrefix("Source: Claude Code") ?? false)
         // No window reported — nothing else to list.
         XCTAssertNil(cl.otherLimits)
         // §2.4a credits card suppressed entirely (D-37 — extraUsage normalized away in STEP_46).
