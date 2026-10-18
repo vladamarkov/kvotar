@@ -3,7 +3,7 @@ import Foundation
 /// Credential-source state, independent of quota verdicts and polling health.
 public struct ClaudeAppConnection: Sendable, Equatable {
     public enum State: String, Sendable, Codable {
-        case unavailable, ready, permissionRequired, expired, ambiguous, accountChanged
+        case unavailable, signInRequired, ready, permissionRequired, expired, ambiguous, accountChanged
         case noEntry, unreadable, connected, codeIdentityDiffers
     }
     public var state: State

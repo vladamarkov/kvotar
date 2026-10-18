@@ -144,6 +144,7 @@ marker presence. Re-check remains a background read and cannot authorize a dialo
 | State, in priority order | Action |
 |---|---|
 | App or config missing/unknown | None |
+| Before connection: app and config present, cache marker absent | None; sign in to the Claude app, then re-check |
 | Permission denied/revoked on an actual key read | Retry, if the gate holds |
 | Token expired | None; wait for the Claude app to renew it |
 | Ambiguous eligible cache | None; not connected, with the reason |
@@ -159,8 +160,10 @@ Kvotar’s signing identity stay unchanged; macOS keeps the grant.” Connect ag
 the changed account and offers no permission remedy. Buttons are disabled while connecting.
 
 The source line names Claude app or Claude Code. After the app source stops, its last reading has
-an explicit historical-source line. A chat-only user without a cache sees that Kvotar cannot see
-the Claude app's chat sign-in; no Code-tab advice. Local attribution is unchanged.
+an explicit historical-source line. Before connection, a present app and config with an absent
+cache marker says: “Kvotar cannot find a saved sign-in in the Claude app. Sign in to the Claude app,
+then re-check.” Missing or unknown files keep the unavailable message without claiming the user
+is signed out. Neither message sends the user to Claude Code. Local attribution is unchanged.
 
 Copy: `DisplayFormatter+ClaudeApp.swift`, `ExplanationRegistry.swift`. Tests:
 `ClaudeAppDisplayTests`, `ClaudeAppSourceTests`.

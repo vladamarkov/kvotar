@@ -26,7 +26,9 @@ extension DisplayFormatter {
                          action: nil, permissionNote: nil)
         case .unavailable:
             detail = connection.usingApp ? "The Claude app or its sign-in file is unavailable. Earlier readings are historical."
-                : "Kvotar cannot see the Claude app’s chat sign-in. Sign in to Claude Code, then re-check."
+                : "Kvotar cannot see the Claude app’s chat sign-in."
+        case .signInRequired:
+            detail = "Kvotar cannot find a saved sign-in in the Claude app. Sign in to the Claude app, then re-check."
         case .ready: detail = "Connect the Claude app to read its account quota."
         case .permissionRequired: detail = "Access to the Claude app’s sign-in was not granted. Use the button to ask macOS again."
         case .expired: detail = "The Claude app’s sign-in expired. Wait for the Claude app to renew it."

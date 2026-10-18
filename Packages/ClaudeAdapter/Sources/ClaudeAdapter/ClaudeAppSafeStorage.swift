@@ -61,8 +61,8 @@ struct ClaudeAppSafeStorage: Sendable {
         let (status, prior) = operations.interaction()
         guard status == errSecSuccess else { return .unavailable }
         // File-based login Keychain ACLs can ignore LAContext/UIFail (FB16959400).
-        // Deliberately retain the deprecated process switch, as Chromium does:
-        // https://github.com/chromium/chromium/blob/main/crypto/apple/scoped_keychain_user_interaction_allowed.cc
+        // Deliberately retain the deprecated process switch to suppress their dialog.
+        // See docs/decisions/0005-claude-app-consent.md.
         guard operations.setInteraction(false) == errSecSuccess else { return .unavailable }
         var restored: OSStatus = errSecSuccess
         func perform() -> ClaudeAppKeyRead {

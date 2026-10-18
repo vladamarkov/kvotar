@@ -138,8 +138,14 @@ public actor ClaudeSourceResolver {
                 status.state = .unavailable
                 return .init(credential: credential, source: .oauth, profile: nil)
             }
-            status.state = !presence.canConnect ? .unavailable
-                : (binding.permissionDenied ? .permissionRequired : .ready)
+            if presence.canConnect {
+                status.state = binding.permissionDenied ? .permissionRequired : .ready
+            } else if presence.app == .present, presence.config == .present,
+                      presence.cacheMarker == .absent {
+                status.state = .signInRequired
+            } else {
+                status.state = .unavailable
+            }
             if presence.canConnect, binding.connectionRequested, !binding.permissionDenied {
                 if try await candidate(allowInteraction: false) != nil { status.state = .ready }
             }

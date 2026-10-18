@@ -489,16 +489,16 @@ public enum ExplanationRegistry {
     }
     private static let asOfSegment = "**as of [t]:** the last good reading — nothing fresher was available."
     private static let reconnectingSentence = "*Reconnecting…* — the account isn't answering right now."
-    private static let credentialExpiryGlossarySentence = "*sign-in expired* — Claude Code: sign in; Claude app: wait."
     private static let claudeAppExpiredSentence = "*sign-in expired* — waiting for the Claude app to renew it."
     private static let signInExpiredSentence = "*sign-in expired* — open Claude Code to sign in again."
 
     /// The whole E-09 cell for `tool` — the spec's glossary form, every term and every freeze
     /// reason. Not rendered as such; it pins the segments byte-for-byte against the spec.
-    public static func sourceTagGlossary(tool: Tool) -> String {
+    public static func sourceTagGlossary(tool: Tool, source: QuotaSource? = nil) -> String {
         switch tool {
         case .claude:
-            return [exactSegment, estSegment(tool: tool), asOfSegment, reconnectingSentence, credentialExpiryGlossarySentence]
+            let expirySentence = source == .claudeApp ? claudeAppExpiredSentence : signInExpiredSentence
+            return [exactSegment, estSegment(tool: tool), asOfSegment, reconnectingSentence, expirySentence]
                 .joined(separator: " ")
         case .codex:
             return [exactSegment, estSegment(tool: tool), asOfSegment, reconnectingSentence].joined(separator: " ")

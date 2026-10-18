@@ -4,7 +4,7 @@ import KvotarCore
 
 final class ClaudeAppDisplayTests: XCTestCase {
     func testActionsMatchStateAndGate() {
-        let states: [ClaudeAppConnection.State] = [.unavailable, .ready, .permissionRequired, .expired,
+        let states: [ClaudeAppConnection.State] = [.unavailable, .signInRequired, .ready, .permissionRequired, .expired,
             .ambiguous, .accountChanged, .noEntry, .unreadable, .connected, .codeIdentityDiffers]
         for state in states {
             for gate in [true, false] {
@@ -88,6 +88,30 @@ final class ClaudeAppDisplayTests: XCTestCase {
             tag: SourceTag(base: "Source: Claude app · exact"), freeze: .claudeAppExpired)
         XCTAssertTrue(card?.contains("waiting for the Claude app to renew it") == true)
         XCTAssertFalse(card?.contains("open Claude Code") == true)
+    }
+
+    func testExpiryGlossaryKeepsCodeCopyUnlessAppSourceIsInUse() {
+        let sources: [QuotaSource?] = [nil, .oauth]
+        for source in sources {
+            let glossary = ExplanationRegistry.sourceTagGlossary(tool: .claude, source: source)
+            XCTAssertTrue(glossary.hasSuffix("*sign-in expired* — open Claude Code to sign in again."))
+            XCTAssertFalse(glossary.contains("Claude app"))
+        }
+        let app = ExplanationRegistry.sourceTagGlossary(tool: .claude, source: .claudeApp)
+        XCTAssertTrue(app.hasSuffix("*sign-in expired* — waiting for the Claude app to renew it."))
+        XCTAssertFalse(app.contains("open Claude Code"))
+    }
+
+    func testMissingAppSignInGuidanceNeverSendsUserToCodeOrOffersPermissionAction() {
+        let signIn = ClaudeAppConnection(state: .signInRequired, appPresent: true, codeAbsent: true)
+        let card = DisplayFormatter.claudeAppCard(signIn)
+        XCTAssertEqual(card?.detail,
+            "Kvotar cannot find a saved sign-in in the Claude app. Sign in to the Claude app, then re-check.")
+        XCTAssertNil(card?.action)
+        XCTAssertNil(card?.permissionNote)
+        let unavailable = DisplayFormatter.claudeAppCard(.init(state: .unavailable,
+            appPresent: true, codeAbsent: true))
+        XCTAssertEqual(unavailable?.detail, "Kvotar cannot see the Claude app’s chat sign-in.")
     }
 
     func testHistoricalSourceAndChangedAccountFact() {

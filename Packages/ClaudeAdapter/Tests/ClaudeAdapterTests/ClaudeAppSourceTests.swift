@@ -175,6 +175,34 @@ final class ClaudeAppSourceTests: XCTestCase {
         XCTAssertTrue(fixture.value(\.keyReads).isEmpty)
     }
 
+    func testMissingMarkerGuidesSignInWithoutTreatingReadErrorsAsSignedOut() async throws {
+        for mode in 0..<4 {
+            let fixture = AppFixture()
+            fixture.change {
+                $0.presence.cacheMarker = .absent
+                if mode == 1 { $0.presence.cacheMarker = .unknown }
+                if mode == 2 { $0.presence.config = .absent }
+                if mode == 3 { $0.presence.config = .unknown }
+            }
+            let resolver = fixture.resolver()
+            _ = try await resolver.resolve()
+            let status = await resolver.connection
+            XCTAssertEqual(status.state, mode == 0 ? .signInRequired : .unavailable)
+            XCTAssertFalse(status.offersConnection)
+            await resolver.connect()
+            XCTAssertTrue(fixture.value(\.keyReads).isEmpty)
+            XCTAssertTrue(fixture.value(\.requests).isEmpty)
+            if mode == 0 {
+                fixture.change { $0.presence.cacheMarker = .present }
+                _ = try await resolver.resolve()
+                let signedIn = await resolver.connection
+                XCTAssertEqual(signedIn.state, .ready)
+                XCTAssertTrue(signedIn.offersConnection)
+                XCTAssertTrue(fixture.value(\.keyReads).isEmpty)
+            }
+        }
+    }
+
     func testConnectProfileBeforeUsageAndKeyCachedAcrossPolls() async throws {
         let fixture = AppFixture()
         let source = fixture.resolver()
