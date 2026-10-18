@@ -597,6 +597,8 @@ public enum HistoryDisplay {
         case .single(let change):
             let grain = grainName(change.windowType)
             switch change.kind {
+            case .accountRebound:
+                return ("Claude account changed", "Connected again to the Claude app")
             case .planChanged:
                 return (planChangedLabel, "\(change.oldValue ?? "—") → \(change.newValue ?? "—")")
             case .windowWidthChanged:
@@ -668,6 +670,8 @@ public enum HistoryDisplay {
             text = "\(lead) \(value)"
         case .single(let change):
             switch change.kind {
+            case .accountRebound:
+                text = lead
             case .planChanged, .windowWidthChanged:
                 text = "\(lead) \(value)"
             case .windowAdded:

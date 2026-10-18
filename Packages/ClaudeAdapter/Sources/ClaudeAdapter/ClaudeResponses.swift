@@ -184,24 +184,26 @@ struct ClaudeUsageResponse: Decodable {
 }
 
 /// `GET /api/oauth/profile` with `anthropic-beta: oauth-2025-04-20` (Baseline §8.0.3).
-struct ClaudeProfileResponse: Decodable {
+struct ClaudeProfileResponse: Decodable, Sendable {
     let account: Account
     let organization: Organization?
 
-    struct Account: Decodable {
+    struct Account: Decodable, Sendable {
+        let uuid: String?
         let email: String?
         /// Authoritative plan-tier booleans — map deterministically to the limits-DB plan keys.
         let hasClaudePro: Bool?
         let hasClaudeMax: Bool?
 
         enum CodingKeys: String, CodingKey {
+            case uuid
             case email
             case hasClaudePro = "has_claude_pro"
             case hasClaudeMax = "has_claude_max"
         }
     }
 
-    struct Organization: Decodable {
+    struct Organization: Decodable, Sendable {
         /// Org UUID — the `<org_id>` path component of the `/prepaid/credits` call (REV-29,
         /// live-confirmed 2026-07-10). Cached once per token, never persisted.
         let uuid: String?

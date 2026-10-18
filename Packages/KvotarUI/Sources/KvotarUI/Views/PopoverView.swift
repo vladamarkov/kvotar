@@ -169,6 +169,9 @@ public struct PopoverView: View {
     private var content: some View {
         switch vm.activeTab {
         case .claude:
+            if let card = vm.claudeAppCard, vm.claudeState.phase != .firstRun {
+                ClaudeAppConnectionView(card: card).padding(13)
+            }
             ClaudePopoverContent(state: vm.claudeState, deltaLine: vm.deltaLines[.claude],
                                  onDismissDeltaLine: { vm.dismissDeltaLine(.claude) },
                                  onOpenProjects: { vm.openProjectHistory(.claude) })

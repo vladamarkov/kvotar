@@ -87,15 +87,19 @@ struct FirstRunCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.headline).foregroundStyle(Theme.textPrimary)
-            Text(action)
-                .font(.callout)
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(checked)
-                .font(.footnote)
-                .foregroundStyle(Theme.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            if tool == .claude, let card = vm.claudeAppCard {
+                ClaudeAppConnectionView(card: card)
+            } else {
+                Text(title).font(.headline).foregroundStyle(Theme.textPrimary)
+                Text(action)
+                    .font(.callout)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(checked)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Button("Re-check") { vm.recheck(tool) }
                 .padding(.top, 2)
         }
@@ -117,4 +121,23 @@ struct FirstRunCardView: View {
         .environmentObject(AppViewModel())
         .frame(width: 340)
         .background(Theme.card)
+}
+
+struct ClaudeAppConnectionView: View {
+    let card: ClaudeAppCard
+    @EnvironmentObject private var vm: AppViewModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(card.title).font(.headline).foregroundStyle(Theme.textPrimary)
+            Text(card.detail).font(.callout).foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let note = card.permissionNote {
+                Text(note).font(.footnote).foregroundStyle(Theme.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let action = card.action {
+                Button(action) { vm.connectClaudeApp() }.disabled(vm.connectingClaudeApp)
+            }
+        }
+    }
 }

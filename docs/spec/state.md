@@ -307,6 +307,15 @@ staleness by the row's age, so it never shows a rate-derived state. A row still 
 timing, the long-limit states or Healthy, where the app's own launch restore shows Idle.
 (`Packages/KvotarCLI/Sources/KvotarCLI/StatusReader.swift`: `StatusReader.read`)
 
+## Claude app connection state
+
+`ClaudeAppConnection` is credential-source state, separate from `AppState`. Its ordered failures
+and actions are in [popover](popover.md#claude-app-connection). Identity change stops new quota
+reads and leaves earlier readings explicitly historical. A successful explicit connection clears
+transient forecast and account-state caches before the next reading. An expired CLI credential
+beside a connected Claude app does not change its source or quota state. None of these states
+permits background interaction. Tests: `ClaudeAppSourceTests`, `ClaudeAppDisplayTests`.
+
 ## Known gaps
 
 | Gap | Today | Proposed |

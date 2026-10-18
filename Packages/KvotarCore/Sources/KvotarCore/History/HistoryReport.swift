@@ -186,6 +186,7 @@ public struct HistoryReport: Sendable, Equatable {
     public struct AccountChange: Sendable, Equatable {
         public enum Kind: String, Sendable, CaseIterable {
             case planChanged = "plan_changed"
+            case accountRebound = "account_rebound"
             case windowAdded = "window_added"
             case windowRemoved = "window_removed"
             case windowWidthChanged = "window_width_changed"

@@ -145,6 +145,29 @@ public final class AppViewModel: ObservableObject {
 
     /// Forces an immediate re-poll of `tool` (first-run "Re-check" button). Injected by the
     /// composition root so the view layer stays coordinator-free (mirrors `onSelectMode`).
+    @Published public var claudeAppConnection: ClaudeAppConnection?
+    @Published public var connectingClaudeApp = false
+    public func resetClaudeAccountDisplay() {
+        transientSetupTool = nil
+        activeTab = .claude
+        lastOpenSnapshot[.claude] = nil; deltaLines[.claude] = nil
+        deltaLineGeneration[.claude, default: 0] += 1
+        lastSuccessfulPollAt[.claude] = nil; lastMonthlyAttribution[.claude] = nil
+        lastLocalDay[.claude] = nil
+        reminderEpisodes[.claude] = nil
+        applyUnavailable(tool: .claude)
+    }
+    public func applyClaudeAppConnection(_ connection: ClaudeAppConnection?) {
+        claudeAppConnection = connection
+        renderDisplay(tool: .claude, now: Date())
+    }
+    public var onConnectClaudeApp: (() -> Void)?
+    public var claudeAppCard: ClaudeAppCard? { DisplayFormatter.claudeAppCard(claudeAppConnection) }
+    public var claudeAppSource: String? { DisplayFormatter.claudeAppSource(claudeAppConnection) }
+    public func connectClaudeApp() {
+        guard !connectingClaudeApp, claudeAppConnection?.offersConnection == true else { return }
+        onConnectClaudeApp?()
+    }
     public var onRecheck: ((Tool) -> Void)?
 
     /// Opens the History window (STEP_109). Injected by the composition root, which also closes
@@ -651,13 +674,16 @@ public final class AppViewModel: ObservableObject {
             switch tool {
             case .claude:
                 claudeState = DisplayFormatter.claude(
-                    state: state, snapshot: snapshot, forecast: forecast,
+                    state: state, snapshot: snapshot,
+                    forecast: claudeAppConnection?.isHistorical == true ? nil : forecast,
                     localAttribution: attribution, offMachine: offMachine,
-                    fastBurnDelta: fastBurnDelta, pollAsOf: pollAsOf,
+                    fastBurnDelta: fastBurnDelta,
+                    staleAsOf: claudeAppConnection?.isHistorical == true ? pollAsOf : nil,
+                    pollAsOf: pollAsOf,
                     lastActiveWindow: lastActiveWindow,
                     monthlyAttribution: monthlyAttribution,
                     monthlyRatePerHour: monthlyRatePerHour, localDay: localDay,
-                    dailyReport: lastDailyReport[.claude], now: now)
+                    dailyReport: lastDailyReport[.claude], connection: claudeAppConnection, now: now)
             case .codex:
                 codexState = DisplayFormatter.codex(
                     state: state, snapshot: snapshot, forecast: forecast,
@@ -678,7 +704,7 @@ public final class AppViewModel: ObservableObject {
                     monthlyAttribution: lastMonthlyAttribution[.claude],
                     monthlyRatePerHour: nil,
                     localDay: lastLocalDay[.claude],
-                    dailyReport: lastDailyReport[.claude], now: now)
+                    dailyReport: lastDailyReport[.claude], connection: claudeAppConnection, now: now)
             case .codex:
                 codexState = DisplayFormatter.codex(
                     state: state, snapshot: snapshot, forecast: nil,

@@ -16,6 +16,7 @@ public enum DiagnosticsBundle {
     /// Facts Core cannot observe for itself; supplied by the composition root.
     public struct HostFacts: Sendable {
         /// `ForecastLogRecorder.currentAppVersion()` — e.g. `0.1.2 (3) beta`.
+        public let claudeApp: ClaudeAppPresence
         public let appVersion: String
         public let channel: BuildChannel
         /// `UNAuthorizationStatus` rendered as a word, or `"unknown"`.
@@ -30,7 +31,9 @@ public enum DiagnosticsBundle {
 
         public init(appVersion: String, channel: BuildChannel,
                     notificationAuthorization: String, openAtLogin: Bool,
-                    pricingVersion: String? = nil, pricingUpdated: String? = nil) {
+                    pricingVersion: String? = nil, pricingUpdated: String? = nil,
+                    claudeApp: ClaudeAppPresence = .init()) {
+            self.claudeApp = claudeApp
             self.appVersion = appVersion
             self.channel = channel
             self.notificationAuthorization = notificationAuthorization
@@ -277,6 +280,9 @@ public enum DiagnosticsBundle {
             "",
             "Logs collected:         \(logsCollected.isEmpty ? "none" : logsCollected.joined(separator: ", "))",
         ]
+        lines.append("")
+        lines.append("Claude app metadata and cache-marker presence (no value is decoded, kept or printed)")
+        lines.append(contentsOf: facts.claudeApp.diagnosticsLines)
         lines.append("")
         lines.append("Local tool versions (best effort):")
         lines.append("  claude:               \(toolVersion("claude"))")

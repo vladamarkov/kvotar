@@ -18,10 +18,14 @@ public protocol AccountAdapter: Sendable {
     /// cooldown is pending — a rotation is the one sanctioned reason to probe before the
     /// deadline. Must be read-only and local (no request, no dialog). Default: never.
     func credentialChanged() async -> Bool
+    var claudeAppConnection: ClaudeAppConnection? { get async }
+    func connectClaudeApp() async
 }
 
 public extension AccountAdapter {
     func credentialChanged() async -> Bool { false }
+    var claudeAppConnection: ClaudeAppConnection? { get async { nil } }
+    func connectClaudeApp() async {}
 }
 
 /// Adapter health after the most recent fetch attempt (ARCHITECTURE.md §Data source map,
@@ -187,6 +191,7 @@ public enum DetectionStatus: Sendable, Equatable {
 /// (UI Spec §2.3/§2.5 Codex: "Source: app-server RPC · exact" vs "wham/usage"). STEP_27.
 public enum QuotaSource: String, Sendable, Equatable {
     case oauth
+    case claudeApp
     case appServerRPC = "rpc"
     case wham
 }

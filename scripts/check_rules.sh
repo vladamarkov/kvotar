@@ -60,6 +60,12 @@ done < <(echo "$SOURCES" | xargs grep -n -o -I -E -- '[a-z]+-(generic|internet)-
 scan R4 "" '"/usr/bin/security"' "/usr/bin/security launched outside KeychainTokenProvider" \
     'ClaudeAdapter/KeychainTokenProvider\.swift$'
 
+# Direct reads and the process-wide UI switch belong only to the consented Desktop reader.
+scan R4 "" 'SecItemCopyMatching[[:space:]]*\(' "direct Keychain read outside Claude app reader" \
+    'ClaudeAdapter/ClaudeAppSafeStorage\.swift$'
+scan R4 "" 'SecKeychain(Get|Set)UserInteractionAllowed[[:space:]]*\(' "Keychain interaction control outside Claude app reader" \
+    'ClaudeAdapter/ClaudeAppSafeStorage\.swift$'
+
 # --- R3: no refresh strings or token endpoints ------------------------------------------------
 scan R3 "-i" 'refresh_?token|grant_type|/oauth2?/token|auth\.openai\.com|console\.anthropic\.com' \
     "refresh token, grant type or token endpoint"

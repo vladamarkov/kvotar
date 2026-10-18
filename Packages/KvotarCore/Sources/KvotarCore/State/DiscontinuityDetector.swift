@@ -7,6 +7,7 @@ public struct DiscontinuityObservation: Sendable, Equatable {
     public enum EventType: String, Sendable {
         case limitChanged = "limit_changed"
         case planChanged = "plan_changed"
+        case accountRebound = "account_rebound"
         case creditsToggled = "credits_toggled"
         case windowReset = "window_reset"
         /// A **live** window the provider took back (REV-64 §5 / STEP_102) — distinct from a reset,

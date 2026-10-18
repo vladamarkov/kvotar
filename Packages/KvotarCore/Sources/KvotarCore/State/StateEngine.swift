@@ -142,7 +142,13 @@ public actor StateEngine {
         (windowResets, windowResetContinuation) = AsyncStream.makeStream()
     }
 
-    /// The last classified state for `tool`, or `nil` before its first evaluation.
+    /// A deliberate account connection discards the previous account's transient classification.
+    public func resetAccount(tool: Tool) {
+        currentStates[tool] = nil; lastSuccessfulPollAt[tool] = nil
+        lastPrimaryResetsAt[tool] = nil; lastLivePrimaryUsedPct[tool] = nil
+        calmStreaks[tool] = nil; currentGlyphs[tool] = nil; glyphDemoteStreaks[tool] = nil
+    }
+
     public func currentState(for tool: Tool) -> AppState? { currentStates[tool] }
 
     /// Evaluates one tool. Records poll recency (for the TTL), detects a window reset, classifies

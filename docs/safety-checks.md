@@ -53,7 +53,7 @@ make test    # every test suite, with live access disabled
 | ClaudeAdapter | `ClaudeAccountAdapterTests.testExpiredCredentialGatesPollNoRequestSent`, `testExpiredCredentialGatesWithNoRefreshSeam` | An expired token sends no request at all |
 | ClaudeAdapter | `ClaudeAccountAdapterTests.testZeroNetworkRecoveryPollsWhenExpiryFlipsFuture`, `testEpisodeEndsOnCredentialHealthNotOnAPoll` | Recovery happens only when the owning tool has renewed the token |
 
-### R4 — Read credentials only the safe way, and never show a dialog
+### R4 — Read credentials only the safe way, and never show an unexpected dialog
 
 **Why.** The Claude token sits in a Keychain item that trusts only `/usr/bin/security`. Reading it through that tool is silent; reading it any other way raises a system dialog. `auth.json` is only ever read.
 
@@ -65,6 +65,22 @@ make test    # every test suite, with live access disabled
 | ClaudeAdapter | `ClaudeAccountAdapterTests.testCredentialChangedIsFalseWhenTheReadFails` | A failed read probes nothing |
 | CodexAdapter | `CodexBinaryDiscoveryTests.testLaunchArgumentsArePinned` | The Codex app-server is launched read-only (`-s read-only -a never`) |
 
+### Claude app extension (issue #26)
+
+Only explicit Connect/Retry permits a macOS prompt. The same lock covers interactive reads and
+background save/disable/read/restore. Denial is persisted; the derived key is memory-only.
+`ClaudeAppSuppressionTests` asserts call order, saved-state restoration and fail-closed errors.
+`ClaudeAppSourceTests` covers click gating, relaunch denial memory, profile-before-usage,
+identity/precedence, expiry, config changes and no credential renewal. The typed cache model has
+no refresh field; a wrong-typed synthetic field is ignored. `ClaudeAppPresenceTests` proves
+bounded metadata detection, symlink handling and no fake token/email/UUID in environment output.
+The existing credential-tree and network-seam suites still run.
+
+Actual prompt behavior is maintainer-only proof: Connect/Deny/Retry/Allow with `make run`;
+background silence after revocation on the next key read (relaunch or cleared key cache); Always
+Allow persistence using a signed build, and two signed builds if update continuity is promised.
+Fixtures cannot prove macOS runtime ACL behavior.
+
 ## Static checks (`make check`)
 
 `scripts/check_rules.sh` uses only Bash and the standard macOS command-line tools. Static checks catch drift; the behavior tests above are the protection. They are lexical and can be fooled — they exist to stop honest mistakes.
@@ -74,6 +90,7 @@ Over every file under `Packages/*/Sources` and `App`, the run fails on:
 | Rule | Check |
 |---|---|
 | R2 | `SecItemAdd`, `SecItemUpdate`, `SecItemDelete` |
+| R4 | Direct `SecItemCopyMatching` and process interaction-control calls outside `ClaudeAppSafeStorage` |
 | R2/R4 | a `security` password or keychain subcommand (`*-generic-password`, `*-internet-password`, `*-keychain`) other than `find-generic-password`; `"/usr/bin/security"` outside `KeychainTokenProvider` |
 | R3 | `refresh_token` / `refreshToken`, `grant_type`, `/oauth/token`, `auth.openai.com`, `console.anthropic.com` |
 | R2 | a file write outside the approved writers: the database (`SQLiteStore*`), `LogFileWriter`, `PIDLock`, `LegacyDataMigrator`, `DiagnosticsBundle`, `ProductIdentity`, and the CLI's `BundleReader` and `AnalysisStore`. This catches a *new* writer; a wrong destination inside an approved one is the job of `CredentialTreesUntouchedTests` |
@@ -88,4 +105,4 @@ Over every file under `Packages/*/Sources` and `App`, the run fails on:
 
 - What the `codex` binary does internally once Kvotar launches it. Kvotar launches it read-only; see `docs/credentials-and-privacy.md`.
 - How often Kvotar polls and how it backs off. Those are product decisions with their own records in `docs/decisions/`.
-- **The copy rule.** User-facing text never names polling internals ("throttled", "retry", "rate limit"…). It is a product voice rule, not a safety rule: one shared word list (`UserCopyRules.pollingWords`) is checked by the explanation-registry and notification tests, and changing the rule needs the maintainer's approval.
+- **The copy rule.** User-facing text never names polling internals ("throttled", "retry", "rate limit"…). It is a product voice rule, not a safety rule: the permission button `Retry` is explicitly agreed in #26; otherwise one shared word list (`UserCopyRules.pollingWords`) is checked by the explanation-registry and notification tests, and changing the rule needs the maintainer's approval.

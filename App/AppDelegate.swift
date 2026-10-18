@@ -18,6 +18,7 @@ import KvotarUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let viewModel = AppViewModel()
 
+    private let claudeAppDetector = ClaudeAppDetector()
     private var menuBarController: MenuBarController?
     /// The History window (STEP_109) — one instance, created on first open.
     private var historyWindow: HistoryWindowController?
@@ -530,9 +531,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let codexWham: CodexHTTPFetcher = diagnostics.map {
             CapturingCodexHTTPFetcher(wrapping: CodexURLSessionFetcher(), sink: $0)
         } ?? CodexURLSessionFetcher()
+        let codeProvider = KeychainTokenProvider()
+        let claudeResolver = ClaudeSourceResolver(
+            code: codeProvider, fetcher: claudeFetcher, detector: claudeAppDetector,
+            load: {
+                guard let store else { throw AccountAdapterError.credentialUnreadable("connection storage unavailable") }
+                return try await store.readClaudeAppBinding()
+            }, save: { binding, rebound in
+                guard let store else { throw AccountAdapterError.credentialUnreadable("connection storage unavailable") }
+                try await store.writeClaudeAppBinding(binding, rebound: rebound)
+            })
         let claudeAdapter = ClaudeAccountAdapter(
-            tokenProvider: KeychainTokenProvider(),
-            fetcher: claudeFetcher)
+            tokenProvider: codeProvider, fetcher: claudeFetcher, sourceResolver: claudeResolver)
         let coordinator = PollCoordinator(
             viewModel: viewModel, store: store, presenter: presenter,
             claude: claudeAdapter,
@@ -542,6 +552,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.coordinator = coordinator
         // First-run "Re-check" button → force an immediate re-poll of that tool (STEP_30).
         viewModel.onRecheck = { [weak coordinator] tool in coordinator?.recheck(tool: tool) }
+        viewModel.onConnectClaudeApp = { [weak coordinator] in
+            Task { await coordinator?.connectClaudeApp() }
+        }
         // The onboarding gate (STEP_143): once per process, when a tool is first known to be
         // detected. Neither detected ⇒ never fires, the popover welcome stays the surface, and
         // the next launch tries again — the spec's "first later launch that finds a tool".
@@ -875,7 +888,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 notificationAuthorization: authorization,
                 openAtLogin: SMAppService.mainApp.status == .enabled,
                 pricingVersion: pricing?.version,
-                pricingUpdated: pricing?.updated)
+                pricingUpdated: pricing?.updated,
+                claudeApp: claudeAppDetector.detect())
             do {
                 let url = try await DiagnosticsBundle.build(store: store, facts: facts,
                                                             explanation: explanation)

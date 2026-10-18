@@ -360,6 +360,21 @@ case (`5-hour`), or `quota period` when its width is unknown. (`ExplanationRegis
 A fact that cannot apply on this shape (the low-allowance shape, the retrospective grain) is hidden,
 not dashed, so its element never opens the table's text.
 
+### Claude app source and connection
+
+The account source tag names `Claude app` or `Claude Code`. An expired app credential's freeze
+sentence is “*sign-in expired* — waiting for the Claude app to renew it.” The existing Code
+sentence remains Code-specific, including the default E-09 glossary; the app-specific glossary
+uses the app sentence only for a `claudeApp` quota source. `ExplanationRegistry` also owns these connection explanations:
+
+- “The Claude app is signed in to a different account than the one Kvotar connected. Connect again
+  to follow it.”
+- “Claude Code uses a different account or organization, or its identity could not be confirmed.
+  Kvotar is keeping the connected Claude app source.”
+
+They are credential explanations, never polling mechanics. Tests: `ClaudeAppDisplayTests` and
+`ClaudeAppSourceTests`; source-tag assembly stays in `sourceTagCard`.
+
 ### The bridge line
 
 Every card on an element that shows a quota percentage opens with

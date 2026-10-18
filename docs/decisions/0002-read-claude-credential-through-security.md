@@ -7,6 +7,9 @@ read_when: Touching KeychainTokenProvider, CodexTokenProvider, or any code that 
 
 ## Decision
 
+Amended for the Claude app only by [0005](0005-claude-app-consent.md). The Claude Code reader and
+the cookie/session-key exclusions below are unchanged.
+
 Kvotar reads the `Claude Code-credentials` Keychain item by running
 `/usr/bin/security find-generic-password -s "Claude Code-credentials" -w`. It never calls
 `SecItemCopyMatching` (or any `SecItem*` function) on that item, never shows an authorization dialog,

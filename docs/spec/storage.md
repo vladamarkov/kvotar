@@ -413,3 +413,17 @@ settings audit, `v21`), `SQLiteStoreRetentionTests`, `SQLiteStorePollTests`,
 version), `SQLiteStoreTokenEventsTests` (`v19`), `SQLiteStoreQuotaLimitEventsTests` (`v11`,
 `v13`), `LegacyDataMigratorTests`, `PIDLockTests`, `CredentialTreesUntouchedTests`; and
 `Packages/KvotarCLI/Tests/KvotarCLITests/CredentialTreesUntouchedTests.swift`.
+
+## Claude app connection metadata
+
+The `claude_app_connection` setting holds JSON: `identityDigest` (SHA-256 of the verified account
+and organization joined), `connectionRequested`, `permissionDenied`, and `requiresReconnect`.
+It never holds account IDs, access tokens, refresh material or decryption keys. Reads fail closed
+on malformed or unavailable storage. Effective writes retain the normal `settings_changes` audit.
+An explicit rebind to a different identity writes one `account_rebound` discontinuity in the same
+transaction, with only tool/time/type and no identity payload. It also clears the prior
+`last_open_snapshot_claude` setting, retaining its settings-change audit, so a delta line cannot
+compare the new account with the previous account. Existing quota rows are retained;
+this introduces no schema migration or per-account history partitioning.
+
+Tests: `ClaudeAppPresenceTests.testConnectionAndReboundAreWrittenTogetherWithoutIdentityPayloadInEvent`.

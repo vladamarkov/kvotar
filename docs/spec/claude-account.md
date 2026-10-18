@@ -41,14 +41,13 @@ What this page does **not** own:
 
 ## Calls and what is sent
 
-Kvotar makes three calls, all `GET` to `api.anthropic.com`, all with the user's own Claude Code
-access token. No other host or path is called for Claude.
+Kvotar makes three calls, all `GET` to `api.anthropic.com`, with an existing access token from Claude Code or the explicitly connected Claude app. No other host or path is called for Claude.
 (`ClaudeAccountAdapter.usageURL`, `profileURL`, `prepaidURL(orgId:)`; test
 `NoRefreshNetworkSeamTests.testAFullCycleReachesOnlyTheQuotaEndpointsAndNeverSendsARefreshToken`)
 
 | Call | Path | Purpose | Headers Kvotar sets |
 |---|---|---|---|
-| Usage | `/api/oauth/usage` | The quota reading, every poll | `Authorization: Bearer <token>`, `User-Agent` |
+| Usage | `/api/oauth/usage` | The quota reading, every poll | `Authorization: Bearer <token>`, `User-Agent`; Claude app also sends `anthropic-beta: oauth-2025-04-20` |
 | Profile | `/api/oauth/profile` | Email, plan, organization id, prepaid eligibility | the same, plus `anthropic-beta: oauth-2025-04-20` |
 | Prepaid wallet | `/api/oauth/organizations/<org id>/prepaid/credits` | Balance, auto-reload, wallet currency. Pro and Max only | the same as profile |
 
@@ -75,9 +74,20 @@ access token. No other host or path is called for Claude.
 Reason for the single retry: Claude Code can rotate the shared token between Kvotar's read and its
 request, and that race once left the app asking for a sign-in nobody needed.
 
+## Claude app profile proof
+
+The connected Claude app source requires successful profile proof before usage, including matching
+account and organization UUIDs. The same verified response supplies email, plan and prepaid
+eligibility; the account adapter does not fetch the profile a second time or borrow CLI email.
+Proof is repeated when the selected entry changes. A valid CLI item appearing beside it is
+profile-checked against the bound identity before taking precedence; expired CLI items are never
+profile-checked. These requests use the existing profile endpoint and headers. The source resolver
+serializes connection and selection; a connection change invalidates an in-flight quota result.
+Selection, consent and persistence are specified in [credentials](credentials.md#the-claude-app-connection).
+
 ## From the usage response to a reading
 
-**One usage response becomes one reading** (`QuotaSnapshot`, tool `.claude`, source `.oauth`).
+**One usage response becomes one reading** (`QuotaSnapshot`, tool `.claude`, source `.oauth` for Claude Code or `.claudeApp` for the Claude app).
 
 | Reading field | From | Notes |
 |---|---|---|

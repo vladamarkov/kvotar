@@ -279,6 +279,9 @@ final class MenuBarController: QuotaSurface {
     /// Left-click toggles the popover; a secondary click opens the context menu (Baseline §14.1).
     /// Secondary = right button / two-finger tap (`.rightMouseUp`) **or** control-click, which
     /// AppKit delivers as `.leftMouseUp` with the Control modifier — the macOS convention.
+    @objc private func connectClaudeApp() { viewModel.connectClaudeApp() }
+    @objc private func recheckClaudeApp() { viewModel.recheck(.claude) }
+
     @objc private func statusItemClicked() {
         let event = NSApp.currentEvent
         let isSecondary = event?.type == .rightMouseUp
@@ -395,6 +398,17 @@ final class MenuBarController: QuotaSurface {
                 item.representedObject = tool.rawValue
                 menu.addItem(item)
             }
+            menu.addItem(.separator())
+        }
+
+        if let action = viewModel.claudeAppCard?.action {
+            let item = NSMenuItem(title: action, action: #selector(connectClaudeApp), keyEquivalent: "")
+            item.target = self
+            item.isEnabled = !viewModel.connectingClaudeApp
+            menu.addItem(item)
+            let recheck = NSMenuItem(title: "Re-check Claude", action: #selector(recheckClaudeApp), keyEquivalent: "")
+            recheck.target = self
+            menu.addItem(recheck)
             menu.addItem(.separator())
         }
 

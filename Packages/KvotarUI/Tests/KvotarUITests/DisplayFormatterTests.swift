@@ -581,7 +581,7 @@ final class DisplayFormatterTests: XCTestCase {
         XCTAssertTrue(weekly.isHighlighted)
         XCTAssertEqual(weekly.cue, .amber)
         XCTAssertEqual(weekly.reset, "resets \(Fmt.monthDay(weeklyReset)) · day 4 of 7")
-        XCTAssertEqual(c.header?.sourceTag, "Source: Claude account · exact")
+        XCTAssertEqual(c.header?.sourceTag, "Source: Claude Code · exact")
     }
 
     /// D-101 — one fact, one shape, both tabs: the Claude render of the not-started shape is the

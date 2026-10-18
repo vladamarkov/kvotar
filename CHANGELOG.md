@@ -5,6 +5,9 @@ the line of their change.
 
 ## Unreleased
 
+- Connect the Claude app to read account quota when no Claude Code credential exists. Only the
+  Connect or Retry click may ask macOS for Keychain access; background activity stays silent.
+
 - The History window's charts were redrawn. On Explore quota, dates sit along the axis at the
   weekly resets, the card appears as soon as the pointer moves over the chart, the weekly limit
   has its own chart above the strip with each week drawn from the readings Kvotar recorded, and

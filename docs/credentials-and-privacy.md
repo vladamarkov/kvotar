@@ -8,7 +8,7 @@ read_when: Changing anything that reads a credential, calls the network, writes 
 ## In one paragraph
 
 Kvotar runs on your Mac. There is no Kvotar account, and your usage and session data are never
-uploaded: the only requests that reach a Kvotar-run server are update checks (daily, or when you ask), described below. To show your quota it asks your providers, with the sign-in Claude
+uploaded: the only requests that reach a Kvotar-run server are update checks (daily, or when you ask), described below. To show your quota it asks your providers, with the sign-in Claude, Claude
 Code and Codex already keep on your Mac, and it reads the session logs those tools already write. It
 reads both credentials and never changes them.
 
@@ -27,16 +27,35 @@ reads both credentials and never changes them.
 - **When:** fresh on every poll. The token is not cached, so when Claude Code refreshes its own
   sign-in, Kvotar picks the new token up on the next poll.
 
+### Claude app (optional)
+
+If Claude Code's credential is positively absent and the installed Claude app has an OAuth cache,
+**Connect Claude app** can request macOS access to its `Claude Safe Storage` key. Only that click
+(or the permission Retry action) may prompt. Launch, wake, Re-check, notifications, timers and
+diagnostics never authorize a dialog. Denial is remembered until you click again.
+
+Kvotar decrypts the cache in memory and verifies the selected account and organization using the
+profile endpoint before quota reads. It never decodes or keeps refresh credentials, writes the
+config, modifies Keychain items or access lists, or asks Claude to renew a sign-in. The derived key
+may remain in memory until quit; it is never saved. A relaunch or failed decryption requires a
+new silent key read, so a revoked grant is noticed then. **Always Allow** is saved by macOS,
+conditional on the grant, Keychain item and Kvotar signing identity remaining unchanged.
+
+Only a digest of the verified identity, connection intent and permission/reconnect flags are
+saved in Kvotar settings. A changed account stops the source until **Connect again**, which adds
+an identity-free history marker. An expired CLI token never starts an app connection. The
+[decision record](decisions/0005-claude-app-consent.md) describes this one prompt-policy exception.
+
 ### Codex
 
 - **Where:** `~/.codex/auth.json`, written by Codex.
-- **How:** a plain file read of the access token and account id. Never written.
+- **How:** on the web fallback leg, a plain file read of the access token and account id. Never written.
   (`CodexAdapter/CodexTokenProvider.swift`)
 
 ### Never a refresh
 
 Kvotar never refreshes a token and never asks another program to. If the Claude token it reads has
-expired, it sends **no request** and shows that the sign-in expired; opening Claude Code refreshes it,
+expired, it sends **no request** and shows that the sign-in expired; its owning tool renews it,
 and Kvotar recovers on its next poll. (One narrow case is not gated yet: after a 401 or 403, a token
 that another program rotated in the meantime is retried once without checking its expiry. That sends
 a request; it never refreshes anything.)
@@ -53,6 +72,7 @@ that. See [decision 0001](decisions/0001-never-refresh-a-token.md).
 | `~/.claude/projects/` (Claude Code session logs) | Token counts, model, timestamps, session id, the project folder |
 | `~/.codex/sessions/` and `~/.codex/archived_sessions/` (Codex session logs) | The same |
 | `~/.codex/state_5.sqlite`, `~/.codex/goals_1.sqlite` | Thread metadata (model, file location) and an over-quota flag; opened read-only |
+| `/Applications/Claude.app`, Claude app support folder | App metadata, bounded cache-marker presence and capped session-folder counts; an explicitly connected source decrypts only its OAuth cache in memory |
 | `~/.claude.json` | The account email, only if the provider's profile call fails or returns no email |
 
 The text of your prompts, Claude's replies and tool output is never stored. The session files

@@ -51,6 +51,14 @@ final class KeychainTokenProviderTests: XCTestCase {
         XCTAssertNil(try provider.credential())
     }
 
+    func testReadOutcomeDistinguishesExit44FromDecodeFailure() throws {
+        let absent = KeychainTokenProvider(securityToolPath: try fakeSecurity(body: "exit 44"))
+        XCTAssertEqual(try absent.readOutcome(), .absent)
+        let broken = KeychainTokenProvider(securityToolPath: try fakeSecurity(body: "printf '{}'; exit 0"))
+        XCTAssertEqual(try broken.readOutcome(), .undecodable)
+        XCTAssertNil(try broken.credential()) // existing CLI-only behavior is unchanged
+    }
+
     /// Any other non-zero exit means the item may well exist and the read was refused.
     func testDeniedReadThrowsCredentialUnreadable() throws {
         let provider = KeychainTokenProvider(securityToolPath: try fakeSecurity(body: "exit 51"))

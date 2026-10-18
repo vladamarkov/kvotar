@@ -88,6 +88,7 @@ public enum ExplanationElement: String, CaseIterable, Sendable, Hashable {
 public enum SourceFreeze: Sendable, Equatable {
     case reconnecting
     case signInExpired
+    case claudeAppExpired
 }
 
 /// Which live line an element is showing (UI Spec Part 3 §5.2 rule 4 — REV-75/D-88, STEP_130).
@@ -476,6 +477,9 @@ public enum ExplanationRegistry {
     /// The E-09 glossary segments, verbatim from the spec cell. The card shows the segments whose
     /// term the tag is currently displaying, plus the freeze sentence when a reason is known. The
     /// `est.` sentence names the tool whose logs it means, so it is per column (STEP_128).
+    public static let claudeAppAccountChanged = "The Claude app is signed in to a different account than the one Kvotar connected. Connect again to follow it."
+    public static let claudeCodeIdentityDiffers = "Claude Code uses a different account or organization, or its identity could not be confirmed. Kvotar is keeping the connected Claude app source."
+
     private static let exactSegment = "**exact:** straight from your account."
     private static func estSegment(tool: Tool) -> String {
         switch tool {
@@ -485,14 +489,16 @@ public enum ExplanationRegistry {
     }
     private static let asOfSegment = "**as of [t]:** the last good reading — nothing fresher was available."
     private static let reconnectingSentence = "*Reconnecting…* — the account isn't answering right now."
+    private static let claudeAppExpiredSentence = "*sign-in expired* — waiting for the Claude app to renew it."
     private static let signInExpiredSentence = "*sign-in expired* — open Claude Code to sign in again."
 
     /// The whole E-09 cell for `tool` — the spec's glossary form, every term and every freeze
     /// reason. Not rendered as such; it pins the segments byte-for-byte against the spec.
-    public static func sourceTagGlossary(tool: Tool) -> String {
+    public static func sourceTagGlossary(tool: Tool, source: QuotaSource? = nil) -> String {
         switch tool {
         case .claude:
-            return [exactSegment, estSegment(tool: tool), asOfSegment, reconnectingSentence, signInExpiredSentence]
+            let expirySentence = source == .claudeApp ? claudeAppExpiredSentence : signInExpiredSentence
+            return [exactSegment, estSegment(tool: tool), asOfSegment, reconnectingSentence, expirySentence]
                 .joined(separator: " ")
         case .codex:
             return [exactSegment, estSegment(tool: tool), asOfSegment, reconnectingSentence].joined(separator: " ")
@@ -523,6 +529,8 @@ public enum ExplanationRegistry {
         switch (freeze, tool) {
         case (.reconnecting?, _):
             segments.append(reconnectingSentence)
+        case (.claudeAppExpired?, _):
+            segments.append(claudeAppExpiredSentence)
         case (.signInExpired?, .claude):
             segments.append(signInExpiredSentence)
         case (.signInExpired?, .codex), (nil, _):
